@@ -1,0 +1,79 @@
+// Source:
+//   Algorithms + Data Structures = Programs, Niklaus Wirth, 1976
+//   Chapter 5, Fig. 5.4, Pages 308-310
+//   Converted from railroad diagram to EBNF and adapted to ASCII
+//   by Daniel Toffetti, 2025
+// =================================================================
+// 
+// Note 1:
+// =======
+// While the book contains an ASCII chart in Appendix "A", on page 351,
+// the grammar and the code make use of some non-ASCII characters.
+// That is because Wirth used a CDC 6000 computer which had a non-ASCII
+// character set (see http://en.wikipedia.org/wiki/CDC_6000 and
+// https://en.wikipedia.org/wiki/CDC_display_code for details).
+// 
+// These non-ASCII characters were replaced here by alternative ASCII
+// characters, as follows:
+// 
+// "≠" replaced by "#"
+// "≤" replaced by "{"
+// "≥" replaced by "}"
+// 
+// The use of curly brackets is not a good alternative, but it is the
+// only reasonable choice that is available in the ASCII character set,
+// taking into account that the code assumes one symbol per character
+// except for ":=", and changing "≤" to "<=" and "≥" to ">=" involves
+// more work and greater code changes than I want to do here.
+// 
+// Note 2:
+// =======
+// Note that the PL0 grammar and language description in the book does
+// not include the "read" and "write" statements, or the "?" and "!"
+// operators (for input and output). The reason for this is that in
+// the original PL/0 implementation, the compiler prints the value of
+// any variable as it changes (see https://en.wikipedia.org/wiki/PL/0).
+// However, these statements were later added in most implementations.
+//
+// Note 3:
+// =======
+// Note that the example PL0 code given in the book in Chapter 5, Page
+// 310-311 is typed in lowercase letters, while the grammar and code
+// in the parsers imply the PL0 source must be in uppercase letters.
+
+
+// Syntactical Rules:
+// ==================
+
+program = block "." ;
+
+block = [ "const" ident "=" number { "," ident "=" number } ";" ]
+        [ "var" ident { "," ident } ";" ]
+        { "procedure" ident ";" block ";" }
+        statement ;
+
+statement = [ ident ":=" expression
+            | "call" ident 
+            | "begin" statement { ";" statement } "end" 
+            | "if" condition "then" statement 
+            | "while" condition "do" statement ] ;
+
+condition = "odd" expression |
+            expression ( "=" | "#" | "<" | "{" | ">" | "}" ) expression ;
+
+expression = [ "+" | "-" ] term { ( "+" | "-" ) term } ;
+
+term = factor { ( "*" | "/" ) factor } ;
+
+factor = ident | number | "(" expression ")" ;
+
+// Lexical Rules:
+// ==============
+
+ident = letter { letter | digit } ;
+
+number = digit { digit } ;
+
+letter = "A" | "B" | ... | "Y" | "Z" ;
+
+digit = "0" | "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9" ;
