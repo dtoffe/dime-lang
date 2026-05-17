@@ -71,7 +71,6 @@ var ch: char;           {last character read}
     code: array [0..cxmax] of instruction;
     word: array [1..norw] of alfa;
     wsym: array [1..norw] of symbol;
-    ssym: array [char] of symbol;
     mnemonic: array [fct] of
                 packed array [1 .. 5] of char;
     declbegsys, statbegsys, facbegsys: symset;
@@ -211,22 +210,101 @@ begin {getsym}
             error (30)
     end
     else
-    if ch = ':' then
-    begin
-        getch;
-        if ch = '=' then
-        begin
-            sym := becomes;
-            getch
-        end
-        else
-            sym := nul;
-    end
-    else
-    begin
-        sym := ssym[ch];
-        getch
-    end;
+        case ch of
+            '+':
+                begin
+                    sym := plus;
+                    getch
+                end;
+            '-':
+                begin
+                    sym := minus;
+                    getch
+                end;
+            '*':
+                begin
+                    sym := times;
+                    getch
+                end;
+            '/':
+                begin
+                    sym := slash;
+                    getch
+                end;
+            '(':
+                begin
+                    sym := lparen;
+                    getch
+                end;
+            ')':
+                begin
+                    sym := rparen;
+                    getch
+                end;
+            '=':
+                begin
+                    sym := eql;
+                    getch
+                end;
+            ',':
+                begin
+                    sym := comma;
+                    getch
+                end;
+            '.':
+                begin
+                    sym := period;
+                    getch
+                end;
+            ';':
+                begin
+                    sym := semicolon;
+                    getch
+                end;
+            ':':
+                begin
+                    getch;
+                    if ch = '=' then
+                    begin
+                        sym := becomes;
+                        getch
+                    end
+                    else
+                        sym := nul;
+                end;
+            '<':
+                begin
+                    getch;
+                    if ch = '=' then
+                    begin
+                        sym := leq;
+                        getch
+                    end
+                    else if ch = '>' then
+                    begin
+                        sym := neq;
+                        getch
+                    end
+                    else
+                        sym := lss;
+                end;
+            '>':
+                begin
+                    getch;
+                    if ch = '=' then
+                    begin
+                        sym := geq;
+                        getch
+                    end
+                    else
+                        sym := gtr;
+                end
+            else
+                begin
+                    sym := nul;
+                    getch
+                end
+        end;
     // Following output is added for debugging
     write(sym, ' ');
     if sym = ident then
@@ -655,8 +733,6 @@ begin {main program}
     Rewrite(outputFile);
     
     writeln('Processing file: ', inputFileName);
-    for ch := 'A' to ';' do
-        ssym[ch] := nul;
     word[ 1] := 'begin     ';
     word[ 2] := 'call      ';
     word[ 3] := 'const     ';
@@ -679,21 +755,6 @@ begin {main program}
     wsym[ 9] := thensym;
     wsym[10] := varsym;
     wsym[11] := whilesym;
-    ssym['+'] := plus;
-    ssym['-'] := minus;
-    ssym['*'] := times;
-    ssym['/'] := slash;
-    ssym['('] := lparen;
-    ssym[')'] := rparen;
-    ssym['='] := eql;
-    ssym[','] := comma;
-    ssym['.'] := period;
-    ssym['#'] := neq;  { non ASCII ≠ "crossed equal symbol" in the book }
-    ssym['<'] := lss;
-    ssym['>'] := gtr;
-    ssym['{'] := leq;  { non ASCII "less than or equal symbol" <=, ≤ in the book }
-    ssym['}'] := geq;  { non ASCII "greater than or equal symbol" >=, ≥ in the book }
-    ssym[';'] := semicolon;
     mnemonic[lit] := 'LIT  ';
     mnemonic[opr] := 'OPR  ';
     mnemonic[lod] := 'LOD  ';

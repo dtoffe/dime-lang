@@ -15,6 +15,7 @@ and this project is expected to follow [Semantic Versioning](https://semver.org/
 
 ### Changed
 
+- Replaced single character relational operators with double character ones.
 - Changed reserved words to lowercase, identifiers can be upper and lowercase.
 
 ### Removed

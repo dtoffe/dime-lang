@@ -13,18 +13,16 @@
 // character set (see http://en.wikipedia.org/wiki/CDC_6000 and
 // https://en.wikipedia.org/wiki/CDC_display_code for details).
 // 
-// These non-ASCII characters were replaced here by alternative ASCII
-// characters, as follows:
+// These non-ASCII characters are written here with standard ASCII
+// operator spellings, as follows:
 // 
-// "≠" replaced by "#"
-// "≤" replaced by "{"
-// "≥" replaced by "}"
+// "<>" is used for "not equal".
+// "<=" is used for "less than or equal".
+// ">=" is used for "greater than or equal".
 // 
-// The use of curly brackets is not a good alternative, but it is the
-// only reasonable choice that is available in the ASCII character set,
-// taking into account that the code assumes one symbol per character
-// except for ":=", and changing "≤" to "<=" and "≥" to ">=" involves
-// more work and greater code changes than I want to do here.
+// The lexer therefore recognizes four multi-character symbols:
+// ":=", "<>", "<=", and ">=".
+// 
 // 
 // Note 2:
 // =======
@@ -62,7 +60,7 @@ statement = [ ident ":=" expression
             | "while" condition "do" statement ] ;
 
 condition = "odd" expression |
-            expression ( "=" | "#" | "<" | "{" | ">" | "}" ) expression ;
+            expression ( "=" | "<>" | "<" | "<=" | ">" | ">=" ) expression ;
 
 expression = [ "+" | "-" ] term { ( "+" | "-" ) term } ;
 

@@ -23,13 +23,13 @@ begin
     R := X;
     Q := 0;
     W := Y;
-    while W { R do 
+    while W <= R do 
         W := 2 * W;
     while W > Y do
     begin
         Q := 2 * Q;
         W := W / 2;
-        if W { R then
+        if W <= R then
         begin
             R := R - W;
             Q := Q + 1
@@ -42,7 +42,7 @@ procedure GCD;
 begin
     F := X;
     G := Y;
-    while F # G do
+    while F <> G do
     begin
         if F < G then
             G := G - F;
