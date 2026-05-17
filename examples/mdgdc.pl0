@@ -1,59 +1,59 @@
-CONST M = 7, N = 85;
+const M = 7, N = 85;
 
-VAR X, Y, Z, Q, R;
+var X, Y, Z, Q, R;
 
-PROCEDURE MULTIPLY;
-    VAR A, B;
-BEGIN
+procedure MULTIPLY;
+    var A, B;
+begin
     A := X;
     B := Y;
     Z := 0;
-    WHILE B > 0 DO
-    BEGIN
-        IF ODD B THEN
+    while B > 0 do
+    begin
+        if odd B then
             Z := Z + A;
         A := 2 * A;
         B := B / 2;
-    END
-END;
+    end
+end;
 
-PROCEDURE DIVIDE;
-    VAR W;
-BEGIN
+procedure DIVIDE;
+    var W;
+begin
     R := X;
     Q := 0;
     W := Y;
-    WHILE W { R DO 
+    while W { R do 
         W := 2 * W;
-    WHILE W > Y DO
-    BEGIN
+    while W > Y do
+    begin
         Q := 2 * Q;
         W := W / 2;
-        IF W { R THEN
-        BEGIN
+        if W { R then
+        begin
             R := R - W;
             Q := Q + 1
-        END
-    END
-END;
+        end
+    end
+end;
 
-PROCEDURE GCD;
-    VAR F, G;
-BEGIN
+procedure GCD;
+    var F, G;
+begin
     F := X;
     G := Y;
-    WHILE F # G DO
-    BEGIN
-        IF F < G THEN
+    while F # G do
+    begin
+        if F < G then
             G := G - F;
-        IF G < F THEN
+        if G < F then
             F := F - G;
-    END;
+    end;
     Z := F
-END;
+end;
 
-BEGIN
-    X := M; Y := N; CALL MULTIPLY;
-    X := 25; Y := 3; CALL DIVIDE;
-    X := 84; Y := 36; CALL GCD
-END.
+begin
+    X := M; Y := N; call MULTIPLY;
+    X := 25; Y := 3; call DIVIDE;
+    X := 84; Y := 36; call GCD
+end.

@@ -102,7 +102,7 @@ begin
          1: writeln (' Use = instead of :=.');
          2: writeln (' = must be followed by a number.');
          3: writeln (' Identifier must be followed by =.');
-         4: writeln (' "const", "var", "procedure" must be followed by an identifier.');
+         4: writeln (' "const", "var", "procedure" must be followed by an identifier. Possible reserved-word case error.');
          5: writeln (' Semicolon or comma missing.');
          6: writeln (' Incorrect symbol after procedure declaration.');
          7: writeln (' Statement expected.');
@@ -112,11 +112,11 @@ begin
         11: writeln (' Undeclared identifier.');
         12: writeln (' Assignment to constant or procedure is not allowed.');
         13: writeln (' Assignment operator := expected.');
-        14: writeln (' "call" must be followed by an identifier.');
+        14: writeln (' "call" must be followed by an identifier. Possible reserved-word case error.');
         15: writeln (' Call of a constant or a variable is meaningless.');
-        16: writeln (' "then" expected.');
-        17: writeln (' Semicolon or "end" expected.');
-        18: writeln (' "do" expected.');
+        16: writeln (' "then" expected. Possible reserved-word case error.');
+        17: writeln (' Semicolon or "end" expected. Possible reserved-word case error.');
+        18: writeln (' "do" expected. Possible reserved-word case error.');
         19: writeln (' Incorrect symbol following statement.');
         20: writeln (' Relational operator expected.');
         21: writeln (' Expression must not contain a procedure identifier.');
@@ -163,7 +163,7 @@ procedure getsym;
 begin {getsym}
     while (ch = ' ') or (ch = chr(10)) or (ch = chr(13)) do
         getch;
-    if ch in ['A'..'Z'] then
+    if ch in ['A'..'Z', 'a'..'z'] then
     begin {identifier or reserved word}
         k := 0;
         repeat
@@ -173,7 +173,7 @@ begin {getsym}
                 a[k] := ch
             end ;
             getch
-        until not (ch in ['A'..'Z', '0'..'9']);
+        until not (ch in ['A'..'Z', 'a'..'z', '0'..'9']);
         if k >= kk then
             kk := k
         else
@@ -657,17 +657,17 @@ begin {main program}
     writeln('Processing file: ', inputFileName);
     for ch := 'A' to ';' do
         ssym[ch] := nul;
-    word[ 1] := 'BEGIN     ';
-    word[ 2] := 'CALL      ';
-    word[ 3] := 'CONST     ';
-    word[ 4] := 'DO        ';
-    word[ 5] := 'END       ';
-    word[ 6] := 'IF        ';
-    word[ 7] := 'ODD       ';
-    word[ 8] := 'PROCEDURE ';
-    word[ 9] := 'THEN      ';
-    word[10] := 'VAR       ';
-    word[11] := 'WHILE     ';
+    word[ 1] := 'begin     ';
+    word[ 2] := 'call      ';
+    word[ 3] := 'const     ';
+    word[ 4] := 'do        ';
+    word[ 5] := 'end       ';
+    word[ 6] := 'if        ';
+    word[ 7] := 'odd       ';
+    word[ 8] := 'procedure ';
+    word[ 9] := 'then      ';
+    word[10] := 'var       ';
+    word[11] := 'while     ';
     wsym[ 1] := beginsym;
     wsym[ 2] := callsym;
     wsym[ 3] := constsym;

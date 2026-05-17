@@ -15,4 +15,6 @@ and this project is expected to follow [Semantic Versioning](https://semver.org/
 
 ### Changed
 
+- Changed reserved words to lowercase, identifiers can be upper and lowercase.
+
 ### Removed

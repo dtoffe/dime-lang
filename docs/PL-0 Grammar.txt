@@ -40,6 +40,9 @@
 // Note that the example PL0 code given in the book in Chapter 5, Page
 // 310-311 is typed in lowercase letters, while the grammar and code
 // in the parsers imply the PL0 source must be in uppercase letters.
+//
+// In this compiler variant, identifiers may use uppercase and lowercase
+// ASCII letters, but reserved words must be written in lowercase.
 
 
 // Syntactical Rules:
@@ -74,6 +77,6 @@ ident = letter { letter | digit } ;
 
 number = digit { digit } ;
 
-letter = "A" | "B" | ... | "Y" | "Z" ;
+letter = "A" | "B" | ... | "Y" | "Z" | "a" | "b" | ... | "y" | "z" ;
 
 digit = "0" | "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9" ;
