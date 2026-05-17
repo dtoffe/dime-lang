@@ -27,27 +27,27 @@ program compiler {(input,output)};
 uses
   SysUtils;
 
-const norw = 11;    {no. of reserved words}
-    txmax = 100;    {length of identifier table}
-    nmax = 14;      {max. no. of digits in numbers}
-    al = 10;        {length of identifiers}
-    amax = 2047;    {maximum address}
-    levmax = 3;     {maximum depth of block nesting}
-    cxmax = 200;    {size of code array}
+const reservedWordCount = 11;    {no. of reserved words}
+    symbolTableMax = 100;        {length of identifier table}
+    numberMaxDigits = 14;        {max. no. of digits in numbers}
+    identifierLength = 10;       {length of identifiers}
+    maxAddress = 2047;           {maximum address}
+    maxNestingLevel = 3;         {maximum depth of block nesting}
+    codeMaxIndex = 200;          {maximum code array index}
 
 type symbol =
         (nul, ident, number, plus, minus, times, slash, oddsym,
         eql, neq, lss, leq, gtr, geq, lparen, rparen, comma, semicolon,
         period, becomes, beginsym, endsym, ifsym, thensym,
         whilesym, dosym, callsym, constsym, varsym, procsym);
-    alfa = packed array [1 .. al] of char;
+    alfa = packed array [1 .. identifierLength] of char;
     objkind = (constant, variable, proc);
     symset = set of symbol;
     fct = (lit, opr, lod, sto, cal, int, jmp, jpc); {functions}
     instruction = packed record
                     f: fct;          {function code}
-                    l: 0..levmax;    {level}
-                    a: 0..amax;      {displacement address}
+                    l: 0..maxNestingLevel;    {level}
+                    a: 0..maxAddress;         {displacement address}
                   end ;
 {   LIT 0,a  :  load constant a
     OPR 0,a  :  execute operation a
@@ -68,13 +68,13 @@ var ch: char;           {last character read}
     cx: integer;        {code allocation index}
     line: array [1..81] of char;
     a: alfa;
-    code: array [0..cxmax] of instruction;
-    word: array [1..norw] of alfa;
-    wsym: array [1..norw] of symbol;
+    code: array [0..codeMaxIndex] of instruction;
+    word: array [1..reservedWordCount] of alfa;
+    wsym: array [1..reservedWordCount] of symbol;
     mnemonic: array [fct] of
                 packed array [1 .. 5] of char;
     declbegsys, statbegsys, facbegsys: symset;
-    table: array [0..txmax] of
+    table: array [0..symbolTableMax] of
               record name: alfa;
                 case kind: objkind of
                   constant: (val: integer);
@@ -166,7 +166,7 @@ begin {getsym}
     begin {identifier or reserved word}
         k := 0;
         repeat
-            if k < al then
+            if k < identifierLength then
             begin
                 k := k + 1;
                 a[k] := ch
@@ -182,7 +182,7 @@ begin {getsym}
             until kk = k;
         id := a;
         i := 1;
-        j := norw;
+        j := reservedWordCount;
         repeat
             k := (i + j) div 2;
             if id <= word[k] then
@@ -206,7 +206,7 @@ begin {getsym}
             k := k + 1;
             getch
         until not (ch in ['0'..'9']);
-        if k > nmax then
+        if k > numberMaxDigits then
             error (30)
     end
     else
@@ -317,7 +317,7 @@ end {getsym} ;
 
 procedure gen(x: fct; y, z: integer);
 begin
-    if cx > cxmax then
+    if cx > codeMaxIndex then
     begin
         write(' PROGRAM TOO LONG');
         {goto 99}
@@ -358,7 +358,7 @@ procedure block (lev, tx: integer; fsys: symset);
             case k of
                 constant:
                     begin
-                        if num > amax then
+                        if num > maxAddress then
                         begin
                             error (30);
                             num := 0
@@ -462,7 +462,7 @@ procedure block (lev, tx: integer; fsys: symset);
                         else
                             if sym = number then
                             begin
-                                if num > amax then
+                                if num > maxAddress then
                                 begin
                                     error (30);
                                     num := 0
@@ -649,7 +649,7 @@ begin {block}
     tx0 := tx;
     table[tx].adr := cx;
     gen(jmp,0,0);
-    if lev > levmax then
+    if lev > maxNestingLevel then
         error (32);
     repeat
         if sym = constsym then
@@ -772,7 +772,7 @@ begin {main program}
     cx := 0;
     ll := 0;
     ch := ' ';
-    kk := al;
+    kk := identifierLength;
     getsym;
     block(0, 0, [period]+declbegsys+statbegsys);
     if sym <> period then
@@ -780,7 +780,7 @@ begin {main program}
     if err = 0 then
     begin
         write(' PL/O PROGRAM COMPILED SUCCESSFULLY');
-        for i := 0 to cxmax do
+        for i := 0 to codeMaxIndex do
             with code[i] do
                 writeln(outputFile, i, mnemonic[f]:5, l:3, a:5);
     end

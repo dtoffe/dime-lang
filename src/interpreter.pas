@@ -20,16 +20,16 @@ This file contains the interpreter.
 program interpreter;
 
 const
-    levmax = 3;     {maximum depth of block nesting}
-    amax = 2047;    {maximum address}
-    cxmax = 200;    {size of code array}
+    maxNestingLevel = 3;    {maximum depth of block nesting}
+    maxAddress = 2047;      {maximum address}
+    codeMaxIndex = 200;     {maximum code array index}
 
 type
     fct = (lit, opr, lod, sto, cal, int, jmp, jpc); {functions}
     instruction = packed record
                     f: fct;          {function code}
-                    l: 0..levmax;    {level}
-                    a: 0..amax;      {displacement address}
+                    l: 0..maxNestingLevel;    {level}
+                    a: 0..maxAddress;         {displacement address}
                   end ;
 {   LIT 0,a  :  load constant a
     OPR 0,a  :  execute operation a
@@ -41,7 +41,7 @@ type
     JPC 0,a  :  jump conditional to a      }
 
 var 
-    code: array [0..cxmax] of instruction;
+    code: array [0..codeMaxIndex] of instruction;
 
     inputFile: Text;
     inputFileName: string;
@@ -56,7 +56,7 @@ var
 
 begin
     i := 0;
-    while not EOF(inputFile) and (i < cxmax) do
+    while not EOF(inputFile) and (i < codeMaxIndex) do
     begin
         // Read one line from the file
         readln(inputFile, line);
@@ -109,10 +109,11 @@ writeln(f_str, ' ', l_str, ' ', a_str);
 end;
 
 procedure interpret;
-    const stacksize = 500;
+
+    const stackMaxSize = 500;
     var p, b, t: integer; {program-, base-, topstack-registers}
         i: instruction; {instruction register}
-        s: array [1..stacksize] of integer; {datastore}
+        s: array [1..stackMaxSize] of integer; {datastore}
 
     function base(l: integer): integer;
         var b1: integer;
