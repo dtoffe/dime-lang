@@ -15,6 +15,9 @@ and this project is expected to follow [Semantic Versioning](https://semver.org/
 
 ### Changed
 
+- Split variables names when a variable was used for two different purposes.
+- Renamed all compact variable names to more readable names.
+- Renamed all compact type names to more readable names.
 - Renamed all compact constant names to more readable names.
 - Replaced single character relational operators with double character ones.
 - Changed reserved words to lowercase, identifiers can be upper and lowercase.

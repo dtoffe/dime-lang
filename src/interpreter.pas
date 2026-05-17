@@ -27,9 +27,9 @@ const
 type
     opcode = (lit, opr, lod, sto, cal, int, jmp, jpc); {functions}
     pCodeInstruction = packed record
-                    f: opcode;       {function code}
-                    l: 0..maxNestingLevel;    {level}
-                    a: 0..maxAddress;         {displacement address}
+                    operation: opcode;             {function code}
+                    lexicalLevel: 0..maxNestingLevel;    {level}
+                    argument: 0..maxAddress;             {displacement address}
                   end ;
 {   LIT 0,a  :  load constant a
     OPR 0,a  :  execute operation a
@@ -41,148 +41,175 @@ type
     JPC 0,a  :  jump conditional to a      }
 
 var 
-    code: array [0..codeMaxIndex] of pCodeInstruction;
+    pCode: array [0..codeMaxIndex] of pCodeInstruction;
 
-    inputFile: Text;
-    inputFileName: string;
+    pCodeFile: Text;
+    pCodeFileName: string;
 
 procedure readCode;
 
 var
-    line: string;
-    i, status: Integer;
-    f_str, l_str, a_str: string;
-    index: Integer;
+    pCodeLine: string;
+    instructionIndex, conversionStatus: Integer;
+    opcodeText, lexicalLevelText, argumentText: string;
+    lineIndexWidth: Integer;
 
 begin
-    i := 0;
-    while not EOF(inputFile) and (i < codeMaxIndex) do
+    instructionIndex := 0;
+    while not EOF(pCodeFile) and (instructionIndex < codeMaxIndex) do
     begin
         // Read one line from the file
-        readln(inputFile, line);
+        readln(pCodeFile, pCodeLine);
 
-        if (line = '') or (line = ' ') then
+        if (pCodeLine = '') or (pCodeLine = ' ') then
             continue;
 
         // Extract the index first (up to the first non-digit)
-        index := 0;
-        while (index < length(line)) and (line[index+1] >= '0') and (line[index+1] <= '9') do
-            index := index + 1;
+        lineIndexWidth := 0;
+        while (lineIndexWidth < length(pCodeLine)) and
+              (pCodeLine[lineIndexWidth+1] >= '0') and
+              (pCodeLine[lineIndexWidth+1] <= '9') do
+            lineIndexWidth := lineIndexWidth + 1;
 
         // Extract the f, l, and a values based on their fixed widths
-        f_str := copy(line, index + 1, 5);
-        l_str := copy(line, index + 1 + 5, 3);
-        a_str := copy(line, index + 1 + 5 + 3, 5);
+        opcodeText := copy(pCodeLine, lineIndexWidth + 1, 5);
+        lexicalLevelText := copy(pCodeLine, lineIndexWidth + 1 + 5, 3);
+        argumentText := copy(pCodeLine, lineIndexWidth + 1 + 5 + 3, 5);
 
-writeln(f_str, ' ', l_str, ' ', a_str);
+writeln(opcodeText, ' ', lexicalLevelText, ' ', argumentText);
         // Convert the extracted strings to integers
-        case f_str of
-            'LIT  ' : code[i].f := lit;
-            'OPR  ' : code[i].f := opr;
-            'LOD  ' : code[i].f := lod;
-            'STO  ' : code[i].f := sto;
-            'CAL  ' : code[i].f := cal;
-            'INT  ' : code[i].f := int;
-            'JMP  ' : code[i].f := jmp;
-            'JPC  ' : code[i].f := jpc;
+        case opcodeText of
+            'LIT  ' : pCode[instructionIndex].operation := lit;
+            'OPR  ' : pCode[instructionIndex].operation := opr;
+            'LOD  ' : pCode[instructionIndex].operation := lod;
+            'STO  ' : pCode[instructionIndex].operation := sto;
+            'CAL  ' : pCode[instructionIndex].operation := cal;
+            'INT  ' : pCode[instructionIndex].operation := int;
+            'JMP  ' : pCode[instructionIndex].operation := jmp;
+            'JPC  ' : pCode[instructionIndex].operation := jpc;
         end;
 
-        Val(l_str, code[i].l, status);
-        if status <> 0 then
+        Val(lexicalLevelText, pCode[instructionIndex].lexicalLevel, conversionStatus);
+        if conversionStatus <> 0 then
             writeln('Error converting l-value');
 
-        Val(a_str, code[i].a, status);
-        if status <> 0 then
+        Val(argumentText, pCode[instructionIndex].argument, conversionStatus);
+        if conversionStatus <> 0 then
             writeln('Error converting a-value');
 
         // Increment the counter for the next record
-        i := i + 1;
+        instructionIndex := instructionIndex + 1;
 
     end;
 
     // Close the file
-    Close(inputFile);
+    Close(pCodeFile);
 
     writeln('Reading complete.');
-    writeln('Records loaded: ', i);
+    writeln('Records loaded: ', instructionIndex);
 
 end;
 
 procedure interpret;
 
     const stackMaxSize = 500;
-    var p, b, t: integer; {program-, base-, topstack-registers}
-        i: pCodeInstruction; {instruction register}
-        s: array [1..stackMaxSize] of integer; {datastore}
+    var programCounter, basePointer, stackTop: integer; {program-, base-, topstack-registers}
+        instructionRegister: pCodeInstruction; {instruction register}
+        runtimeStack: array [1..stackMaxSize] of integer; {datastore}
 
-    function base(l: integer): integer;
-        var b1: integer;
-    begin b1 := b; {find base l levels down}
-        while l > 0 do
-            begin b1 := s[b1]; l := l-1
+    function base(lexicalLevelsOutward: integer): integer;
+        var enclosingBasePointer: integer;
+    begin enclosingBasePointer := basePointer; {find base l levels down}
+        while lexicalLevelsOutward > 0 do
+            begin
+                enclosingBasePointer := runtimeStack[enclosingBasePointer];
+                lexicalLevelsOutward := lexicalLevelsOutward - 1
             end ;
-        base := b1
+        base := enclosingBasePointer
      end {base} ;
 
 begin writeln(' START PL/0');
-    t := 0; b := 1; p := 0;
-    s[1] := 0; s[2] := 0; s[3] := 0;
+    stackTop := 0; basePointer := 1; programCounter := 0;
+    runtimeStack[1] := 0; runtimeStack[2] := 0; runtimeStack[3] := 0;
     repeat
-        i := code[p];
-        writeln(i.f, ' ', i.l, ' ', i.a);
-        p := p + 1;
-        with i do
-        case f of
-            lit: begin t := t+1; s[t] := a
+        instructionRegister := pCode[programCounter];
+        writeln(instructionRegister.operation, ' ', instructionRegister.lexicalLevel,
+                ' ', instructionRegister.argument);
+        programCounter := programCounter + 1;
+        with instructionRegister do
+        case operation of
+            lit: begin stackTop := stackTop+1; runtimeStack[stackTop] := argument
                  end ;
-            opr: case a of {operator}
+            opr: case argument of {operator}
                  0: begin {return}
-                        t := b-1; p := s[t+3]; b := s[t+2]
+                        stackTop := basePointer-1;
+                        programCounter := runtimeStack[stackTop+3];
+                        basePointer := runtimeStack[stackTop+2]
                     end ;
-                 1: s[t] := -s[t];
-                 2: begin t := t-1; s[t] := s[t] + s[t+1]
+                 1: runtimeStack[stackTop] := -runtimeStack[stackTop];
+                 2: begin stackTop := stackTop-1;
+                        runtimeStack[stackTop] := runtimeStack[stackTop] + runtimeStack[stackTop+1]
                     end ;
-                 3: begin t := t-1; s[t] := s[t] - s[t+1]
+                 3: begin stackTop := stackTop-1;
+                        runtimeStack[stackTop] := runtimeStack[stackTop] - runtimeStack[stackTop+1]
                     end ;
-                 4: begin t := t-1; s[t] := s[t] * s[t+1]
+                 4: begin stackTop := stackTop-1;
+                        runtimeStack[stackTop] := runtimeStack[stackTop] * runtimeStack[stackTop+1]
                     end ;
-                 5: begin t := t-1; s[t] := s[t] div s[t+1]
+                 5: begin stackTop := stackTop-1;
+                        runtimeStack[stackTop] := runtimeStack[stackTop] div runtimeStack[stackTop+1]
                     end ;
-                 6: s[t] := ord(odd(s[t]));
-                 8: begin t := t-1; s[t] := ord(s[t]=s[t+1])
+                 6: runtimeStack[stackTop] := ord(odd(runtimeStack[stackTop]));
+                 8: begin stackTop := stackTop-1;
+                        runtimeStack[stackTop] := ord(runtimeStack[stackTop]=runtimeStack[stackTop+1])
                     end ;
-                 9: begin t := t-1; s[t] := ord(s[t]<>s[t+1])
+                 9: begin stackTop := stackTop-1;
+                        runtimeStack[stackTop] := ord(runtimeStack[stackTop]<>runtimeStack[stackTop+1])
                     end ;
-                10: begin t := t-1; s[t] := ord(s[t]<s[t+1])
+                10: begin stackTop := stackTop-1;
+                        runtimeStack[stackTop] := ord(runtimeStack[stackTop]<runtimeStack[stackTop+1])
                     end ;
-                11: begin t := t-1; s[t] := ord(s[t]>=s[t+1])
+                11: begin stackTop := stackTop-1;
+                        runtimeStack[stackTop] := ord(runtimeStack[stackTop]>=runtimeStack[stackTop+1])
                     end ;
-                12: begin t := t-1; s[t] := ord(s[t]>s[t+1])
+                12: begin stackTop := stackTop-1;
+                        runtimeStack[stackTop] := ord(runtimeStack[stackTop]>runtimeStack[stackTop+1])
                     end ;
-                13: begin t := t-1; s[t] := ord(s[t]<=s[t+1])
+                13: begin stackTop := stackTop-1;
+                        runtimeStack[stackTop] := ord(runtimeStack[stackTop]<=runtimeStack[stackTop+1])
                     end ;
                 end ;
-            lod: begin t := t+1; s[t] := s[base(l)+a]
+            lod: begin stackTop := stackTop+1;
+                    runtimeStack[stackTop] := runtimeStack[base(lexicalLevel)+argument]
                  end ;
-            sto: begin s[base(l)+a] := s[t]; writeln(s[t]); t := t-1
+            sto: begin
+                    runtimeStack[base(lexicalLevel)+argument] := runtimeStack[stackTop];
+                    writeln(runtimeStack[stackTop]);
+                    stackTop := stackTop-1
                  end ;
             cal: begin {generate new block mark}
-                    s[t+1] := base(l); s[t+2] := b; s[t+3] := p;
-                    b := t+1; p := a
+                    runtimeStack[stackTop+1] := base(lexicalLevel);
+                    runtimeStack[stackTop+2] := basePointer;
+                    runtimeStack[stackTop+3] := programCounter;
+                    basePointer := stackTop+1;
+                    programCounter := argument
                  end ;
-            int: t := t+a;
-            jmp: p := a;
-            jpc: begin if s[t] = 0 then p := a; t := t-1
+            int: stackTop := stackTop+argument;
+            jmp: programCounter := argument;
+            jpc: begin
+                    if runtimeStack[stackTop] = 0 then
+                        programCounter := argument;
+                    stackTop := stackTop-1
                  end
         end {with, case}
-    until p = 0;
+    until programCounter = 0;
     write(' END PL/0');
 end {interpret} ;
 
 begin {main program}
-    inputFileName := ParamStr(1);
-    Assign(inputFile, inputFileName);
-    Reset(inputFile);
+    pCodeFileName := ParamStr(1);
+    Assign(pCodeFile, pCodeFileName);
+    Reset(pCodeFile);
     readCode();
     interpret();
 end .

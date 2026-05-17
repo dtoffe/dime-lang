@@ -45,9 +45,9 @@ type tokenKind =
     tokenSet = set of tokenKind;
     opcode = (lit, opr, lod, sto, cal, int, jmp, jpc); {functions}
     pCodeInstruction = packed record
-                    f: opcode;       {function code}
-                    l: 0..maxNestingLevel;    {level}
-                    a: 0..maxAddress;         {displacement address}
+                    operation: opcode;             {function code}
+                    lexicalLevel: 0..maxNestingLevel;    {level}
+                    argument: 0..maxAddress;             {displacement address}
                   end ;
 {   LIT 0,a  :  load constant a
     OPR 0,a  :  execute operation a
@@ -58,46 +58,46 @@ type tokenKind =
     JMP 0,a  :  jump to a
     JPC 0,a  :  jump conditional to a      }
 
-var ch: char;           {last character read}
-    sym: tokenKind;     {last symbol read}
-    id: identifierText; {last identifier read}
-    num: integer;       {last number read}
-    cc: integer;        {character count}
-    ll: integer;        {line length}
-    kk, err: integer;
-    cx: integer;        {code allocation index}
-    line: array [1..81] of char;
-    a: identifierText;
-    code: array [0..codeMaxIndex] of pCodeInstruction;
-    word: array [1..reservedWordCount] of identifierText;
-    wsym: array [1..reservedWordCount] of tokenKind;
-    mnemonic: array [opcode] of
+var currentChar: char;        {last character read}
+    currentToken: tokenKind;  {last symbol read}
+    currentIdentifier: identifierText; {last identifier read}
+    currentNumber: integer;   {last number read}
+    charIndex: integer;       {character count}
+    lineLength: integer;      {line length}
+    identifierBufferLength, errorCount: integer;
+    codeIndex: integer;       {code allocation index}
+    sourceLine: array [1..81] of char;
+    identifierBuffer: identifierText;
+    pCode: array [0..codeMaxIndex] of pCodeInstruction;
+    reservedWords: array [1..reservedWordCount] of identifierText;
+    reservedWordTokens: array [1..reservedWordCount] of tokenKind;
+    opcodeMnemonics: array [opcode] of
                 packed array [1 .. 5] of char;
-    declbegsys, statbegsys, facbegsys: tokenSet;
-    table: array [0..symbolTableMax] of
-              record name: identifierText;
-                case kind: declarationKind of
-                  constant: (val: integer);
-                  variable, proc: (level, adr: integer)
+    declarationStartTokens, statementStartTokens, factorStartTokens: tokenSet;
+    symbolTable: array [0..symbolTableMax] of
+              record identifier: identifierText;
+                case declarationType: declarationKind of
+                  constant: (constantValue: integer);
+                  variable, proc: (declarationLevel, address: integer)
               end ;
 
-    inputFile, outputFile: Text;
-    inputFileName, outputFileName: string;
-    i: integer;
+    sourceFile, pCodeFile: Text;
+    sourceFileName, pCodeFileName: string;
+    outputInstructionIndex: integer;
 
 procedure cleanExit;
 begin
     writeln;
-    close(inputFile);
-    close(outputFile);
+    close(sourceFile);
+    close(pCodeFile);
     halt
 end {cleanExit} ;
 
-procedure error (n: integer);
+procedure error (errorCode: integer);
 begin
-    writeln (' ****', ' ': cc - 1, '↑', n:2);
-    err := err + 1;
-    case n of 
+    writeln (' ****', ' ': charIndex - 1, '↑', errorCode:2);
+    errorCount := errorCount + 1;
+    case errorCode of
          1: writeln (' Use = instead of :=.');
          2: writeln (' = must be followed by a number.');
          3: writeln (' Identifier must be followed by =.');
@@ -130,274 +130,275 @@ begin
 end {error} ;
 
 procedure getsym;
-    var i, j, k: integer;
+    var reservedWordLow, reservedWordHigh, reservedWordIndex: integer;
+        identifierCharCount, digitCount: integer;
 
     procedure getch;
     begin
-        if cc = ll then
+        if charIndex = lineLength then
         begin
-            if eof(inputfile) then
+            if eof(sourceFile) then
             begin
                 write(' PROGRAM INCOMPLETE');
                 cleanExit() { goto 99 }
             end ;
-            ll := 0;
-            cc := 0;
-            write(cx:5, ' ');
-            while not eoln(inputFile) do
+            lineLength := 0;
+            charIndex := 0;
+            write(codeIndex:5, ' ');
+            while not eoln(sourceFile) do
             begin
-                ll := ll + 1;
-                read(inputFile, ch);
-                //write(ch);
-                line[ll] := ch
+                lineLength := lineLength + 1;
+                read(sourceFile, currentChar);
+                //write(currentChar);
+                sourceLine[lineLength] := currentChar
             end ;
             writeln;
-            ll := ll + 1;
-            read(inputFile, line[ll])
+            lineLength := lineLength + 1;
+            read(sourceFile, sourceLine[lineLength])
         end ;
-        cc := cc + 1;
-        ch := line[cc]
+        charIndex := charIndex + 1;
+        currentChar := sourceLine[charIndex]
      end {getch} ;
 
 begin {getsym}
-    while (ch = ' ') or (ch = chr(10)) or (ch = chr(13)) do
+    while (currentChar = ' ') or (currentChar = chr(10)) or (currentChar = chr(13)) do
         getch;
-    if ch in ['A'..'Z', 'a'..'z'] then
+    if currentChar in ['A'..'Z', 'a'..'z'] then
     begin {identifier or reserved word}
-        k := 0;
+        identifierCharCount := 0;
         repeat
-            if k < identifierLength then
+            if identifierCharCount < identifierLength then
             begin
-                k := k + 1;
-                a[k] := ch
+                identifierCharCount := identifierCharCount + 1;
+                identifierBuffer[identifierCharCount] := currentChar
             end ;
             getch
-        until not (ch in ['A'..'Z', 'a'..'z', '0'..'9']);
-        if k >= kk then
-            kk := k
+        until not (currentChar in ['A'..'Z', 'a'..'z', '0'..'9']);
+        if identifierCharCount >= identifierBufferLength then
+            identifierBufferLength := identifierCharCount
         else
             repeat
-                a[kk] := ' ';
-                kk := kk - 1
-            until kk = k;
-        id := a;
-        i := 1;
-        j := reservedWordCount;
+                identifierBuffer[identifierBufferLength] := ' ';
+                identifierBufferLength := identifierBufferLength - 1
+            until identifierBufferLength = identifierCharCount;
+        currentIdentifier := identifierBuffer;
+        reservedWordLow := 1;
+        reservedWordHigh := reservedWordCount;
         repeat
-            k := (i + j) div 2;
-            if id <= word[k] then
-                j := k - 1;
-            if id >= word[k] then
-                i := k + 1
-        until i > j;
-        if i-1 > j then
-            sym := wsym[k]
+            reservedWordIndex := (reservedWordLow + reservedWordHigh) div 2;
+            if currentIdentifier <= reservedWords[reservedWordIndex] then
+                reservedWordHigh := reservedWordIndex - 1;
+            if currentIdentifier >= reservedWords[reservedWordIndex] then
+                reservedWordLow := reservedWordIndex + 1
+        until reservedWordLow > reservedWordHigh;
+        if reservedWordLow-1 > reservedWordHigh then
+            currentToken := reservedWordTokens[reservedWordIndex]
         else
-            sym := ident
+            currentToken := ident
     end
     else
-    if ch in ['0'..'9'] then
+    if currentChar in ['0'..'9'] then
     begin {number}
-        k := 0;
-        num := 0;
-        sym := number;
+        digitCount := 0;
+        currentNumber := 0;
+        currentToken := number;
         repeat
-            num := 10 * num + (ord(ch) - ord('0'));
-            k := k + 1;
+            currentNumber := 10 * currentNumber + (ord(currentChar) - ord('0'));
+            digitCount := digitCount + 1;
             getch
-        until not (ch in ['0'..'9']);
-        if k > numberMaxDigits then
+        until not (currentChar in ['0'..'9']);
+        if digitCount > numberMaxDigits then
             error (30)
     end
     else
-        case ch of
+        case currentChar of
             '+':
                 begin
-                    sym := plus;
+                    currentToken := plus;
                     getch
                 end;
             '-':
                 begin
-                    sym := minus;
+                    currentToken := minus;
                     getch
                 end;
             '*':
                 begin
-                    sym := times;
+                    currentToken := times;
                     getch
                 end;
             '/':
                 begin
-                    sym := slash;
+                    currentToken := slash;
                     getch
                 end;
             '(':
                 begin
-                    sym := lparen;
+                    currentToken := lparen;
                     getch
                 end;
             ')':
                 begin
-                    sym := rparen;
+                    currentToken := rparen;
                     getch
                 end;
             '=':
                 begin
-                    sym := eql;
+                    currentToken := eql;
                     getch
                 end;
             ',':
                 begin
-                    sym := comma;
+                    currentToken := comma;
                     getch
                 end;
             '.':
                 begin
-                    sym := period;
+                    currentToken := period;
                     getch
                 end;
             ';':
                 begin
-                    sym := semicolon;
+                    currentToken := semicolon;
                     getch
                 end;
             ':':
                 begin
                     getch;
-                    if ch = '=' then
+                    if currentChar = '=' then
                     begin
-                        sym := becomes;
+                        currentToken := becomes;
                         getch
                     end
                     else
-                        sym := nul;
+                        currentToken := nul;
                 end;
             '<':
                 begin
                     getch;
-                    if ch = '=' then
+                    if currentChar = '=' then
                     begin
-                        sym := leq;
+                        currentToken := leq;
                         getch
                     end
-                    else if ch = '>' then
+                    else if currentChar = '>' then
                     begin
-                        sym := neq;
+                        currentToken := neq;
                         getch
                     end
                     else
-                        sym := lss;
+                        currentToken := lss;
                 end;
             '>':
                 begin
                     getch;
-                    if ch = '=' then
+                    if currentChar = '=' then
                     begin
-                        sym := geq;
+                        currentToken := geq;
                         getch
                     end
                     else
-                        sym := gtr;
+                        currentToken := gtr;
                 end
             else
                 begin
-                    sym := nul;
+                    currentToken := nul;
                     getch
                 end
         end;
     // Following output is added for debugging
-    write(sym, ' ');
-    if sym = ident then
-        writeln(id)
-    else if sym = number then
-        writeln(num)
+    write(currentToken, ' ');
+    if currentToken = ident then
+        writeln(currentIdentifier)
+    else if currentToken = number then
+        writeln(currentNumber)
     else
         writeln
 end {getsym} ;
 
-procedure gen(x: opcode; y, z: integer);
+procedure gen(instructionOpcode: opcode; instructionLevel, instructionArgument: integer);
 begin
-    if cx > codeMaxIndex then
+    if codeIndex > codeMaxIndex then
     begin
         write(' PROGRAM TOO LONG');
         {goto 99}
         cleanExit()
     end ;
-    with code[cx] do
+    with pCode[codeIndex] do
     begin
-        f := x;
-        l := y;
-        a := z
+        operation := instructionOpcode;
+        lexicalLevel := instructionLevel;
+        argument := instructionArgument
     end ;
-    cx := cx + 1
+    codeIndex := codeIndex + 1
 end {gen} ;
 
-procedure test (s1, s2: tokenSet; n: integer);
+procedure test (allowedTokens, recoveryTokens: tokenSet; errorCode: integer);
 begin
-    if not (sym in s1) then
+    if not (currentToken in allowedTokens) then
     begin
-        error(n);
-        s1 := s1 + s2;
-        while not (sym in s1) do
+        error(errorCode);
+        allowedTokens := allowedTokens + recoveryTokens;
+        while not (currentToken in allowedTokens) do
             getsym
     end
 end {test} ;
 
-procedure block (lev, tx: integer; fsys: tokenSet);
-    var dx,             {data allocation index}
-        tx0,            {initial table index}
-        cx0: integer;   {initial code index}
+procedure block (currentLevel, tableIndex: integer; followTokens: tokenSet);
+    var dataAllocationIndex,     {data allocation index}
+        savedTableIndex,         {initial table index}
+        blockCodeStart: integer; {initial code index}
 
-    procedure enter(k: declarationKind);
+    procedure enter(declarationToEnter: declarationKind);
     begin {enter object into table}
-        tx := tx + 1;
-        with table[tx] do
+        tableIndex := tableIndex + 1;
+        with symbolTable[tableIndex] do
         begin
-            name := id;
-            kind := k;
-            case k of
+            identifier := currentIdentifier;
+            declarationType := declarationToEnter;
+            case declarationToEnter of
                 constant:
                     begin
-                        if num > maxAddress then
+                        if currentNumber > maxAddress then
                         begin
                             error (30);
-                            num := 0
+                            currentNumber := 0
                         end ;
-                        val := num
+                        constantValue := currentNumber
                     end ;
                 variable:
                     begin
-                        level := lev;
-                        adr := dx;
-                        dx := dx + 1;
+                        declarationLevel := currentLevel;
+                        address := dataAllocationIndex;
+                        dataAllocationIndex := dataAllocationIndex + 1;
                     end ;
                 proc:
-                    level := lev
+                    declarationLevel := currentLevel
             end
         end
     end {enter} ;
 
-    function position(id: identifierText): integer;
-        var i: integer;
+    function position(identifierToFind: identifierText): integer;
+        var searchIndex: integer;
     begin {find indentifier id in table}
-        table[0].name := id;
-        i := tx;
-        while table[i].name <> id do
-            i := i - 1;
-        position := i
+        symbolTable[0].identifier := identifierToFind;
+        searchIndex := tableIndex;
+        while symbolTable[searchIndex].identifier <> identifierToFind do
+            searchIndex := searchIndex - 1;
+        position := searchIndex
     end { position} ;
 
     procedure constdeclaration;
     begin
-        if sym = ident then
+        if currentToken = ident then
         begin
             getsym;
-            if sym in [eql, becomes] then
+            if currentToken in [eql, becomes] then
             begin
-                if sym = becomes then
+                if currentToken = becomes then
                     error(1);
                 getsym;
-                if sym = number then
+                if currentToken = number then
                 begin
                     enter(constant);
                     getsym
@@ -414,7 +415,7 @@ procedure block (lev, tx: integer; fsys: tokenSet);
 
     procedure vardeclaration;
     begin
-        if sym = ident then
+        if currentToken = ident then
         begin
             enter (variable);
             getsym
@@ -424,73 +425,73 @@ procedure block (lev, tx: integer; fsys: tokenSet);
     end {vardeclaration} ;
 
     procedure listcode;
-        var i: integer;
+        var instructionIndex: integer;
     begin {list code generated for this block}
-        for i := cx0 to cx-1 do
-            with code[i] do
-                writeln(i, mnemonic[f]:5, l:3, a:5);
+        for instructionIndex := blockCodeStart to codeIndex-1 do
+            with pCode[instructionIndex] do
+                writeln(instructionIndex, opcodeMnemonics[operation]:5, lexicalLevel:3, argument:5);
     end {listcode} ;
 
-    procedure statement (fsys: tokenSet);
-        var i, cx1, cx2: integer;
+    procedure statement (followTokens: tokenSet);
+        var symbolIndex, conditionalJumpIndex, loopExitJumpIndex: integer;
 
-        procedure expression(fsys: tokenSet);
-            var addop: tokenKind;
+        procedure expression(followTokens: tokenSet);
+            var additiveOperator: tokenKind;
 
-            procedure term(fsys: tokenSet);
-                var mulop: tokenKind;
+            procedure term(followTokens: tokenSet);
+                var multiplicativeOperator: tokenKind;
 
-                procedure factor (fsys: tokenSet);
-                    var i: integer;
+                procedure factor (followTokens: tokenSet);
+                    var symbolIndex: integer;
                 begin
-                    test(facbegsys, fsys, 24);
-                    while sym in facbegsys do
+                    test(factorStartTokens, followTokens, 24);
+                    while currentToken in factorStartTokens do
                     begin
-                        if sym = ident then
-                        begin i := position(id);
-                            if i = 0 then
+                        if currentToken = ident then
+                        begin symbolIndex := position(currentIdentifier);
+                            if symbolIndex = 0 then
                                 error (11)
                             else
-                                with table[i] do
-                                case kind of
-                                    constant: gen(lit, 0, val);
-                                    variable: gen(lod, lev - level, adr);
+                                with symbolTable[symbolIndex] do
+                                case declarationType of
+                                    constant: gen(lit, 0, constantValue);
+                                    variable: gen(lod, currentLevel - declarationLevel, address);
                                     proc: error (21)
                                 end ;
                                 getsym
                         end
                         else
-                            if sym = number then
+                            if currentToken = number then
                             begin
-                                if num > maxAddress then
+                                if currentNumber > maxAddress then
                                 begin
                                     error (30);
-                                    num := 0
+                                    currentNumber := 0
                                 end ;
-                                gen(lit, 0, num); getsym
+                                gen(lit, 0, currentNumber); getsym
                             end
                             else
-                                if sym = lparen then
+                                if currentToken = lparen then
                                 begin
                                     getsym;
-                                    expression([rparen]+fsys);
-                                    if sym = rparen then
+                                    expression([rparen]+followTokens);
+                                    if currentToken = rparen then
                                         getsym
                                     else
                                         error (22)
                                 end ;
-                        test (fsys, [lparen], 23)
+                        test (followTokens, [lparen], 23)
                     end
                 end { factor} ;
 
             begin {term}
-                factor(fsys+[times, slash]);
-                while sym in [times, slash] do
+                factor(followTokens+[times, slash]);
+                while currentToken in [times, slash] do
                 begin
-                    mulop := sym;
+                    multiplicativeOperator := currentToken;
                     getsym;
-                    factor(fsys+[times, slash]);
-                    if mulop = times then
+                    factor(followTokens+[times, slash]);
+                    if multiplicativeOperator = times then
                         gen(opr, 0, 4)
                     else
                         gen(opr, 0, 5)
@@ -498,48 +499,48 @@ procedure block (lev, tx: integer; fsys: tokenSet);
             end {term} ;
 
         begin {expression}
-            if sym in [plus, minus] then
+            if currentToken in [plus, minus] then
             begin
-                addop := sym;
+                additiveOperator := currentToken;
                 getsym;
-                term(fsys+[plus, minus]);
-                if addop = minus then
+                term(followTokens+[plus, minus]);
+                if additiveOperator = minus then
                     gen(opr,0,1)
             end
             else
-                term(fsys+[plus, minus]);
-            while sym in [plus, minus] do
+                term(followTokens+[plus, minus]);
+            while currentToken in [plus, minus] do
             begin
-                addop := sym;
+                additiveOperator := currentToken;
                 getsym;
-                term(fsys+[plus, minus]);
-                if addop = plus then
+                term(followTokens+[plus, minus]);
+                if additiveOperator = plus then
                     gen(opr,0,2)
                 else
                     gen(opr,0,3)
             end
         end {expression} ;
 
-        procedure condition(fsys: tokenSet);
-            var relop: tokenKind;
+        procedure condition(followTokens: tokenSet);
+            var relationalOperator: tokenKind;
         begin
-            if sym = oddsym then
+            if currentToken = oddsym then
             begin
                 getsym;
-                expression(fsys);
+                expression(followTokens);
                 gen(opr,0,6)
             end
             else
             begin
-                expression([eql, neq, lss, gtr, leq, geq]+fsys);
-                if not (sym in [eql, neq, lss, leq, gtr, geq]) then
+                expression([eql, neq, lss, gtr, leq, geq]+followTokens);
+                if not (currentToken in [eql, neq, lss, leq, gtr, geq]) then
                     error (20)
                 else
                 begin
-                    relop := sym;
+                    relationalOperator := currentToken;
                     getsym;
-                    expression(fsys);
-                    case relop of
+                    expression(followTokens);
+                    case relationalOperator of
                         eql: gen(opr,0, 8);
                         neq: gen(opr,0, 9);
                         lss: gen(opr,0,10);
@@ -552,237 +553,238 @@ procedure block (lev, tx: integer; fsys: tokenSet);
         end {condition} ;
 
     begin {statement}
-        if sym = ident then
+        if currentToken = ident then
         begin
-            i := position(id);
-            if i = 0 then
+            symbolIndex := position(currentIdentifier);
+            if symbolIndex = 0 then
                 error (11)
             else
-                if table[i].kind <> variable then
+                if symbolTable[symbolIndex].declarationType <> variable then
                 begin {assignment to non-variable}
                     error (12);
-                    i := 0
+                    symbolIndex := 0
                 end ;
             getsym;
-            if sym = becomes then
+            if currentToken = becomes then
                 getsym
             else
                 error (13);
-            expression(fsys);
-            if i <> 0 then
-                with table[i] do
-                    gen(sto, lev - level, adr)
+            expression(followTokens);
+            if symbolIndex <> 0 then
+                with symbolTable[symbolIndex] do
+                    gen(sto, currentLevel - declarationLevel, address)
         end
         else
-            if sym = callsym then
+            if currentToken = callsym then
             begin
                 getsym;
-                if sym <> ident then
+                if currentToken <> ident then
                     error (14)
                 else
                 begin
-                    i := position(id);
-                    if i = 0 then
+                    symbolIndex := position(currentIdentifier);
+                    if symbolIndex = 0 then
                         error (11)
                     else
-                        with table[i] do
-                            if kind = proc then
-                                gen (cal, lev-level, adr)
+                        with symbolTable[symbolIndex] do
+                            if declarationType = proc then
+                                gen (cal, currentLevel-declarationLevel, address)
                             else
                                 error (15);
                     getsym
                 end
             end
             else
-                if sym = ifsym then
+                if currentToken = ifsym then
                 begin
                     getsym;
-                    condition([thensym, dosym]+fsys);
-                    if sym = thensym then
+                    condition([thensym, dosym]+followTokens);
+                    if currentToken = thensym then
                         getsym
                     else
                         error (16);
-                    cx1 := cx;
+                    conditionalJumpIndex := codeIndex;
                     gen(jpc,0,0);
-                    statement(fsys);
-                    code[cx1].a := cx
+                    statement(followTokens);
+                    pCode[conditionalJumpIndex].argument := codeIndex
                 end
                 else
-                    if sym = beginsym then
+                    if currentToken = beginsym then
                     begin
                         getsym;
-                        statement([semicolon, endsym]+fsys);
-                        while sym in [semicolon]+statbegsys do
+                        statement([semicolon, endsym]+followTokens);
+                        while currentToken in [semicolon]+statementStartTokens do
                         begin
-                            if sym = semicolon then
+                            if currentToken = semicolon then
                                 getsym
                             else
                                 error (10);
-                            statement([semicolon, endsym]+fsys)
+                            statement([semicolon, endsym]+followTokens)
                         end ;
-                        if sym = endsym then
+                        if currentToken = endsym then
                             getsym
                         else
                             error (17)
                     end
                     else
-                        if sym = whilesym then
+                        if currentToken = whilesym then
                         begin
-                            cx1 := cx;
+                            conditionalJumpIndex := codeIndex;
                             getsym;
-                            condition([dosym]+fsys);
-                            cx2 := cx;
+                            condition([dosym]+followTokens);
+                            loopExitJumpIndex := codeIndex;
                             gen(jpc,0,0);
-                            if sym = dosym then
+                            if currentToken = dosym then
                                 getsym
                             else
                                 error (18);
-                            statement(fsys);
-                            gen(jmp, 0, cx1);
-                            code[cx2].a := cx
+                            statement(followTokens);
+                            gen(jmp, 0, conditionalJumpIndex);
+                            pCode[loopExitJumpIndex].argument := codeIndex
                         end ;
-        test(fsys, [ ], 19)
+        test(followTokens, [ ], 19)
      end {statement} ;
 
 begin {block}
-    dx := 3;
-    tx0 := tx;
-    table[tx].adr := cx;
+    dataAllocationIndex := 3;
+    savedTableIndex := tableIndex;
+    symbolTable[tableIndex].address := codeIndex;
     gen(jmp,0,0);
-    if lev > maxNestingLevel then
+    if currentLevel > maxNestingLevel then
         error (32);
     repeat
-        if sym = constsym then
+        if currentToken = constsym then
         begin
             getsym;
             repeat
                 constdeclaration;
-                while sym = comma do
+                while currentToken = comma do
                 begin
                     getsym;
                     constdeclaration
                 end ;
-                if sym = semicolon then
+                if currentToken = semicolon then
                     getsym
                 else
                     error (5)
-            until sym <> ident
+            until currentToken <> ident
         end ;
-        if sym = varsym then
+        if currentToken = varsym then
         begin
             getsym;
             repeat
                 vardeclaration;
-                while sym = comma do
+                while currentToken = comma do
                 begin
                     getsym;
                     vardeclaration
                 end ;
-                if sym = semicolon then
+                if currentToken = semicolon then
                     getsym
                 else
                     error (5)
-            until sym <> ident;
+            until currentToken <> ident;
         end ;
-        while sym = procsym do
+        while currentToken = procsym do
         begin
             getsym;
-            if sym = ident then
+            if currentToken = ident then
             begin
                 enter(proc);
                 getsym
             end
             else
                 error (4);
-            if sym = semicolon then
+            if currentToken = semicolon then
                 getsym
             else
                 error (5);
-            block(lev+1, tx, [semicolon]+fsys);
-            if sym = semicolon then
+            block(currentLevel+1, tableIndex, [semicolon]+followTokens);
+            if currentToken = semicolon then
             begin
                 getsym;
-                test(statbegsys+[ident, procsym], fsys, 6)
+                test(statementStartTokens+[ident, procsym], followTokens, 6)
             end
             else
                 error (5)
         end ;
-        test(statbegsys+[ident], declbegsys, 7)
-    until not(sym in declbegsys);
-    code[table[tx0].adr].a := cx;
-    with table[tx0] do
+        test(statementStartTokens+[ident], declarationStartTokens, 7)
+    until not(currentToken in declarationStartTokens);
+    pCode[symbolTable[savedTableIndex].address].argument := codeIndex;
+    with symbolTable[savedTableIndex] do
     begin
-        adr := cx; {start adr of code}
+        address := codeIndex; {start adr of code}
     end ;
-    cx0 := cx;
-    gen(int, 0, dx);
-    statement([semicolon, endsym]+fsys);
+    blockCodeStart := codeIndex;
+    gen(int, 0, dataAllocationIndex);
+    statement([semicolon, endsym]+followTokens);
     gen(opr, 0, 0); {return}
-    test(fsys, [ ], 8);
+    test(followTokens, [ ], 8);
     listcode;
 end {block} ;
 
 begin {main program}
-    inputFileName := ParamStr(1);
-    Assign(inputFile, inputFileName);
-    Reset(inputFile);
+    sourceFileName := ParamStr(1);
+    Assign(sourceFile, sourceFileName);
+    Reset(sourceFile);
 
-    outputFileName := ChangeFileExt(inputFileName, '.pcode');
-    //outputFileName := ExtractFileName(outputFileName);
-    Assign(outputFile, outputFileName);
-    Rewrite(outputFile);
+    pCodeFileName := ChangeFileExt(sourceFileName, '.pcode');
+    //pCodeFileName := ExtractFileName(pCodeFileName);
+    Assign(pCodeFile, pCodeFileName);
+    Rewrite(pCodeFile);
     
-    writeln('Processing file: ', inputFileName);
-    word[ 1] := 'begin     ';
-    word[ 2] := 'call      ';
-    word[ 3] := 'const     ';
-    word[ 4] := 'do        ';
-    word[ 5] := 'end       ';
-    word[ 6] := 'if        ';
-    word[ 7] := 'odd       ';
-    word[ 8] := 'procedure ';
-    word[ 9] := 'then      ';
-    word[10] := 'var       ';
-    word[11] := 'while     ';
-    wsym[ 1] := beginsym;
-    wsym[ 2] := callsym;
-    wsym[ 3] := constsym;
-    wsym[ 4] := dosym;
-    wsym[ 5] := endsym;
-    wsym[ 6] := ifsym;
-    wsym[ 7] := oddsym;
-    wsym[ 8] := procsym;
-    wsym[ 9] := thensym;
-    wsym[10] := varsym;
-    wsym[11] := whilesym;
-    mnemonic[lit] := 'LIT  ';
-    mnemonic[opr] := 'OPR  ';
-    mnemonic[lod] := 'LOD  ';
-    mnemonic[sto] := 'STO  ';
-    mnemonic[cal] := 'CAL  ';
-    mnemonic[int] := 'INT  ';
-    mnemonic[jmp] := 'JMP  ';
-    mnemonic[jpc] := 'JPC  ';
-    declbegsys := [constsym, varsym, procsym];
-    statbegsys := [beginsym, callsym, ifsym, whilesym];
-    facbegsys := [ident, number, lparen];
+    writeln('Processing file: ', sourceFileName);
+    reservedWords[ 1] := 'begin     ';
+    reservedWords[ 2] := 'call      ';
+    reservedWords[ 3] := 'const     ';
+    reservedWords[ 4] := 'do        ';
+    reservedWords[ 5] := 'end       ';
+    reservedWords[ 6] := 'if        ';
+    reservedWords[ 7] := 'odd       ';
+    reservedWords[ 8] := 'procedure ';
+    reservedWords[ 9] := 'then      ';
+    reservedWords[10] := 'var       ';
+    reservedWords[11] := 'while     ';
+    reservedWordTokens[ 1] := beginsym;
+    reservedWordTokens[ 2] := callsym;
+    reservedWordTokens[ 3] := constsym;
+    reservedWordTokens[ 4] := dosym;
+    reservedWordTokens[ 5] := endsym;
+    reservedWordTokens[ 6] := ifsym;
+    reservedWordTokens[ 7] := oddsym;
+    reservedWordTokens[ 8] := procsym;
+    reservedWordTokens[ 9] := thensym;
+    reservedWordTokens[10] := varsym;
+    reservedWordTokens[11] := whilesym;
+    opcodeMnemonics[lit] := 'LIT  ';
+    opcodeMnemonics[opr] := 'OPR  ';
+    opcodeMnemonics[lod] := 'LOD  ';
+    opcodeMnemonics[sto] := 'STO  ';
+    opcodeMnemonics[cal] := 'CAL  ';
+    opcodeMnemonics[int] := 'INT  ';
+    opcodeMnemonics[jmp] := 'JMP  ';
+    opcodeMnemonics[jpc] := 'JPC  ';
+    declarationStartTokens := [constsym, varsym, procsym];
+    statementStartTokens := [beginsym, callsym, ifsym, whilesym];
+    factorStartTokens := [ident, number, lparen];
     { page(output);  standard library feature of old Pascals to clear screen }
-    err := 0;
-    cc := 0;
-    cx := 0;
-    ll := 0;
-    ch := ' ';
-    kk := identifierLength;
+    errorCount := 0;
+    charIndex := 0;
+    codeIndex := 0;
+    lineLength := 0;
+    currentChar := ' ';
+    identifierBufferLength := identifierLength;
     getsym;
-    block(0, 0, [period]+declbegsys+statbegsys);
-    if sym <> period then
+    block(0, 0, [period]+declarationStartTokens+statementStartTokens);
+    if currentToken <> period then
         error (9);
-    if err = 0 then
+    if errorCount = 0 then
     begin
         write(' PL/O PROGRAM COMPILED SUCCESSFULLY');
-        for i := 0 to codeMaxIndex do
-            with code[i] do
-                writeln(outputFile, i, mnemonic[f]:5, l:3, a:5);
+        for outputInstructionIndex := 0 to codeMaxIndex do
+            with pCode[outputInstructionIndex] do
+                writeln(pCodeFile, outputInstructionIndex,
+                        opcodeMnemonics[operation]:5, lexicalLevel:3, argument:5);
     end
     else
         write(' ERRORS IN PL/O PROGRAM');
