@@ -35,17 +35,17 @@ const reservedWordCount = 11;    {no. of reserved words}
     maxNestingLevel = 3;         {maximum depth of block nesting}
     codeMaxIndex = 200;          {maximum code array index}
 
-type symbol =
+type tokenKind =
         (nul, ident, number, plus, minus, times, slash, oddsym,
         eql, neq, lss, leq, gtr, geq, lparen, rparen, comma, semicolon,
         period, becomes, beginsym, endsym, ifsym, thensym,
         whilesym, dosym, callsym, constsym, varsym, procsym);
-    alfa = packed array [1 .. identifierLength] of char;
-    objkind = (constant, variable, proc);
-    symset = set of symbol;
-    fct = (lit, opr, lod, sto, cal, int, jmp, jpc); {functions}
-    instruction = packed record
-                    f: fct;          {function code}
+    identifierText = packed array [1 .. identifierLength] of char;
+    declarationKind = (constant, variable, proc);
+    tokenSet = set of tokenKind;
+    opcode = (lit, opr, lod, sto, cal, int, jmp, jpc); {functions}
+    pCodeInstruction = packed record
+                    f: opcode;       {function code}
                     l: 0..maxNestingLevel;    {level}
                     a: 0..maxAddress;         {displacement address}
                   end ;
@@ -59,24 +59,24 @@ type symbol =
     JPC 0,a  :  jump conditional to a      }
 
 var ch: char;           {last character read}
-    sym: symbol;        {last symbol read}
-    id: alfa;           {last identifier read}
+    sym: tokenKind;     {last symbol read}
+    id: identifierText; {last identifier read}
     num: integer;       {last number read}
     cc: integer;        {character count}
     ll: integer;        {line length}
     kk, err: integer;
     cx: integer;        {code allocation index}
     line: array [1..81] of char;
-    a: alfa;
-    code: array [0..codeMaxIndex] of instruction;
-    word: array [1..reservedWordCount] of alfa;
-    wsym: array [1..reservedWordCount] of symbol;
-    mnemonic: array [fct] of
+    a: identifierText;
+    code: array [0..codeMaxIndex] of pCodeInstruction;
+    word: array [1..reservedWordCount] of identifierText;
+    wsym: array [1..reservedWordCount] of tokenKind;
+    mnemonic: array [opcode] of
                 packed array [1 .. 5] of char;
-    declbegsys, statbegsys, facbegsys: symset;
+    declbegsys, statbegsys, facbegsys: tokenSet;
     table: array [0..symbolTableMax] of
-              record name: alfa;
-                case kind: objkind of
+              record name: identifierText;
+                case kind: declarationKind of
                   constant: (val: integer);
                   variable, proc: (level, adr: integer)
               end ;
@@ -315,7 +315,7 @@ begin {getsym}
         writeln
 end {getsym} ;
 
-procedure gen(x: fct; y, z: integer);
+procedure gen(x: opcode; y, z: integer);
 begin
     if cx > codeMaxIndex then
     begin
@@ -332,7 +332,7 @@ begin
     cx := cx + 1
 end {gen} ;
 
-procedure test (s1, s2: symset; n: integer);
+procedure test (s1, s2: tokenSet; n: integer);
 begin
     if not (sym in s1) then
     begin
@@ -343,12 +343,12 @@ begin
     end
 end {test} ;
 
-procedure block (lev, tx: integer; fsys: symset);
+procedure block (lev, tx: integer; fsys: tokenSet);
     var dx,             {data allocation index}
         tx0,            {initial table index}
         cx0: integer;   {initial code index}
 
-    procedure enter(k: objkind);
+    procedure enter(k: declarationKind);
     begin {enter object into table}
         tx := tx + 1;
         with table[tx] do
@@ -377,7 +377,7 @@ procedure block (lev, tx: integer; fsys: symset);
         end
     end {enter} ;
 
-    function position(id: alfa): integer;
+    function position(id: identifierText): integer;
         var i: integer;
     begin {find indentifier id in table}
         table[0].name := id;
@@ -431,16 +431,16 @@ procedure block (lev, tx: integer; fsys: symset);
                 writeln(i, mnemonic[f]:5, l:3, a:5);
     end {listcode} ;
 
-    procedure statement (fsys: symset);
+    procedure statement (fsys: tokenSet);
         var i, cx1, cx2: integer;
 
-        procedure expression(fsys: symset);
-            var addop: symbol;
+        procedure expression(fsys: tokenSet);
+            var addop: tokenKind;
 
-            procedure term(fsys: symset);
-                var mulop: symbol;
+            procedure term(fsys: tokenSet);
+                var mulop: tokenKind;
 
-                procedure factor (fsys: symset);
+                procedure factor (fsys: tokenSet);
                     var i: integer;
                 begin
                     test(facbegsys, fsys, 24);
@@ -520,8 +520,8 @@ procedure block (lev, tx: integer; fsys: symset);
             end
         end {expression} ;
 
-        procedure condition(fsys: symset);
-            var relop: symbol;
+        procedure condition(fsys: tokenSet);
+            var relop: tokenKind;
         begin
             if sym = oddsym then
             begin

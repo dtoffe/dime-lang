@@ -25,9 +25,9 @@ const
     codeMaxIndex = 200;     {maximum code array index}
 
 type
-    fct = (lit, opr, lod, sto, cal, int, jmp, jpc); {functions}
-    instruction = packed record
-                    f: fct;          {function code}
+    opcode = (lit, opr, lod, sto, cal, int, jmp, jpc); {functions}
+    pCodeInstruction = packed record
+                    f: opcode;       {function code}
                     l: 0..maxNestingLevel;    {level}
                     a: 0..maxAddress;         {displacement address}
                   end ;
@@ -41,7 +41,7 @@ type
     JPC 0,a  :  jump conditional to a      }
 
 var 
-    code: array [0..codeMaxIndex] of instruction;
+    code: array [0..codeMaxIndex] of pCodeInstruction;
 
     inputFile: Text;
     inputFileName: string;
@@ -112,7 +112,7 @@ procedure interpret;
 
     const stackMaxSize = 500;
     var p, b, t: integer; {program-, base-, topstack-registers}
-        i: instruction; {instruction register}
+        i: pCodeInstruction; {instruction register}
         s: array [1..stackMaxSize] of integer; {datastore}
 
     function base(l: integer): integer;
