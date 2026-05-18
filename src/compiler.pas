@@ -118,12 +118,12 @@ begin
         16: writeln (' "then" expected. Possible reserved-word case error.');
         17: writeln (' Semicolon or "end" expected. Possible reserved-word case error.');
         18: writeln (' "do" expected. Possible reserved-word case error.');
-        19: writeln (' Incorrect symbol following compileStatement.');
+        19: writeln (' Incorrect symbol following statement.');
         20: writeln (' Relational operator expected.');
         21: writeln (' Expression must not contain a procedure identifier.');
         22: writeln (' Right parenthesis missing.');
         23: writeln (' The preceding compileFactor cannot be followed by this symbol.');
-        24: writeln (' An compileExpression cannot begin with this symbol.');
+        24: writeln (' An expression cannot begin with this symbol.');
         30: writeln (' This number is too large.');
         //31: writeln (' .'); // Not included in code or error messages
         32: writeln (' Only three levels of nesting are supported.')
