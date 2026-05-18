@@ -85,15 +85,17 @@ var currentChar: char;        {last character read}
     sourceFileName, pCodeFileName: string;
     outputInstructionIndex: integer;
 
-procedure cleanExit;
+{Closes the open compiler files and terminates the process.}
+procedure closeFilesAndHalt;
 begin
     writeln;
     close(sourceFile);
     close(pCodeFile);
     halt
-end {cleanExit} ;
+end {closeFilesAndHalt} ;
 
-procedure error (errorCode: integer);
+{Reports a compiler diagnostic and increments the global error count.}
+procedure reportError (errorCode: integer);
 begin
     writeln (' ****', ' ': charIndex - 1, '↑', errorCode:2);
     errorCount := errorCount + 1;
@@ -116,31 +118,33 @@ begin
         16: writeln (' "then" expected. Possible reserved-word case error.');
         17: writeln (' Semicolon or "end" expected. Possible reserved-word case error.');
         18: writeln (' "do" expected. Possible reserved-word case error.');
-        19: writeln (' Incorrect symbol following statement.');
+        19: writeln (' Incorrect symbol following compileStatement.');
         20: writeln (' Relational operator expected.');
         21: writeln (' Expression must not contain a procedure identifier.');
         22: writeln (' Right parenthesis missing.');
-        23: writeln (' The preceding factor cannot be followed by this symbol.');
-        24: writeln (' An expression cannot begin with this symbol.');
+        23: writeln (' The preceding compileFactor cannot be followed by this symbol.');
+        24: writeln (' An compileExpression cannot begin with this symbol.');
         30: writeln (' This number is too large.');
         //31: writeln (' .'); // Not included in code or error messages
         32: writeln (' Only three levels of nesting are supported.')
     end;
-    // cleanExit() { goto 99 }
-end {error} ;
+    // closeFilesAndHalt() { goto 99 }
+end {reportError} ;
 
-procedure getsym;
+{Reads the next lexical token from the source file into the current token state.}
+procedure readNextToken;
     var reservedWordLow, reservedWordHigh, reservedWordIndex: integer;
         identifierCharCount, digitCount: integer;
 
-    procedure getch;
+    {Reads the next source character, loading a new source line when needed.}
+    procedure readNextChar;
     begin
         if charIndex = lineLength then
         begin
             if eof(sourceFile) then
             begin
                 write(' PROGRAM INCOMPLETE');
-                cleanExit() { goto 99 }
+                closeFilesAndHalt() { goto 99 }
             end ;
             lineLength := 0;
             charIndex := 0;
@@ -158,11 +162,11 @@ procedure getsym;
         end ;
         charIndex := charIndex + 1;
         currentChar := sourceLine[charIndex]
-     end {getch} ;
+     end {readNextChar} ;
 
-begin {getsym}
+begin {readNextToken}
     while (currentChar = ' ') or (currentChar = chr(10)) or (currentChar = chr(13)) do
-        getch;
+        readNextChar;
     if currentChar in ['A'..'Z', 'a'..'z'] then
     begin {identifier or reserved word}
         identifierCharCount := 0;
@@ -172,7 +176,7 @@ begin {getsym}
                 identifierCharCount := identifierCharCount + 1;
                 identifierBuffer[identifierCharCount] := currentChar
             end ;
-            getch
+            readNextChar
         until not (currentChar in ['A'..'Z', 'a'..'z', '0'..'9']);
         if identifierCharCount >= identifierBufferLength then
             identifierBufferLength := identifierCharCount
@@ -205,97 +209,97 @@ begin {getsym}
         repeat
             currentNumber := 10 * currentNumber + (ord(currentChar) - ord('0'));
             digitCount := digitCount + 1;
-            getch
+            readNextChar
         until not (currentChar in ['0'..'9']);
         if digitCount > numberMaxDigits then
-            error (30)
+            reportError (30)
     end
     else
         case currentChar of
             '+':
                 begin
                     currentToken := plus;
-                    getch
+                    readNextChar
                 end;
             '-':
                 begin
                     currentToken := minus;
-                    getch
+                    readNextChar
                 end;
             '*':
                 begin
                     currentToken := times;
-                    getch
+                    readNextChar
                 end;
             '/':
                 begin
                     currentToken := slash;
-                    getch
+                    readNextChar
                 end;
             '(':
                 begin
                     currentToken := lparen;
-                    getch
+                    readNextChar
                 end;
             ')':
                 begin
                     currentToken := rparen;
-                    getch
+                    readNextChar
                 end;
             '=':
                 begin
                     currentToken := eql;
-                    getch
+                    readNextChar
                 end;
             ',':
                 begin
                     currentToken := comma;
-                    getch
+                    readNextChar
                 end;
             '.':
                 begin
                     currentToken := period;
-                    getch
+                    readNextChar
                 end;
             ';':
                 begin
                     currentToken := semicolon;
-                    getch
+                    readNextChar
                 end;
             ':':
                 begin
-                    getch;
+                    readNextChar;
                     if currentChar = '=' then
                     begin
                         currentToken := becomes;
-                        getch
+                        readNextChar
                     end
                     else
                         currentToken := nul;
                 end;
             '<':
                 begin
-                    getch;
+                    readNextChar;
                     if currentChar = '=' then
                     begin
                         currentToken := leq;
-                        getch
+                        readNextChar
                     end
                     else if currentChar = '>' then
                     begin
                         currentToken := neq;
-                        getch
+                        readNextChar
                     end
                     else
                         currentToken := lss;
                 end;
             '>':
                 begin
-                    getch;
+                    readNextChar;
                     if currentChar = '=' then
                     begin
                         currentToken := geq;
-                        getch
+                        readNextChar
                     end
                     else
                         currentToken := gtr;
@@ -303,7 +307,7 @@ begin {getsym}
             else
                 begin
                     currentToken := nul;
-                    getch
+                    readNextChar
                 end
         end;
     // Following output is added for debugging
@@ -314,15 +318,16 @@ begin {getsym}
         writeln(currentNumber)
     else
         writeln
-end {getsym} ;
+end {readNextToken} ;
 
-procedure gen(instructionOpcode: opcode; instructionLevel, instructionArgument: integer);
+{Appends one p-code instruction to the generated instruction array.}
+procedure emitInstruction(instructionOpcode: opcode; instructionLevel, instructionArgument: integer);
 begin
     if codeIndex > codeMaxIndex then
     begin
         write(' PROGRAM TOO LONG');
         {goto 99}
-        cleanExit()
+        closeFilesAndHalt()
     end ;
     with pCode[codeIndex] do
     begin
@@ -331,26 +336,29 @@ begin
         argument := instructionArgument
     end ;
     codeIndex := codeIndex + 1
-end {gen} ;
+end {emitInstruction} ;
 
-procedure test (allowedTokens, recoveryTokens: tokenSet; errorCode: integer);
+{Reports an unexpected token and skips input until parsing can safely resume.}
+procedure recoverIfUnexpectedToken (allowedTokens, recoveryTokens: tokenSet; errorCode: integer);
 begin
     if not (currentToken in allowedTokens) then
     begin
-        error(errorCode);
+        reportError(errorCode);
         allowedTokens := allowedTokens + recoveryTokens;
         while not (currentToken in allowedTokens) do
-            getsym
+            readNextToken
     end
-end {test} ;
+end {recoverIfUnexpectedToken} ;
 
-procedure block (currentLevel, tableIndex: integer; followTokens: tokenSet);
+{Compiles a PL/0 block, including declarations, nested procedures, and its body.}
+procedure compileBlock (currentLevel, tableIndex: integer; followTokens: tokenSet);
     var dataAllocationIndex,     {data allocation index}
         savedTableIndex,         {initial table index}
         blockCodeStart: integer; {initial code index}
 
-    procedure enter(declarationToEnter: declarationKind);
-    begin {enter object into table}
+    {Adds the current identifier as a constant, variable, or procedure declaration.}
+    procedure enterDeclaration(declarationToEnter: declarationKind);
+    begin {enterDeclaration object into table}
         tableIndex := tableIndex + 1;
         with symbolTable[tableIndex] do
         begin
@@ -361,7 +369,7 @@ procedure block (currentLevel, tableIndex: integer; followTokens: tokenSet);
                     begin
                         if currentNumber > maxAddress then
                         begin
-                            error (30);
+                            reportError (30);
                             currentNumber := 0
                         end ;
                         constantValue := currentNumber
@@ -376,339 +384,348 @@ procedure block (currentLevel, tableIndex: integer; followTokens: tokenSet);
                     declarationLevel := currentLevel
             end
         end
-    end {enter} ;
+    end {enterDeclaration} ;
 
-    function position(identifierToFind: identifierText): integer;
+    {Finds an identifier in the active symbol table, returning zero when absent.}
+    function findSymbol(identifierToFind: identifierText): integer;
         var searchIndex: integer;
     begin {find indentifier id in table}
         symbolTable[0].identifier := identifierToFind;
         searchIndex := tableIndex;
         while symbolTable[searchIndex].identifier <> identifierToFind do
             searchIndex := searchIndex - 1;
-        position := searchIndex
-    end { position} ;
+        findSymbol := searchIndex
+    end { findSymbol} ;
 
-    procedure constdeclaration;
+    {Parses one constant declaration and records it in the symbol table.}
+    procedure parseConstantDeclaration;
     begin
         if currentToken = ident then
         begin
-            getsym;
+            readNextToken;
             if currentToken in [eql, becomes] then
             begin
                 if currentToken = becomes then
-                    error(1);
-                getsym;
+                    reportError(1);
+                readNextToken;
                 if currentToken = number then
                 begin
-                    enter(constant);
-                    getsym
+                    enterDeclaration(constant);
+                    readNextToken
                 end
                 else
-                    error (2)
+                    reportError (2)
             end
             else
-                error (3)
+                reportError (3)
         end
         else
-            error (4)
-    end {constdeclaration} ;
+            reportError (4)
+    end {parseConstantDeclaration} ;
 
-    procedure vardeclaration;
+    {Parses one variable declaration and records its stack address.}
+    procedure parseVariableDeclaration;
     begin
         if currentToken = ident then
         begin
-            enter (variable);
-            getsym
+            enterDeclaration (variable);
+            readNextToken
         end
         else
-            error (4)
-    end {vardeclaration} ;
+            reportError (4)
+    end {parseVariableDeclaration} ;
 
-    procedure listcode;
+    {Writes the p-code instructions generated for the current block.}
+    procedure listGeneratedCode;
         var instructionIndex: integer;
     begin {list code generated for this block}
         for instructionIndex := blockCodeStart to codeIndex-1 do
             with pCode[instructionIndex] do
                 writeln(instructionIndex, opcodeMnemonics[operation]:5, lexicalLevel:3, argument:5);
-    end {listcode} ;
+    end {listGeneratedCode} ;
 
-    procedure statement (followTokens: tokenSet);
+    {Compiles one statement and emits the p-code needed to execute it.}
+    procedure compileStatement (followTokens: tokenSet);
         var symbolIndex, conditionalJumpIndex, loopExitJumpIndex: integer;
 
-        procedure expression(followTokens: tokenSet);
+        {Compiles an expression, including leading signs and additive operators.}
+        procedure compileExpression(followTokens: tokenSet);
             var additiveOperator: tokenKind;
 
-            procedure term(followTokens: tokenSet);
+            {Compiles a term and emits multiplication or division operations.}
+            procedure compileTerm(followTokens: tokenSet);
                 var multiplicativeOperator: tokenKind;
 
-                procedure factor (followTokens: tokenSet);
+                {Compiles a factor such as an identifier, number, or parenthesized expression.}
+                procedure compileFactor (followTokens: tokenSet);
                     var symbolIndex: integer;
                 begin
-                    test(factorStartTokens, followTokens, 24);
+                    recoverIfUnexpectedToken(factorStartTokens, followTokens, 24);
                     while currentToken in factorStartTokens do
                     begin
                         if currentToken = ident then
-                        begin symbolIndex := position(currentIdentifier);
+                        begin symbolIndex := findSymbol(currentIdentifier);
                             if symbolIndex = 0 then
-                                error (11)
+                                reportError (11)
                             else
                                 with symbolTable[symbolIndex] do
                                 case declarationType of
-                                    constant: gen(lit, 0, constantValue);
-                                    variable: gen(lod, currentLevel - declarationLevel, address);
-                                    proc: error (21)
+                                    constant: emitInstruction(lit, 0, constantValue);
+                                    variable: emitInstruction(lod, currentLevel - declarationLevel, address);
+                                    proc: reportError (21)
                                 end ;
-                                getsym
+                                readNextToken
                         end
                         else
                             if currentToken = number then
                             begin
                                 if currentNumber > maxAddress then
                                 begin
-                                    error (30);
+                                    reportError (30);
                                     currentNumber := 0
                                 end ;
-                                gen(lit, 0, currentNumber); getsym
+                                emitInstruction(lit, 0, currentNumber); readNextToken
                             end
                             else
                                 if currentToken = lparen then
                                 begin
-                                    getsym;
-                                    expression([rparen]+followTokens);
+                                    readNextToken;
+                                    compileExpression([rparen]+followTokens);
                                     if currentToken = rparen then
-                                        getsym
+                                        readNextToken
                                     else
-                                        error (22)
+                                        reportError (22)
                                 end ;
-                        test (followTokens, [lparen], 23)
+                        recoverIfUnexpectedToken (followTokens, [lparen], 23)
                     end
-                end { factor} ;
+                end { compileFactor} ;
 
-            begin {term}
-                factor(followTokens+[times, slash]);
+            begin {compileTerm}
+                compileFactor(followTokens+[times, slash]);
                 while currentToken in [times, slash] do
                 begin
                     multiplicativeOperator := currentToken;
-                    getsym;
-                    factor(followTokens+[times, slash]);
+                    readNextToken;
+                    compileFactor(followTokens+[times, slash]);
                     if multiplicativeOperator = times then
-                        gen(opr, 0, 4)
+                        emitInstruction(opr, 0, 4)
                     else
-                        gen(opr, 0, 5)
+                        emitInstruction(opr, 0, 5)
                 end
-            end {term} ;
+            end {compileTerm} ;
 
-        begin {expression}
+        begin {compileExpression}
             if currentToken in [plus, minus] then
             begin
                 additiveOperator := currentToken;
-                getsym;
-                term(followTokens+[plus, minus]);
+                readNextToken;
+                compileTerm(followTokens+[plus, minus]);
                 if additiveOperator = minus then
-                    gen(opr,0,1)
+                    emitInstruction(opr,0,1)
             end
             else
-                term(followTokens+[plus, minus]);
+                compileTerm(followTokens+[plus, minus]);
             while currentToken in [plus, minus] do
             begin
                 additiveOperator := currentToken;
-                getsym;
-                term(followTokens+[plus, minus]);
+                readNextToken;
+                compileTerm(followTokens+[plus, minus]);
                 if additiveOperator = plus then
-                    gen(opr,0,2)
+                    emitInstruction(opr,0,2)
                 else
-                    gen(opr,0,3)
+                    emitInstruction(opr,0,3)
             end
-        end {expression} ;
+        end {compileExpression} ;
 
-        procedure condition(followTokens: tokenSet);
+        {Compiles a boolean condition and emits the comparison operation.}
+        procedure compileCondition(followTokens: tokenSet);
             var relationalOperator: tokenKind;
         begin
             if currentToken = oddsym then
             begin
-                getsym;
-                expression(followTokens);
-                gen(opr,0,6)
+                readNextToken;
+                compileExpression(followTokens);
+                emitInstruction(opr,0,6)
             end
             else
             begin
-                expression([eql, neq, lss, gtr, leq, geq]+followTokens);
+                compileExpression([eql, neq, lss, gtr, leq, geq]+followTokens);
                 if not (currentToken in [eql, neq, lss, leq, gtr, geq]) then
-                    error (20)
+                    reportError (20)
                 else
                 begin
                     relationalOperator := currentToken;
-                    getsym;
-                    expression(followTokens);
+                    readNextToken;
+                    compileExpression(followTokens);
                     case relationalOperator of
-                        eql: gen(opr,0, 8);
-                        neq: gen(opr,0, 9);
-                        lss: gen(opr,0,10);
-                        geq: gen(opr,0,11);
-                        gtr: gen(opr,0,12);
-                        leq: gen(opr,0,13);
+                        eql: emitInstruction(opr,0, 8);
+                        neq: emitInstruction(opr,0, 9);
+                        lss: emitInstruction(opr,0,10);
+                        geq: emitInstruction(opr,0,11);
+                        gtr: emitInstruction(opr,0,12);
+                        leq: emitInstruction(opr,0,13);
                     end
                 end
             end
-        end {condition} ;
+        end {compileCondition} ;
 
-    begin {statement}
+    begin {compileStatement}
         if currentToken = ident then
         begin
-            symbolIndex := position(currentIdentifier);
+            symbolIndex := findSymbol(currentIdentifier);
             if symbolIndex = 0 then
-                error (11)
+                reportError (11)
             else
                 if symbolTable[symbolIndex].declarationType <> variable then
                 begin {assignment to non-variable}
-                    error (12);
+                    reportError (12);
                     symbolIndex := 0
                 end ;
-            getsym;
+            readNextToken;
             if currentToken = becomes then
-                getsym
+                readNextToken
             else
-                error (13);
-            expression(followTokens);
+                reportError (13);
+            compileExpression(followTokens);
             if symbolIndex <> 0 then
                 with symbolTable[symbolIndex] do
-                    gen(sto, currentLevel - declarationLevel, address)
+                    emitInstruction(sto, currentLevel - declarationLevel, address)
         end
         else
             if currentToken = callsym then
             begin
-                getsym;
+                readNextToken;
                 if currentToken <> ident then
-                    error (14)
+                    reportError (14)
                 else
                 begin
-                    symbolIndex := position(currentIdentifier);
+                    symbolIndex := findSymbol(currentIdentifier);
                     if symbolIndex = 0 then
-                        error (11)
+                        reportError (11)
                     else
                         with symbolTable[symbolIndex] do
                             if declarationType = proc then
-                                gen (cal, currentLevel-declarationLevel, address)
+                                emitInstruction (cal, currentLevel-declarationLevel, address)
                             else
-                                error (15);
-                    getsym
+                                reportError (15);
+                    readNextToken
                 end
             end
             else
                 if currentToken = ifsym then
                 begin
-                    getsym;
-                    condition([thensym, dosym]+followTokens);
+                    readNextToken;
+                    compileCondition([thensym, dosym]+followTokens);
                     if currentToken = thensym then
-                        getsym
+                        readNextToken
                     else
-                        error (16);
+                        reportError (16);
                     conditionalJumpIndex := codeIndex;
-                    gen(jpc,0,0);
-                    statement(followTokens);
+                    emitInstruction(jpc,0,0);
+                    compileStatement(followTokens);
                     pCode[conditionalJumpIndex].argument := codeIndex
                 end
                 else
                     if currentToken = beginsym then
                     begin
-                        getsym;
-                        statement([semicolon, endsym]+followTokens);
+                        readNextToken;
+                        compileStatement([semicolon, endsym]+followTokens);
                         while currentToken in [semicolon]+statementStartTokens do
                         begin
                             if currentToken = semicolon then
-                                getsym
+                                readNextToken
                             else
-                                error (10);
-                            statement([semicolon, endsym]+followTokens)
+                                reportError (10);
+                            compileStatement([semicolon, endsym]+followTokens)
                         end ;
                         if currentToken = endsym then
-                            getsym
+                            readNextToken
                         else
-                            error (17)
+                            reportError (17)
                     end
                     else
                         if currentToken = whilesym then
                         begin
                             conditionalJumpIndex := codeIndex;
-                            getsym;
-                            condition([dosym]+followTokens);
+                            readNextToken;
+                            compileCondition([dosym]+followTokens);
                             loopExitJumpIndex := codeIndex;
-                            gen(jpc,0,0);
+                            emitInstruction(jpc,0,0);
                             if currentToken = dosym then
-                                getsym
+                                readNextToken
                             else
-                                error (18);
-                            statement(followTokens);
-                            gen(jmp, 0, conditionalJumpIndex);
+                                reportError (18);
+                            compileStatement(followTokens);
+                            emitInstruction(jmp, 0, conditionalJumpIndex);
                             pCode[loopExitJumpIndex].argument := codeIndex
                         end ;
-        test(followTokens, [ ], 19)
-     end {statement} ;
+        recoverIfUnexpectedToken(followTokens, [ ], 19)
+     end {compileStatement} ;
 
-begin {block}
+begin {compileBlock}
     dataAllocationIndex := 3;
     savedTableIndex := tableIndex;
     symbolTable[tableIndex].address := codeIndex;
-    gen(jmp,0,0);
+    emitInstruction(jmp,0,0);
     if currentLevel > maxNestingLevel then
-        error (32);
+        reportError (32);
     repeat
         if currentToken = constsym then
         begin
-            getsym;
+            readNextToken;
             repeat
-                constdeclaration;
+                parseConstantDeclaration;
                 while currentToken = comma do
                 begin
-                    getsym;
-                    constdeclaration
+                    readNextToken;
+                    parseConstantDeclaration
                 end ;
                 if currentToken = semicolon then
-                    getsym
+                    readNextToken
                 else
-                    error (5)
+                    reportError (5)
             until currentToken <> ident
         end ;
         if currentToken = varsym then
         begin
-            getsym;
+            readNextToken;
             repeat
-                vardeclaration;
+                parseVariableDeclaration;
                 while currentToken = comma do
                 begin
-                    getsym;
-                    vardeclaration
+                    readNextToken;
+                    parseVariableDeclaration
                 end ;
                 if currentToken = semicolon then
-                    getsym
+                    readNextToken
                 else
-                    error (5)
+                    reportError (5)
             until currentToken <> ident;
         end ;
         while currentToken = procsym do
         begin
-            getsym;
+            readNextToken;
             if currentToken = ident then
             begin
-                enter(proc);
-                getsym
+                enterDeclaration(proc);
+                readNextToken
             end
             else
-                error (4);
+                reportError (4);
             if currentToken = semicolon then
-                getsym
+                readNextToken
             else
-                error (5);
-            block(currentLevel+1, tableIndex, [semicolon]+followTokens);
+                reportError (5);
+            compileBlock(currentLevel+1, tableIndex, [semicolon]+followTokens);
             if currentToken = semicolon then
             begin
-                getsym;
-                test(statementStartTokens+[ident, procsym], followTokens, 6)
+                readNextToken;
+                recoverIfUnexpectedToken(statementStartTokens+[ident, procsym], followTokens, 6)
             end
             else
-                error (5)
+                reportError (5)
         end ;
-        test(statementStartTokens+[ident], declarationStartTokens, 7)
+        recoverIfUnexpectedToken(statementStartTokens+[ident], declarationStartTokens, 7)
     until not(currentToken in declarationStartTokens);
     pCode[symbolTable[savedTableIndex].address].argument := codeIndex;
     with symbolTable[savedTableIndex] do
@@ -716,12 +733,12 @@ begin {block}
         address := codeIndex; {start adr of code}
     end ;
     blockCodeStart := codeIndex;
-    gen(int, 0, dataAllocationIndex);
-    statement([semicolon, endsym]+followTokens);
-    gen(opr, 0, 0); {return}
-    test(followTokens, [ ], 8);
-    listcode;
-end {block} ;
+    emitInstruction(int, 0, dataAllocationIndex);
+    compileStatement([semicolon, endsym]+followTokens);
+    emitInstruction(opr, 0, 0); {return}
+    recoverIfUnexpectedToken(followTokens, [ ], 8);
+    listGeneratedCode;
+end {compileBlock} ;
 
 begin {main program}
     sourceFileName := ParamStr(1);
@@ -774,10 +791,10 @@ begin {main program}
     lineLength := 0;
     currentChar := ' ';
     identifierBufferLength := identifierLength;
-    getsym;
-    block(0, 0, [period]+declarationStartTokens+statementStartTokens);
+    readNextToken;
+    compileBlock(0, 0, [period]+declarationStartTokens+statementStartTokens);
     if currentToken <> period then
-        error (9);
+        reportError (9);
     if errorCount = 0 then
     begin
         write(' PL/O PROGRAM COMPILED SUCCESSFULLY');
@@ -789,5 +806,5 @@ begin {main program}
     else
         write(' ERRORS IN PL/O PROGRAM');
     {99: writeln}
-    cleanExit()
+    closeFilesAndHalt()
 end .

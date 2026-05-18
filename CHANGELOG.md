@@ -15,6 +15,7 @@ and this project is expected to follow [Semantic Versioning](https://semver.org/
 
 ### Changed
 
+- Renamed all compact procedure names to more readable names, added comments in the procedure headers.
 - Split variables names when a variable was used for two different purposes.
 - Renamed all compact variable names to more readable names.
 - Renamed all compact type names to more readable names.

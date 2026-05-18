@@ -46,7 +46,8 @@ var
     pCodeFile: Text;
     pCodeFileName: string;
 
-procedure readCode;
+{Loads p-code instructions from the input file into memory.}
+procedure loadPCodeFile;
 
 var
     pCodeLine: string;
@@ -110,14 +111,16 @@ writeln(opcodeText, ' ', lexicalLevelText, ' ', argumentText);
 
 end;
 
-procedure interpret;
+{Executes the loaded p-code program on the stack-based PL/0 virtual machine.}
+procedure executePCode;
 
     const stackMaxSize = 500;
     var programCounter, basePointer, stackTop: integer; {program-, base-, topstack-registers}
         instructionRegister: pCodeInstruction; {instruction register}
         runtimeStack: array [1..stackMaxSize] of integer; {datastore}
 
-    function base(lexicalLevelsOutward: integer): integer;
+    {Finds the base pointer for an enclosing lexical scope.}
+    function findBase(lexicalLevelsOutward: integer): integer;
         var enclosingBasePointer: integer;
     begin enclosingBasePointer := basePointer; {find base l levels down}
         while lexicalLevelsOutward > 0 do
@@ -125,8 +128,8 @@ procedure interpret;
                 enclosingBasePointer := runtimeStack[enclosingBasePointer];
                 lexicalLevelsOutward := lexicalLevelsOutward - 1
             end ;
-        base := enclosingBasePointer
-     end {base} ;
+        findBase := enclosingBasePointer
+     end {findBase} ;
 
 begin writeln(' START PL/0');
     stackTop := 0; basePointer := 1; programCounter := 0;
@@ -180,15 +183,15 @@ begin writeln(' START PL/0');
                     end ;
                 end ;
             lod: begin stackTop := stackTop+1;
-                    runtimeStack[stackTop] := runtimeStack[base(lexicalLevel)+argument]
+                    runtimeStack[stackTop] := runtimeStack[findBase(lexicalLevel)+argument]
                  end ;
             sto: begin
-                    runtimeStack[base(lexicalLevel)+argument] := runtimeStack[stackTop];
+                    runtimeStack[findBase(lexicalLevel)+argument] := runtimeStack[stackTop];
                     writeln(runtimeStack[stackTop]);
                     stackTop := stackTop-1
                  end ;
             cal: begin {generate new block mark}
-                    runtimeStack[stackTop+1] := base(lexicalLevel);
+                    runtimeStack[stackTop+1] := findBase(lexicalLevel);
                     runtimeStack[stackTop+2] := basePointer;
                     runtimeStack[stackTop+3] := programCounter;
                     basePointer := stackTop+1;
@@ -204,12 +207,12 @@ begin writeln(' START PL/0');
         end {with, case}
     until programCounter = 0;
     write(' END PL/0');
-end {interpret} ;
+end {executePCode} ;
 
 begin {main program}
     pCodeFileName := ParamStr(1);
     Assign(pCodeFile, pCodeFileName);
     Reset(pCodeFile);
-    readCode();
-    interpret();
+    loadPCodeFile();
+    executePCode();
 end .
