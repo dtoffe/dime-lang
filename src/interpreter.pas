@@ -27,9 +27,9 @@ const
 type
     opcode = (lit, opr, lod, sto, cal, int, jmp, jpc); {functions}
     pCodeInstruction = packed record
-                    operation: opcode;             {function code}
-                    lexicalLevel: 0..maxNestingLevel;    {level}
-                    argument: 0..maxAddress;             {displacement address}
+                    operation: opcode;                  {virtual machine opcode}
+                    lexicalLevel: 0..maxNestingLevel;   {static-link distance}
+                    argument: 0..maxAddress;            {opcode-specific operand}
                   end ;
 {   LIT 0,a  :  load constant a
     OPR 0,a  :  execute operation a
@@ -41,7 +41,7 @@ type
     JPC 0,a  :  jump conditional to a      }
 
 var 
-    pCode: array [0..codeMaxIndex] of pCodeInstruction;
+    pCode: array [0..codeMaxIndex] of pCodeInstruction; {loaded p-code image}
 
     pCodeFile: Text;
     pCodeFileName: string;
@@ -53,32 +53,32 @@ var
     pCodeLine: string;
     instructionIndex, conversionStatus: Integer;
     opcodeText, lexicalLevelText, argumentText: string;
-    lineIndexWidth: Integer;
+    lineIndexWidth: Integer; {width of the leading decimal instruction index}
 
 begin
     instructionIndex := 0;
     while not EOF(pCodeFile) and (instructionIndex < codeMaxIndex) do
     begin
-        // Read one line from the file
+        {Read one fixed-width listing line from the compiler output.}
         readln(pCodeFile, pCodeLine);
 
         if (pCodeLine = '') or (pCodeLine = ' ') then
             continue;
 
-        // Extract the index first (up to the first non-digit)
+        {Skip the decimal instruction number prefix before the opcode columns.}
         lineIndexWidth := 0;
         while (lineIndexWidth < length(pCodeLine)) and
               (pCodeLine[lineIndexWidth+1] >= '0') and
               (pCodeLine[lineIndexWidth+1] <= '9') do
             lineIndexWidth := lineIndexWidth + 1;
 
-        // Extract the f, l, and a values based on their fixed widths
+        {The compiler writes opcode, lexical level, and argument in fixed columns.}
         opcodeText := copy(pCodeLine, lineIndexWidth + 1, 5);
         lexicalLevelText := copy(pCodeLine, lineIndexWidth + 1 + 5, 3);
         argumentText := copy(pCodeLine, lineIndexWidth + 1 + 5 + 3, 5);
 
 writeln(opcodeText, ' ', lexicalLevelText, ' ', argumentText);
-        // Convert the extracted strings to integers
+        {Decode the mnemonic and numeric operands into the in-memory instruction record.}
         case opcodeText of
             'LIT  ' : pCode[instructionIndex].operation := lit;
             'OPR  ' : pCode[instructionIndex].operation := opr;
@@ -98,12 +98,12 @@ writeln(opcodeText, ' ', lexicalLevelText, ' ', argumentText);
         if conversionStatus <> 0 then
             writeln('Error converting a-value');
 
-        // Increment the counter for the next record
+        {Advance to the next instruction slot.}
         instructionIndex := instructionIndex + 1;
 
     end;
 
-    // Close the file
+    {The full p-code listing has now been consumed.}
     Close(pCodeFile);
 
     writeln('Reading complete.');
@@ -115,14 +115,14 @@ end;
 procedure executePCode;
 
     const stackMaxSize = 500;
-    var programCounter, basePointer, stackTop: integer; {program-, base-, topstack-registers}
-        instructionRegister: pCodeInstruction; {instruction register}
-        runtimeStack: array [1..stackMaxSize] of integer; {datastore}
+    var programCounter, basePointer, stackTop: integer; {PC, base pointer, and top-of-stack index}
+        instructionRegister: pCodeInstruction; {instruction currently being executed}
+        runtimeStack: array [1..stackMaxSize] of integer; {shared operand stack and activation records}
 
     {Finds the base pointer for an enclosing lexical scope.}
     function findBase(lexicalLevelsOutward: integer): integer;
         var enclosingBasePointer: integer;
-    begin enclosingBasePointer := basePointer; {find base l levels down}
+    begin enclosingBasePointer := basePointer; {follow static links outward from the current frame}
         while lexicalLevelsOutward > 0 do
             begin
                 enclosingBasePointer := runtimeStack[enclosingBasePointer];
@@ -134,6 +134,7 @@ procedure executePCode;
 begin writeln(' START PL/0');
     stackTop := 0; basePointer := 1; programCounter := 0;
     runtimeStack[1] := 0; runtimeStack[2] := 0; runtimeStack[3] := 0;
+    {Frame layout: static link, dynamic link, return address.}
     repeat
         instructionRegister := pCode[programCounter];
         writeln(instructionRegister.operation, ' ', instructionRegister.lexicalLevel,
@@ -144,7 +145,7 @@ begin writeln(' START PL/0');
             lit: begin stackTop := stackTop+1; runtimeStack[stackTop] := argument
                  end ;
             opr: case argument of {operator}
-                 0: begin {return}
+                 0: begin {return from the current procedure activation}
                         stackTop := basePointer-1;
                         programCounter := runtimeStack[stackTop+3];
                         basePointer := runtimeStack[stackTop+2]
@@ -190,7 +191,7 @@ begin writeln(' START PL/0');
                     writeln(runtimeStack[stackTop]);
                     stackTop := stackTop-1
                  end ;
-            cal: begin {generate new block mark}
+            cal: begin {build a new activation record and jump to the callee}
                     runtimeStack[stackTop+1] := findBase(lexicalLevel);
                     runtimeStack[stackTop+2] := basePointer;
                     runtimeStack[stackTop+3] := programCounter;

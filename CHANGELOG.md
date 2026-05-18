@@ -9,7 +9,8 @@ and this project is expected to follow [Semantic Versioning](https://semver.org/
 
 ### Added
 
-- Added pcode machine documentation
+- Added more comments in compiler and interpreter code.
+- Added pcode machine documentation.
 - Added basic project files (`CHANGELOG.md`, `ROADMAP.md`, `RELEASING.md` ).
 - Initial PL/0 source code and examples.
 - Initial project scaffolding and repository housekeeping.

@@ -45,9 +45,9 @@ type tokenKind =
     tokenSet = set of tokenKind;
     opcode = (lit, opr, lod, sto, cal, int, jmp, jpc); {functions}
     pCodeInstruction = packed record
-                    operation: opcode;             {function code}
-                    lexicalLevel: 0..maxNestingLevel;    {level}
-                    argument: 0..maxAddress;             {displacement address}
+                    operation: opcode;                  {virtual machine opcode}
+                    lexicalLevel: 0..maxNestingLevel;   {static-link distance}
+                    argument: 0..maxAddress;            {opcode-specific operand}
                   end ;
 {   LIT 0,a  :  load constant a
     OPR 0,a  :  execute operation a
@@ -58,32 +58,33 @@ type tokenKind =
     JMP 0,a  :  jump to a
     JPC 0,a  :  jump conditional to a      }
 
-var currentChar: char;        {last character read}
-    currentToken: tokenKind;  {last symbol read}
-    currentIdentifier: identifierText; {last identifier read}
-    currentNumber: integer;   {last number read}
-    charIndex: integer;       {character count}
-    lineLength: integer;      {line length}
+var currentChar: char;        {current source character}
+    currentToken: tokenKind;  {current token produced by the lexer}
+    currentIdentifier: identifierText; {identifier text for currentToken = ident}
+    currentNumber: integer;   {numeric value for currentToken = number}
+    charIndex: integer;       {1-based cursor into sourceLine}
+    lineLength: integer;      {number of valid characters in sourceLine}
     identifierBufferLength, errorCount: integer;
-    codeIndex: integer;       {code allocation index}
-    sourceLine: array [1..81] of char;
-    identifierBuffer: identifierText;
-    pCode: array [0..codeMaxIndex] of pCodeInstruction;
-    reservedWords: array [1..reservedWordCount] of identifierText;
-    reservedWordTokens: array [1..reservedWordCount] of tokenKind;
+    codeIndex: integer;       {index of the next instruction to emit}
+    sourceLine: array [1..81] of char; {current source line plus trailing newline}
+    identifierBuffer: identifierText;  {scratch buffer used while reading identifiers}
+    pCode: array [0..codeMaxIndex] of pCodeInstruction; {generated program image}
+    reservedWords: array [1..reservedWordCount] of identifierText; {sorted for binary search}
+    reservedWordTokens: array [1..reservedWordCount] of tokenKind; {token for each reserved word}
     opcodeMnemonics: array [opcode] of
-                packed array [1 .. 5] of char;
+                packed array [1 .. 5] of char; {fixed-width listing/output text}
     declarationStartTokens, statementStartTokens, factorStartTokens: tokenSet;
     symbolTable: array [0..symbolTableMax] of
-              record identifier: identifierText;
+              record identifier: identifierText; {sentinel slot 0 is used by findSymbol}
                 case declarationType: declarationKind of
                   constant: (constantValue: integer);
                   variable, proc: (declarationLevel, address: integer)
+                  {for variables, address is the stack slot; for procedures, the entry point}
               end ;
 
     sourceFile, pCodeFile: Text;
     sourceFileName, pCodeFileName: string;
-    outputInstructionIndex: integer;
+    outputInstructionIndex: integer; {used when flushing generated code to disk}
 
 {Closes the open compiler files and terminates the process.}
 procedure closeFilesAndHalt;
@@ -136,7 +137,7 @@ procedure readNextToken;
     var reservedWordLow, reservedWordHigh, reservedWordIndex: integer;
         identifierCharCount, digitCount: integer;
 
-    {Reads the next source character, loading a new source line when needed.}
+    {Reads the next source character, reloading sourceLine when the cursor reaches its end.}
     procedure readNextChar;
     begin
         if charIndex = lineLength then
@@ -310,7 +311,7 @@ begin {readNextToken}
                     readNextChar
                 end
         end;
-    // Following output is added for debugging
+    {Echo the lexer stream to stdout for trace/debug output.}
     write(currentToken, ' ');
     if currentToken = ident then
         writeln(currentIdentifier)
@@ -352,9 +353,9 @@ end {recoverIfUnexpectedToken} ;
 
 {Compiles a PL/0 block, including declarations, nested procedures, and its body.}
 procedure compileBlock (currentLevel, tableIndex: integer; followTokens: tokenSet);
-    var dataAllocationIndex,     {data allocation index}
-        savedTableIndex,         {initial table index}
-        blockCodeStart: integer; {initial code index}
+    var dataAllocationIndex,     {next local-variable slot; slots 0..2 are the activation record header}
+        savedTableIndex,         {symbol table size on entry so locals can shadow outer names}
+        blockCodeStart: integer; {first emitted instruction that belongs to this block body}
 
     {Adds the current identifier as a constant, variable, or procedure declaration.}
     procedure enterDeclaration(declarationToEnter: declarationKind);
@@ -389,7 +390,7 @@ procedure compileBlock (currentLevel, tableIndex: integer; followTokens: tokenSe
     {Finds an identifier in the active symbol table, returning zero when absent.}
     function findSymbol(identifierToFind: identifierText): integer;
         var searchIndex: integer;
-    begin {find indentifier id in table}
+    begin {find identifier id in table}
         symbolTable[0].identifier := identifierToFind;
         searchIndex := tableIndex;
         while symbolTable[searchIndex].identifier <> identifierToFind do
@@ -663,10 +664,10 @@ procedure compileBlock (currentLevel, tableIndex: integer; followTokens: tokenSe
      end {compileStatement} ;
 
 begin {compileBlock}
-    dataAllocationIndex := 3;
+    dataAllocationIndex := 3; {reserve static link, dynamic link, and return address}
     savedTableIndex := tableIndex;
     symbolTable[tableIndex].address := codeIndex;
-    emitInstruction(jmp,0,0);
+    emitInstruction(jmp,0,0); {skip nested procedure bodies until the block is entered}
     if currentLevel > maxNestingLevel then
         reportError (32);
     repeat
@@ -730,7 +731,7 @@ begin {compileBlock}
     pCode[symbolTable[savedTableIndex].address].argument := codeIndex;
     with symbolTable[savedTableIndex] do
     begin
-        address := codeIndex; {start adr of code}
+        address := codeIndex; {entry point of this block after declarations}
     end ;
     blockCodeStart := codeIndex;
     emitInstruction(int, 0, dataAllocationIndex);
@@ -784,7 +785,7 @@ begin {main program}
     declarationStartTokens := [constsym, varsym, procsym];
     statementStartTokens := [beginsym, callsym, ifsym, whilesym];
     factorStartTokens := [ident, number, lparen];
-    { page(output);  standard library feature of old Pascals to clear screen }
+    {page(output) was used by older Pascals to clear the terminal before compilation output.}
     errorCount := 0;
     charIndex := 0;
     codeIndex := 0;
