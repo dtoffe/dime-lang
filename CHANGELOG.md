@@ -18,6 +18,7 @@ and this project is expected to follow [Semantic Versioning](https://semver.org/
 
 ### Changed
 
+- Update RELEASING.md to reflect the current release plan workflow.
 - Fix empty `begin` .. `end` statements, at least one inner statement is required.
 - Small fixes related to ancient Pascal features (fixed around '↑' character, print only non empty instruction array positions, etc.).
 - Rename all compact procedure names to more readable names, added comments in the procedure headers.
