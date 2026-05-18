@@ -17,6 +17,7 @@ and this project is expected to follow [Semantic Versioning](https://semver.org/
 
 ### Changed
 
+- Small fixes related to ancient Pascal features (removed some old comments, fixed around '↑' character, print only non empty instruction array positions, etc.).
 - Renamed all compact procedure names to more readable names, added comments in the procedure headers.
 - Split variables names when a variable was used for two different purposes.
 - Renamed all compact variable names to more readable names.

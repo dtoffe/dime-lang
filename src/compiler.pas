@@ -17,12 +17,8 @@ the file and executes it.
 This file contains the compiler.
 }
 
-{$modeSwitch nonlocalgoto+}
-
-program compiler {(input,output)};
+program compiler;
 {PL/0 compiler with code generation}
-
-{label 99;}
 
 uses
   SysUtils;
@@ -98,7 +94,7 @@ end {closeFilesAndHalt} ;
 {Reports a compiler diagnostic and increments the global error count.}
 procedure reportError (errorCode: integer);
 begin
-    writeln (' ****', ' ': charIndex - 1, '↑', errorCode:2);
+    writeln (' ****', ' ': charIndex - 1, '^', errorCode:2);
     errorCount := errorCount + 1;
     case errorCode of
          1: writeln (' Use = instead of :=.');
@@ -129,7 +125,6 @@ begin
         //31: writeln (' .'); // Not included in code or error messages
         32: writeln (' Only three levels of nesting are supported.')
     end;
-    // closeFilesAndHalt() { goto 99 }
 end {reportError} ;
 
 {Reads the next lexical token from the source file into the current token state.}
@@ -145,7 +140,7 @@ procedure readNextToken;
             if eof(sourceFile) then
             begin
                 write(' PROGRAM INCOMPLETE');
-                closeFilesAndHalt() { goto 99 }
+                closeFilesAndHalt()
             end ;
             lineLength := 0;
             charIndex := 0;
@@ -154,7 +149,6 @@ procedure readNextToken;
             begin
                 lineLength := lineLength + 1;
                 read(sourceFile, currentChar);
-                //write(currentChar);
                 sourceLine[lineLength] := currentChar
             end ;
             writeln;
@@ -327,7 +321,6 @@ begin
     if codeIndex > codeMaxIndex then
     begin
         write(' PROGRAM TOO LONG');
-        {goto 99}
         closeFilesAndHalt()
     end ;
     with pCode[codeIndex] do
@@ -747,7 +740,6 @@ begin {main program}
     Reset(sourceFile);
 
     pCodeFileName := ChangeFileExt(sourceFileName, '.pcode');
-    //pCodeFileName := ExtractFileName(pCodeFileName);
     Assign(pCodeFile, pCodeFileName);
     Rewrite(pCodeFile);
     
@@ -785,7 +777,6 @@ begin {main program}
     declarationStartTokens := [constsym, varsym, procsym];
     statementStartTokens := [beginsym, callsym, ifsym, whilesym];
     factorStartTokens := [ident, number, lparen];
-    {page(output) was used by older Pascals to clear the terminal before compilation output.}
     errorCount := 0;
     charIndex := 0;
     codeIndex := 0;
@@ -799,13 +790,13 @@ begin {main program}
     if errorCount = 0 then
     begin
         write(' PL/O PROGRAM COMPILED SUCCESSFULLY');
-        for outputInstructionIndex := 0 to codeMaxIndex do
+        for outputInstructionIndex := 0 to codeIndex - 1 do
             with pCode[outputInstructionIndex] do
                 writeln(pCodeFile, outputInstructionIndex,
                         opcodeMnemonics[operation]:5, lexicalLevel:3, argument:5);
     end
     else
         write(' ERRORS IN PL/O PROGRAM');
-    {99: writeln}
     closeFilesAndHalt()
 end .
+

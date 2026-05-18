@@ -19,6 +19,9 @@ This file contains the interpreter.
 
 program interpreter;
 
+uses
+    SysUtils;
+
 const
     maxNestingLevel = 3;    {maximum depth of block nesting}
     maxAddress = 2047;      {maximum address}
@@ -62,7 +65,7 @@ begin
         {Read one fixed-width listing line from the compiler output.}
         readln(pCodeFile, pCodeLine);
 
-        if (pCodeLine = '') or (pCodeLine = ' ') then
+        if Trim(pCodeLine) = '' then
             continue;
 
         {Skip the decimal instruction number prefix before the opcode columns.}
