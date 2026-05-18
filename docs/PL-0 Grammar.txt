@@ -41,6 +41,36 @@
 //
 // In this compiler variant, identifiers may use uppercase and lowercase
 // ASCII letters, but reserved words must be written in lowercase.
+//
+// Note 4:
+// =======
+// This file documents the syntax currently accepted by the compiler in
+// `src/compiler.pas`. It is intentionally descriptive of the present
+// implementation, not of later planned language revisions in the roadmap.
+//
+// Note 5:
+// =======
+// `begin` ... `end` requires at least one inner statement. Empty compound
+// statements such as `begin end` are rejected by the current parser.
+//
+// Note 6:
+// =======
+// Nested procedures are still accepted by the current implementation, even
+// though their removal is planned for a later milestone.
+//
+// Note 7:
+// =======
+// The grammar describes the accepted token sequences, but the compiler also
+// enforces a few implementation limits that are not visible in pure EBNF:
+//
+// - identifiers are stored using at most 10 characters
+// - numeric literals are limited to 14 digits
+// - block nesting is limited to 3 lexical levels
+// - generated p-code is limited to 200 instruction slots
+// - symbol table capacity is limited to 100 entries
+//
+// These are implementation limits of the current compiler, not intended
+// long-term language design commitments.
 
 
 // Syntactical Rules:
@@ -59,6 +89,10 @@ statement = [ ident ":=" expression
             | "if" condition "then" statement 
             | "while" condition "do" statement ] ;
 
+// The outer brackets mean a statement position may be empty in some contexts.
+// This matches the current recursive-descent parser. However, once `begin` is
+// seen, at least one inner statement is required before the matching `end`.
+
 condition = "odd" expression |
             expression ( "=" | "<>" | "<" | "<=" | ">" | ">=" ) expression ;
 
@@ -67,6 +101,10 @@ expression = [ "+" | "-" ] term { ( "+" | "-" ) term } ;
 term = factor { ( "*" | "/" ) factor } ;
 
 factor = ident | number | "(" expression ")" ;
+
+// Procedure identifiers are valid lexical identifiers, but they are not valid
+// expression factors semantically. Using a procedure name in an expression is
+// rejected during compilation.
 
 // Lexical Rules:
 // ==============

@@ -623,6 +623,8 @@ procedure compileBlock (currentLevel, tableIndex: integer; followTokens: tokenSe
                     if currentToken = beginsym then
                     begin
                         readNextToken;
+                        recoverIfUnexpectedToken(statementStartTokens+[ident],
+                                                 [semicolon, endsym]+followTokens, 7);
                         compileStatement([semicolon, endsym]+followTokens);
                         while currentToken in [semicolon]+statementStartTokens do
                         begin
