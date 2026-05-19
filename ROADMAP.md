@@ -66,12 +66,4 @@ This roadmap is intentionally conservative. The goal is to build the project in 
 - Add some better tracing and/or debug machinery to simplify testing and debugging.
 - Add a good handful of additional golden example program, separate them from tests.
 
-### v0.0.1 - Cleanup and Naming
-
-- Rename old 1976-PL/0-era identifiers to clearer names for readability and consistency.
-- Remove obvious code cruft and artificial limitations that do not belong in modern Pascal.
-- Improve comments, datatypes, and code shape where needed, but no new language features.
-- Add pcode machine and codebase documentation.
-- Make sure grammar documentation matches the actual accepted syntax before later refactors begin.
-
 For older releases, see [CHANGELOG.md](./CHANGELOG.md).
