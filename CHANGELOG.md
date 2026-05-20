@@ -7,6 +7,14 @@ and this project is expected to follow [Semantic Versioning](https://semver.org/
 
 ## [Unreleased]
 
+### Added
+
+- Add main compiler program driver.
+
+### Changed
+
+- Extract main program driver from compiler, convert compiler into a unit.
+
 ## [v0.0.2] - 2026-05-20
 
 ### Added

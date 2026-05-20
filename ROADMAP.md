@@ -67,10 +67,4 @@ This roadmap is intentionally conservative. The goal is to build the project in 
 - Establish at least these layers: `lexer`, `parser`, `ast`, `symbol table`, `semantics`, `codegen`, `diagnostics`.
 - Reduce cross-unit global state and make dependencies more explicit for better maintainability.
 
-### v0.0.2 - Small enhancements and better debugging
-
-- Remove support for nested procedures, adjust grammar to reflect that.
-- Add some better tracing and/or debug machinery to simplify testing and debugging.
-- Add a good handful of additional golden example program, separate them from tests.
-
 For older releases, see [CHANGELOG.md](./CHANGELOG.md).

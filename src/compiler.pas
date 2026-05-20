@@ -17,8 +17,14 @@ the file and executes it.
 This file contains the compiler.
 }
 
-program compiler;
+unit compiler;
 {PL/0 compiler with code generation}
+
+interface
+
+procedure compileFile(const inputFileName: string);
+
+implementation
 
 uses
   SysUtils;
@@ -839,8 +845,9 @@ begin {compileBlock}
     listGeneratedCode;
 end {compileBlock} ;
 
-begin {main program}
-    sourceFileName := ParamStr(1);
+procedure compileFile(const inputFileName: string);
+begin
+    sourceFileName := inputFileName;
     Assign(sourceFile, sourceFileName);
     Reset(sourceFile);
 
@@ -903,5 +910,6 @@ begin {main program}
     else
         write(' ERRORS IN PL/O PROGRAM');
     closeFilesAndHalt()
-end .
+end {compileFile} ;
 
+end.
