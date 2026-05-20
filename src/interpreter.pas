@@ -23,7 +23,7 @@ uses
     SysUtils;
 
 const
-    maxNestingLevel = 3;    {maximum depth of block nesting}
+    maxNestingLevel = 1;    {the language has only global and procedure-local lexical scopes}
     maxAddress = 2047;      {maximum address}
     codeMaxIndex = 200;     {maximum code array index}
 
@@ -158,7 +158,9 @@ procedure executePCode;
         instructionRegister: pCodeInstruction; {instruction currently being executed}
         runtimeStack: array [1..stackMaxSize] of integer; {shared operand stack and activation records}
 
-    {Finds the base pointer for an enclosing lexical scope.}
+    {Finds the base pointer for an enclosing lexical scope.
+     The VM still supports walking outward by arbitrary distances as legacy
+     machinery, although the current compiler emits only lexical levels 0 and 1.}
     function findBase(lexicalLevelsOutward: integer): integer;
         var enclosingBasePointer: integer;
     begin enclosingBasePointer := basePointer; {follow static links outward from the current frame}

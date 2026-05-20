@@ -44,9 +44,9 @@
 //
 // Note 4:
 // =======
-// This file documents the syntax currently accepted by the compiler in
-// `src/compiler.pas`. It is intentionally descriptive of the present
-// implementation, not of later planned language revisions in the roadmap.
+// This file documents the intended PL/0-derived surface syntax for Dime at
+// this stage. It is normative for the language design, even when the current
+// compiler implementation is still catching up with it.
 //
 // Note 5:
 // =======
@@ -55,8 +55,8 @@
 //
 // Note 6:
 // =======
-// Nested procedures are still accepted by the current implementation, even
-// though their removal is planned for a later milestone.
+// Procedures may only be declared at global scope. Nested procedure
+// declarations inside procedure bodies are not part of the language.
 //
 // Note 7:
 // =======
@@ -65,7 +65,7 @@
 //
 // - identifiers are stored using at most 10 characters
 // - numeric literals are limited to 14 digits
-// - block nesting is limited to 3 lexical levels
+// - the language has only two lexical scopes: global and procedure-local
 // - generated p-code is limited to 200 instruction slots
 // - symbol table capacity is limited to 100 entries
 //
@@ -76,12 +76,16 @@
 // Syntactical Rules:
 // ==================
 
-program = block "." ;
+program = globalBlock "." ;
 
-block = [ "const" ident "=" number { "," ident "=" number } ";" ]
-        [ "var" ident { "," ident } ";" ]
-        { "procedure" ident ";" block ";" }
-        statement ;
+globalBlock = [ "const" ident "=" number { "," ident "=" number } ";" ]
+              [ "var" ident { "," ident } ";" ]
+              { "procedure" ident ";" procedureBlock ";" }
+              statement ;
+
+procedureBlock = [ "const" ident "=" number { "," ident "=" number } ";" ]
+                 [ "var" ident { "," ident } ";" ]
+                 statement ;
 
 statement = [ ident ":=" expression
             | "call" ident 

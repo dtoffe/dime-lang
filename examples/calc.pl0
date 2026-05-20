@@ -2,32 +2,31 @@ const addop = 1, subop = 2, multop = 3, divop = 4;
 
 var op, x, y, done;
 
+procedure add;
+begin
+    x := x + y
+end;
+
+procedure sub;
+begin
+    x := x - y
+end;
+
+procedure mult;
+var c;
+begin
+    x := x * y
+end;
+
+procedure div;
+begin
+    if y <> 0 then
+        x := x / y;
+    if y = 0 then
+        done := 1
+end;
+
 procedure calculate;
-
-    procedure add;
-    begin
-        x := x + y
-    end;
-
-    procedure sub;
-    begin
-        x := x - y
-    end;
-
-    procedure mult;
-    var c;
-    begin
-        x := x * y
-    end;
-
-    procedure div;
-    begin
-        if y <> 0 then
-            x := x / y;
-        if y = 0 then
-            done := 1
-    end;
-
 begin
     if op = addop then
         call add;

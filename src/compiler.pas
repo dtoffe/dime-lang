@@ -28,7 +28,7 @@ const reservedWordCount = 11;    {no. of reserved words}
     numberMaxDigits = 14;        {max. no. of digits in numbers}
     identifierLength = 10;       {length of identifiers}
     maxAddress = 2047;           {maximum address}
-    maxNestingLevel = 3;         {maximum depth of block nesting}
+    maxNestingLevel = 1;         {the language has only global and procedure-local lexical scopes}
     codeMaxIndex = 200;          {maximum code array index}
 
 type tokenKind =
@@ -177,8 +177,8 @@ begin
         23: writeln (' The preceding compileFactor cannot be followed by this symbol.');
         24: writeln (' An expression cannot begin with this symbol.');
         30: writeln (' This number is too large.');
-        //31: writeln (' .'); // Not included in code or error messages
-        32: writeln (' Only three levels of nesting are supported.')
+        31: writeln (' Nested procedures are not supported.');
+        32: writeln (' Procedures may only be declared at global scope.')
     end;
 end {reportError} ;
 
@@ -391,11 +391,14 @@ begin
     end
 end {recoverIfUnexpectedToken} ;
 
-{Compiles a PL/0 block, including declarations, nested procedures, and its body.}
-procedure compileBlock (currentLevel, tableIndex: integer; followTokens: tokenSet);
+{Compiles a PL/0 block with declarations and a statement body.
+ Top-level blocks may declare procedures; procedure bodies may not.}
+procedure compileBlock (currentLevel, tableIndex: integer; followTokens: tokenSet;
+                        allowProcedureDeclarations: boolean);
     var dataAllocationIndex,     {next local-variable slot; slots 0..2 are the activation record header}
         savedTableIndex,         {symbol table size on entry so locals can shadow outer names}
         blockCodeStart: integer; {first emitted instruction that belongs to this block body}
+        activeDeclarationStartTokens: tokenSet;
 
     {Adds the current identifier as a constant, variable, or procedure declaration.}
     procedure enterDeclaration(declarationToEnter: declarationKind);
@@ -446,6 +449,18 @@ procedure compileBlock (currentLevel, tableIndex: integer; followTokens: tokenSe
             searchIndex := searchIndex - 1;
         findSymbol := searchIndex
     end { findSymbol} ;
+
+    {Returns the outward lexical distance for a resolved symbol reference.
+     The language now allows only two scopes: global (0) and procedure-local (1).}
+    function lexicalLevelDistance(targetDeclarationLevel: integer): integer;
+    begin
+        lexicalLevelDistance := currentLevel - targetDeclarationLevel;
+        if (lexicalLevelDistance < 0) or (lexicalLevelDistance > 1) then
+        begin
+            reportError(32);
+            lexicalLevelDistance := 0
+        end
+    end {lexicalLevelDistance} ;
 
     {Parses one constant declaration and records it in the symbol table.}
     procedure parseConstantDeclaration;
@@ -525,7 +540,7 @@ procedure compileBlock (currentLevel, tableIndex: integer; followTokens: tokenSe
                                 with symbolTable[symbolIndex] do
                                 case declarationType of
                                     constant: emitInstruction(lit, 0, constantValue);
-                                    variable: emitInstruction(lod, currentLevel - declarationLevel, address);
+                                    variable: emitInstruction(lod, lexicalLevelDistance(declarationLevel), address);
                                     proc: reportError (21)
                                 end ;
                                 readNextToken
@@ -643,7 +658,7 @@ procedure compileBlock (currentLevel, tableIndex: integer; followTokens: tokenSe
             compileExpression(followTokens);
             if symbolIndex <> 0 then
                 with symbolTable[symbolIndex] do
-                    emitInstruction(sto, currentLevel - declarationLevel, address)
+                    emitInstruction(sto, lexicalLevelDistance(declarationLevel), address)
         end
         else
             if currentToken = callsym then
@@ -659,7 +674,7 @@ procedure compileBlock (currentLevel, tableIndex: integer; followTokens: tokenSe
                     else
                         with symbolTable[symbolIndex] do
                             if declarationType = proc then
-                                emitInstruction (cal, currentLevel-declarationLevel, address)
+                                emitInstruction (cal, lexicalLevelDistance(declarationLevel), address)
                             else
                                 reportError (15);
                     readNextToken
@@ -721,9 +736,14 @@ procedure compileBlock (currentLevel, tableIndex: integer; followTokens: tokenSe
 begin {compileBlock}
     dataAllocationIndex := 3; {reserve static link, dynamic link, and return address}
     savedTableIndex := tableIndex;
-    symbolTable[tableIndex].address := codeIndex;
-    emitInstruction(jmp,0,0); {skip nested procedure bodies until the block is entered}
-    if currentLevel > maxNestingLevel then
+    activeDeclarationStartTokens := [constsym, varsym];
+    if allowProcedureDeclarations then
+    begin
+        activeDeclarationStartTokens := activeDeclarationStartTokens + [procsym];
+        symbolTable[tableIndex].address := codeIndex;
+        emitInstruction(jmp,0,0); {skip top-level procedure bodies until the main block is entered}
+    end;
+    if currentLevel > 1 then
         reportError (32);
     repeat
         if currentToken = constsym then
@@ -758,8 +778,19 @@ begin {compileBlock}
                     reportError (5)
             until currentToken <> ident;
         end ;
-        while currentToken = procsym do
+        while allowProcedureDeclarations and (currentToken = procsym) do
         begin
+            if currentLevel <> 0 then
+            begin
+                reportError(31);
+                readNextToken;
+                recoverIfUnexpectedToken([ident], [semicolon] + followTokens +
+                                         statementStartTokens + activeDeclarationStartTokens, 4);
+                while not (currentToken in [semicolon] + followTokens +
+                                        statementStartTokens + activeDeclarationStartTokens) do
+                    readNextToken;
+                continue
+            end;
             readNextToken;
             if currentToken = ident then
             begin
@@ -772,18 +803,30 @@ begin {compileBlock}
                 readNextToken
             else
                 reportError (5);
-            compileBlock(currentLevel+1, tableIndex, [semicolon]+followTokens);
+            compileBlock(currentLevel+1, tableIndex, [semicolon]+followTokens, false);
             if currentToken = semicolon then
             begin
                 readNextToken;
-                recoverIfUnexpectedToken(statementStartTokens+[ident, procsym], followTokens, 6)
+                recoverIfUnexpectedToken(statementStartTokens+[ident] +
+                                         activeDeclarationStartTokens, followTokens, 6)
             end
             else
                 reportError (5)
         end ;
-        recoverIfUnexpectedToken(statementStartTokens+[ident], declarationStartTokens, 7)
-    until not(currentToken in declarationStartTokens);
-    pCode[symbolTable[savedTableIndex].address].argument := codeIndex;
+        if (not allowProcedureDeclarations) and (currentToken = procsym) then
+        begin
+            reportError(31);
+            readNextToken;
+            recoverIfUnexpectedToken([ident], [semicolon] + followTokens +
+                                     statementStartTokens + activeDeclarationStartTokens, 4);
+            while not (currentToken in [semicolon] + followTokens +
+                                    statementStartTokens + activeDeclarationStartTokens) do
+                readNextToken;
+        end;
+        recoverIfUnexpectedToken(statementStartTokens+[ident], activeDeclarationStartTokens, 7)
+    until not(currentToken in activeDeclarationStartTokens);
+    if allowProcedureDeclarations then
+        pCode[symbolTable[savedTableIndex].address].argument := codeIndex;
     with symbolTable[savedTableIndex] do
     begin
         address := codeIndex; {entry point of this block after declarations}
@@ -846,7 +889,7 @@ begin {main program}
     currentChar := ' ';
     identifierBufferLength := identifierLength;
     readNextToken;
-    compileBlock(0, 0, [period]+declarationStartTokens+statementStartTokens);
+    compileBlock(0, 0, [period]+declarationStartTokens+statementStartTokens, true);
     if currentToken <> period then
         reportError (9);
     if errorCount = 0 then

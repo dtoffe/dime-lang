@@ -145,13 +145,23 @@ stackTop := stackTop - 1
 
 ### Block
 
-Every block starts with a placeholder jump over its nested procedure bodies.
-After declarations are parsed, the compiler patches that jump to the block body.
+Only the global block starts with a placeholder jump over its top-level
+procedure bodies. Procedure blocks no longer need this jump because nested
+procedure declarations are not part of the language. After global declarations
+are parsed, the compiler patches that jump to the main block body.
 
 ```text
 JMP 0, body
-... nested procedure code ...
+... top-level procedure code ...
 body:
+INT 0, frameSize
+... statement code ...
+OPR 0, 0
+```
+
+For a procedure block, code generation begins directly at:
+
+```text
 INT 0, frameSize
 ... statement code ...
 OPR 0, 0

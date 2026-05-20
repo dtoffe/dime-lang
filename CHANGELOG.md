@@ -15,6 +15,12 @@ and this project is expected to follow [Semantic Versioning](https://semver.org/
 ### Changed
 
 - Change identifier names in examples to lowercase
+- Change procedures declaration, they can only be declared in the global scope now.
+- Update compiler, grammar, and p-code documentation to describe the two-scope model consistently.
+
+### Removed
+
+- Remove support for nested procedures from the grammar and the implementation.
 
 ## [v0.0.1] - 2026-05-18
 
