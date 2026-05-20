@@ -9,9 +9,11 @@ and this project is expected to follow [Semantic Versioning](https://semver.org/
 
 ### Added
 
+- Add tracing helpers for better debugging.
+
 ### Changed
 
-- Changed identifier names in examples to lowercase
+- Change identifier names in examples to lowercase
 
 ## [v0.0.1] - 2026-05-18
 

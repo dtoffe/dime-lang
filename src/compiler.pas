@@ -82,6 +82,61 @@ var currentChar: char;        {current source character}
     sourceFileName, pCodeFileName: string;
     outputInstructionIndex: integer; {used when flushing generated code to disk}
 
+{Converts a fixed-width identifier buffer into a trimmed string for trace output.}
+function identifierToString(const identifier: identifierText): string;
+    var characterIndex: integer;
+begin
+    identifierToString := '';
+    for characterIndex := 1 to identifierLength do
+        identifierToString := identifierToString + identifier[characterIndex];
+    identifierToString := TrimRight(identifierToString)
+end {identifierToString} ;
+
+{Converts an opcode mnemonic array entry into a trimmed string for trace output.}
+function opcodeMnemonicToString(instructionOpcode: opcode): string;
+    var characterIndex: integer;
+begin
+    opcodeMnemonicToString := '';
+    for characterIndex := 1 to 5 do
+        opcodeMnemonicToString := opcodeMnemonicToString + opcodeMnemonics[instructionOpcode][characterIndex];
+    opcodeMnemonicToString := TrimRight(opcodeMnemonicToString)
+end {opcodeMnemonicToString} ;
+
+{Writes the current source line trace entry.}
+procedure traceSourceLine;
+    var sourceText: string;
+        characterIndex: integer;
+begin
+    sourceText := '';
+    for characterIndex := 1 to lineLength - 1 do
+        sourceText := sourceText + sourceLine[characterIndex];
+    writeln('[SRC ] ', codeIndex:4, ' ', sourceText)
+end {traceSourceLine} ;
+
+{Writes the current token trace entry.}
+procedure traceToken;
+begin
+    write('[LEX ] ', currentToken, ' ');
+    if currentToken = ident then
+        writeln(identifierToString(currentIdentifier))
+    else if currentToken = number then
+        writeln(currentNumber)
+    else
+        writeln
+end {traceToken} ;
+
+{Writes a declaration-related trace entry.}
+procedure traceDeclaration(messageText: string);
+begin
+    writeln('[DECL] ', messageText)
+end {traceDeclaration} ;
+
+{Writes a generated-instruction trace entry.}
+procedure traceInstruction(messageText: string);
+begin
+    writeln('[EMIT] ', messageText)
+end {traceInstruction} ;
+
 {Closes the open compiler files and terminates the process.}
 procedure closeFilesAndHalt;
 begin
@@ -144,16 +199,15 @@ procedure readNextToken;
             end ;
             lineLength := 0;
             charIndex := 0;
-            write(codeIndex:5, ' ');
             while not eoln(sourceFile) do
             begin
                 lineLength := lineLength + 1;
                 read(sourceFile, currentChar);
                 sourceLine[lineLength] := currentChar
             end ;
-            writeln;
             lineLength := lineLength + 1;
-            read(sourceFile, sourceLine[lineLength])
+            read(sourceFile, sourceLine[lineLength]);
+            traceSourceLine
         end ;
         charIndex := charIndex + 1;
         currentChar := sourceLine[charIndex]
@@ -305,14 +359,7 @@ begin {readNextToken}
                     readNextChar
                 end
         end;
-    {Echo the lexer stream to stdout for trace/debug output.}
-    write(currentToken, ' ');
-    if currentToken = ident then
-        writeln(currentIdentifier)
-    else if currentToken = number then
-        writeln(currentNumber)
-    else
-        writeln
+    traceToken
 end {readNextToken} ;
 
 {Appends one p-code instruction to the generated instruction array.}
@@ -366,16 +413,25 @@ procedure compileBlock (currentLevel, tableIndex: integer; followTokens: tokenSe
                             reportError (30);
                             currentNumber := 0
                         end ;
-                        constantValue := currentNumber
+                        constantValue := currentNumber;
+                        traceDeclaration('const ' + identifierToString(identifier) +
+                                         ' = ' + IntToStr(constantValue))
                     end ;
                 variable:
                     begin
                         declarationLevel := currentLevel;
                         address := dataAllocationIndex;
                         dataAllocationIndex := dataAllocationIndex + 1;
+                        traceDeclaration('var ' + identifierToString(identifier) +
+                                         ' level=' + IntToStr(declarationLevel) +
+                                         ' addr=' + IntToStr(address))
                     end ;
                 proc:
-                    declarationLevel := currentLevel
+                    begin
+                        declarationLevel := currentLevel;
+                        traceDeclaration('procedure ' + identifierToString(identifier) +
+                                         ' level=' + IntToStr(declarationLevel))
+                    end
             end
         end
     end {enterDeclaration} ;
@@ -435,7 +491,11 @@ procedure compileBlock (currentLevel, tableIndex: integer; followTokens: tokenSe
     begin {list code generated for this block}
         for instructionIndex := blockCodeStart to codeIndex-1 do
             with pCode[instructionIndex] do
-                writeln(instructionIndex, opcodeMnemonics[operation]:5, lexicalLevel:3, argument:5);
+                traceInstruction(Format('%4d %-5s %3d %5d',
+                                        [instructionIndex,
+                                         opcodeMnemonicToString(operation),
+                                         lexicalLevel,
+                                         argument]));
     end {listGeneratedCode} ;
 
     {Compiles one statement and emits the p-code needed to execute it.}

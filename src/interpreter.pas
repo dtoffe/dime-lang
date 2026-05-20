@@ -49,6 +49,39 @@ var
     pCodeFile: Text;
     pCodeFileName: string;
 
+{Converts an opcode enum into the mnemonic used by compiler listings.}
+function opcodeToString(instructionOpcode: opcode): string;
+begin
+    case instructionOpcode of
+        lit: opcodeToString := 'LIT';
+        opr: opcodeToString := 'OPR';
+        lod: opcodeToString := 'LOD';
+        sto: opcodeToString := 'STO';
+        cal: opcodeToString := 'CAL';
+        int: opcodeToString := 'INT';
+        jmp: opcodeToString := 'JMP';
+        jpc: opcodeToString := 'JPC';
+    end
+end {opcodeToString} ;
+
+{Writes a p-code loader trace entry.}
+procedure traceLoad(messageText: string);
+begin
+    writeln('[LOAD] ', messageText)
+end {traceLoad} ;
+
+{Writes an execution-step trace entry.}
+procedure traceStep(messageText: string);
+begin
+    writeln('[STEP] ', messageText)
+end {traceStep} ;
+
+{Writes a store-operation trace entry.}
+procedure traceStore(messageText: string);
+begin
+    writeln('[STOR] ', messageText)
+end {traceStore} ;
+
 {Loads p-code instructions from the input file into memory.}
 procedure loadPCodeFile;
 
@@ -80,7 +113,11 @@ begin
         lexicalLevelText := copy(pCodeLine, lineIndexWidth + 1 + 5, 3);
         argumentText := copy(pCodeLine, lineIndexWidth + 1 + 5 + 3, 5);
 
-writeln(opcodeText, ' ', lexicalLevelText, ' ', argumentText);
+        traceLoad(Format('%4d %-5s %3s %5s',
+                         [instructionIndex,
+                          TrimRight(opcodeText),
+                          Trim(lexicalLevelText),
+                          Trim(argumentText)]));
         {Decode the mnemonic and numeric operands into the in-memory instruction record.}
         case opcodeText of
             'LIT  ' : pCode[instructionIndex].operation := lit;
@@ -109,8 +146,7 @@ writeln(opcodeText, ' ', lexicalLevelText, ' ', argumentText);
     {The full p-code listing has now been consumed.}
     Close(pCodeFile);
 
-    writeln('Reading complete.');
-    writeln('Records loaded: ', instructionIndex);
+    traceLoad('Reading complete. Records loaded: ' + IntToStr(instructionIndex));
 
 end;
 
@@ -134,14 +170,20 @@ procedure executePCode;
         findBase := enclosingBasePointer
      end {findBase} ;
 
-begin writeln(' START PL/0');
+begin
+    traceStep('START PL/0');
     stackTop := 0; basePointer := 1; programCounter := 0;
     runtimeStack[1] := 0; runtimeStack[2] := 0; runtimeStack[3] := 0;
     {Frame layout: static link, dynamic link, return address.}
     repeat
         instructionRegister := pCode[programCounter];
-        writeln(instructionRegister.operation, ' ', instructionRegister.lexicalLevel,
-                ' ', instructionRegister.argument);
+        traceStep(Format('pc=%d bp=%d sp=%d %s %d %d',
+                         [programCounter,
+                          basePointer,
+                          stackTop,
+                          opcodeToString(instructionRegister.operation),
+                          instructionRegister.lexicalLevel,
+                          instructionRegister.argument]));
         programCounter := programCounter + 1;
         with instructionRegister do
         case operation of
@@ -191,7 +233,11 @@ begin writeln(' START PL/0');
                  end ;
             sto: begin
                     runtimeStack[findBase(lexicalLevel)+argument] := runtimeStack[stackTop];
-                    writeln(runtimeStack[stackTop]);
+                    traceStore(Format('level=%d addr=%d abs=%d value=%d',
+                                      [lexicalLevel,
+                                       argument,
+                                       findBase(lexicalLevel) + argument,
+                                       runtimeStack[stackTop]]));
                     stackTop := stackTop-1
                  end ;
             cal: begin {build a new activation record and jump to the callee}
@@ -210,7 +256,7 @@ begin writeln(' START PL/0');
                  end
         end {with, case}
     until programCounter = 0;
-    write(' END PL/0');
+    traceStep('END PL/0');
 end {executePCode} ;
 
 begin {main program}
