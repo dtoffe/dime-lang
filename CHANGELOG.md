@@ -7,6 +7,8 @@ and this project is expected to follow [Semantic Versioning](https://semver.org/
 
 ## [Unreleased]
 
+## [v0.0.2] - 2026-05-20
+
 ### Added
 
 - Add another three examples.
