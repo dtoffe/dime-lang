@@ -4,7 +4,7 @@ This roadmap is intentionally conservative. The goal is to build the project in 
 
 ## Main Short Term Milestones
 
-### v0.0.10 - Structured Datatypes
+### v0.0.11 - Structured Datatypes
 
 - Add subrange datatypes
 - Add array datatypes
@@ -12,18 +12,25 @@ This roadmap is intentionally conservative. The goal is to build the project in 
 - Add set datatypes.
 - Rework type table adding specialized tables for types.
 
-### v0.0.9 - Additional Datatypes
+### v0.0.10 - Additional Datatypes
 
 - Add `char` datatype.
 - Add `string` datatype.
 - Add enumeration datatypes.
 - Use strings in all examples.
 
-### v0.0.8 - Add function and return
+### v0.0.9 - Add function and return
 
 - Add `function` construct.
 - Add `return` statement.
 - Possibly add some `break` and `continue` to adjust loops behaviour
+
+### v0.0.8 - Add assembler codegen
+
+- Add an x86/x64 assembler code generator.
+- Decide if adding an asm interpreter or going straight to binary.
+- Keep the pcode backend in paralell for some time.
+- Maybe start defining some kind of target specific layer.
 
 ### v0.0.7 - Add more statements
 

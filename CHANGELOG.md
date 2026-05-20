@@ -9,6 +9,7 @@ and this project is expected to follow [Semantic Versioning](https://semver.org/
 
 ### Added
 
+- Add another three examples.
 - Add tracing helpers for better debugging.
 
 ### Changed
