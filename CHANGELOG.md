@@ -9,12 +9,14 @@ and this project is expected to follow [Semantic Versioning](https://semver.org/
 
 ### Added
 
+- Add lexer unit for lexical analysis.
 - Add token unit for shared token data types.
 - Add diagnostics unit for error and diagnostics helpers.
 - Add main compiler program driver.
 
 ### Changed
 
+- Extract lexer state and routines into its own unit.
 - Extract token data types from parser into tokens unit.
 - Extract error reporting from compiler into diagnostics unit.
 - Extract main program driver from compiler, convert compiler into a unit.
