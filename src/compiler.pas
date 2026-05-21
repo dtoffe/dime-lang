@@ -27,24 +27,16 @@ procedure compileFile(const inputFileName: string);
 implementation
 
 uses
-  SysUtils, diagnostics;
+  SysUtils, diagnostics, tokens;
 
 const reservedWordCount = 11;    {no. of reserved words}
     symbolTableMax = 100;        {length of identifier table}
     numberMaxDigits = 14;        {max. no. of digits in numbers}
-    identifierLength = 10;       {length of identifiers}
     maxAddress = 2047;           {maximum address}
     maxNestingLevel = 1;         {the language has only global and procedure-local lexical scopes}
     codeMaxIndex = 200;          {maximum code array index}
 
-type tokenKind =
-        (nul, ident, number, plus, minus, times, slash, oddsym,
-        eql, neq, lss, leq, gtr, geq, lparen, rparen, comma, semicolon,
-        period, becomes, beginsym, endsym, ifsym, thensym,
-        whilesym, dosym, callsym, constsym, varsym, procsym);
-    identifierText = packed array [1 .. identifierLength] of char;
-    declarationKind = (constant, variable, proc);
-    tokenSet = set of tokenKind;
+type declarationKind = (constant, variable, proc);
     opcode = (lit, opr, lod, sto, cal, int, jmp, jpc); {functions}
     pCodeInstruction = packed record
                     operation: opcode;                  {virtual machine opcode}
@@ -61,23 +53,23 @@ type tokenKind =
     JPC 0,a  :  jump conditional to a      }
 
 var currentChar: char;        {current source character}
-    currentToken: tokenKind;  {current token produced by the lexer}
-    currentIdentifier: identifierText; {identifier text for currentToken = ident}
+    currentToken: symbol;  {current token produced by the lexer}
+    currentIdentifier: identifier; {identifier text for currentToken = ident}
     currentNumber: integer;   {numeric value for currentToken = number}
     charIndex: integer;       {1-based cursor into sourceLine}
     lineLength: integer;      {number of valid characters in sourceLine}
     identifierBufferLength, errorCount: integer;
     codeIndex: integer;       {index of the next instruction to emit}
     sourceLine: array [1..81] of char; {current source line plus trailing newline}
-    identifierBuffer: identifierText;  {scratch buffer used while reading identifiers}
+    identifierBuffer: identifier;  {scratch buffer used while reading identifiers}
     pCode: array [0..codeMaxIndex] of pCodeInstruction; {generated program image}
-    reservedWords: array [1..reservedWordCount] of identifierText; {sorted for binary search}
-    reservedWordTokens: array [1..reservedWordCount] of tokenKind; {token for each reserved word}
+    reservedWords: array [1..reservedWordCount] of identifier; {sorted for binary search}
+    reservedWordTokens: array [1..reservedWordCount] of symbol; {token for each reserved word}
     opcodeMnemonics: array [opcode] of
                 packed array [1 .. 5] of char; {fixed-width listing/output text}
-    declarationStartTokens, statementStartTokens, factorStartTokens: tokenSet;
+    declarationStartTokens, statementStartTokens, factorStartTokens: symbolSet;
     symbolTable: array [0..symbolTableMax] of
-              record identifier: identifierText; {sentinel slot 0 is used by findSymbol}
+              record identifier: identifier; {sentinel slot 0 is used by findSymbol}
                 case declarationType: declarationKind of
                   constant: (constantValue: integer);
                   variable, proc: (declarationLevel, address: integer)
@@ -89,11 +81,11 @@ var currentChar: char;        {current source character}
     outputInstructionIndex: integer; {used when flushing generated code to disk}
 
 {Converts a fixed-width identifier buffer into a trimmed string for trace output.}
-function identifierToString(const identifier: identifierText): string;
+function identifierToString(const identifier: identifier): string;
     var characterIndex: integer;
 begin
     identifierToString := '';
-    for characterIndex := 1 to identifierLength do
+    for characterIndex := Low(identifier) to High(identifier) do
         identifierToString := identifierToString + identifier[characterIndex];
     identifierToString := TrimRight(identifierToString)
 end {identifierToString} ;
@@ -124,7 +116,7 @@ procedure traceToken;
     var tokenText: string;
 begin
     {Pending lexer extraction cleanup:
-     restore human-readable token labels with a tokenKindToString helper.
+     restore human-readable token labels with a symbolToString helper.
      That helper can stay here temporarily, but it will likely belong in the
      lexer or a later shared syntax unit once token ownership is extracted.}
     if currentToken = ident then
@@ -203,7 +195,7 @@ begin {readNextToken}
     begin {identifier or reserved word}
         identifierCharCount := 0;
         repeat
-            if identifierCharCount < identifierLength then
+            if identifierCharCount < maxIdentLength then
             begin
                 identifierCharCount := identifierCharCount + 1;
                 identifierBuffer[identifierCharCount] := currentChar
@@ -363,7 +355,7 @@ begin
 end {emitInstruction} ;
 
 {Reports an unexpected token and skips input until parsing can safely resume.}
-procedure recoverIfUnexpectedToken (allowedTokens, recoveryTokens: tokenSet; errorCode: integer);
+procedure recoverIfUnexpectedToken (allowedTokens, recoveryTokens: symbolSet; errorCode: integer);
 begin
     if not (currentToken in allowedTokens) then
     begin
@@ -376,12 +368,12 @@ end {recoverIfUnexpectedToken} ;
 
 {Compiles a PL/0 block with declarations and a statement body.
  Top-level blocks may declare procedures; procedure bodies may not.}
-procedure compileBlock (currentLevel, tableIndex: integer; followTokens: tokenSet;
+procedure compileBlock (currentLevel, tableIndex: integer; followTokens: symbolSet;
                         allowProcedureDeclarations: boolean);
     var dataAllocationIndex,     {next local-variable slot; slots 0..2 are the activation record header}
         savedTableIndex,         {symbol table size on entry so locals can shadow outer names}
         blockCodeStart: integer; {first emitted instruction that belongs to this block body}
-        activeDeclarationStartTokens: tokenSet;
+        activeDeclarationStartTokens: symbolSet;
 
     {Adds the current identifier as a constant, variable, or procedure declaration.}
     procedure enterDeclaration(declarationToEnter: declarationKind);
@@ -423,7 +415,7 @@ procedure compileBlock (currentLevel, tableIndex: integer; followTokens: tokenSe
     end {enterDeclaration} ;
 
     {Finds an identifier in the active symbol table, returning zero when absent.}
-    function findSymbol(identifierToFind: identifierText): integer;
+    function findSymbol(identifierToFind: identifier): integer;
         var searchIndex: integer;
     begin {find identifier id in table}
         symbolTable[0].identifier := identifierToFind;
@@ -497,19 +489,19 @@ procedure compileBlock (currentLevel, tableIndex: integer; followTokens: tokenSe
     end {listGeneratedCode} ;
 
     {Compiles one statement and emits the p-code needed to execute it.}
-    procedure compileStatement (followTokens: tokenSet);
+    procedure compileStatement (followTokens: symbolSet);
         var symbolIndex, conditionalJumpIndex, loopExitJumpIndex: integer;
 
         {Compiles an expression, including leading signs and additive operators.}
-        procedure compileExpression(followTokens: tokenSet);
-            var additiveOperator: tokenKind;
+        procedure compileExpression(followTokens: symbolSet);
+            var additiveOperator: symbol;
 
             {Compiles a term and emits multiplication or division operations.}
-            procedure compileTerm(followTokens: tokenSet);
-                var multiplicativeOperator: tokenKind;
+            procedure compileTerm(followTokens: symbolSet);
+                var multiplicativeOperator: symbol;
 
                 {Compiles a factor such as an identifier, number, or parenthesized expression.}
-                procedure compileFactor (followTokens: tokenSet);
+                procedure compileFactor (followTokens: symbolSet);
                     var symbolIndex: integer;
                 begin
                     recoverIfUnexpectedToken(factorStartTokens, followTokens, ERR_INVALID_TOKEN_AT_EXPRESSION_START);
@@ -590,8 +582,8 @@ procedure compileBlock (currentLevel, tableIndex: integer; followTokens: tokenSe
         end {compileExpression} ;
 
         {Compiles a boolean condition and emits the comparison operation.}
-        procedure compileCondition(followTokens: tokenSet);
-            var relationalOperator: tokenKind;
+        procedure compileCondition(followTokens: symbolSet);
+            var relationalOperator: symbol;
         begin
             if currentToken = oddsym then
             begin
@@ -871,7 +863,7 @@ begin
     codeIndex := 0;
     lineLength := 0;
     currentChar := ' ';
-    identifierBufferLength := identifierLength;
+    identifierBufferLength := maxIdentLength;
     readNextToken;
     compileBlock(0, 0, [period]+declarationStartTokens+statementStartTokens, true);
     if currentToken <> period then

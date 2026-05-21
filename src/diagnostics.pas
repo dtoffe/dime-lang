@@ -1,3 +1,10 @@
+{ Copyright (c) 2026 Alejandro Daniel Toffetti
+  License: MIT. See LICENSE in the project root.
+  Date: 2026-05-21
+
+  Centralized diagnostic reporting for the compiler and interpreter.  This unit
+  owns diagnostic levels, verbosity handling, source-location context, and the
+  shared compiler/runtime error reporting helpers. }
 unit diagnostics;
 
 interface

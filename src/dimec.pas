@@ -1,3 +1,10 @@
+{ Copyright (c) 2026 Alejandro Daniel Toffetti
+  License: MIT. See LICENSE in the project root.
+  Date: 2026-05-21
+
+  Command-line entry point for the compiler front-end.  This program parses
+  command-line arguments, configures diagnostic verbosity, and invokes
+  compiler.pas on the requested source file. }
 program dimec;
 
 uses
