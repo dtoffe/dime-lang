@@ -27,7 +27,7 @@ procedure compileFile(const inputFileName: string);
 implementation
 
 uses
-  SysUtils;
+  SysUtils, diagnostics;
 
 const reservedWordCount = 11;    {no. of reserved words}
     symbolTableMax = 100;        {length of identifier table}
@@ -116,31 +116,36 @@ begin
     sourceText := '';
     for characterIndex := 1 to lineLength - 1 do
         sourceText := sourceText + sourceLine[characterIndex];
-    writeln('[SRC ] ', codeIndex:4, ' ', sourceText)
+    emitDiagnostic(debug, Format('[SRC ] %4d %s', [codeIndex, sourceText]))
 end {traceSourceLine} ;
 
 {Writes the current token trace entry.}
 procedure traceToken;
+    var tokenText: string;
 begin
-    write('[LEX ] ', currentToken, ' ');
+    {Pending lexer extraction cleanup:
+     restore human-readable token labels with a tokenKindToString helper.
+     That helper can stay here temporarily, but it will likely belong in the
+     lexer or a later shared syntax unit once token ownership is extracted.}
     if currentToken = ident then
-        writeln(identifierToString(currentIdentifier))
+        tokenText := identifierToString(currentIdentifier)
     else if currentToken = number then
-        writeln(currentNumber)
+        tokenText := IntToStr(currentNumber)
     else
-        writeln
+        tokenText := '';
+    emitDiagnostic(debug, '[LEX ] ' + IntToStr(ord(currentToken)) + ' ' + tokenText)
 end {traceToken} ;
 
 {Writes a declaration-related trace entry.}
 procedure traceDeclaration(messageText: string);
 begin
-    writeln('[DECL] ', messageText)
+    emitDiagnostic(debug, '[DECL] ' + messageText)
 end {traceDeclaration} ;
 
 {Writes a generated-instruction trace entry.}
 procedure traceInstruction(messageText: string);
 begin
-    writeln('[EMIT] ', messageText)
+    emitDiagnostic(debug, '[EMIT] ' + messageText)
 end {traceInstruction} ;
 
 {Closes the open compiler files and terminates the process.}
@@ -152,41 +157,13 @@ begin
     halt
 end {closeFilesAndHalt} ;
 
-{Reports a compiler diagnostic and increments the global error count.}
-procedure reportError (errorCode: integer);
+{Builds the current source context for diagnostics.
+ Only source name and column are filled for now; line and source text will
+ move in once the lexer owns them directly.}
+function currentSourceContext: sourceContext;
 begin
-    writeln (' ****', ' ': charIndex - 1, '^', errorCode:2);
-    errorCount := errorCount + 1;
-    case errorCode of
-         1: writeln (' Use = instead of :=.');
-         2: writeln (' = must be followed by a number.');
-         3: writeln (' Identifier must be followed by =.');
-         4: writeln (' "const", "var", "procedure" must be followed by an identifier. Possible reserved-word case error.');
-         5: writeln (' Semicolon or comma missing.');
-         6: writeln (' Incorrect symbol after procedure declaration.');
-         7: writeln (' Statement expected.');
-         8: writeln (' Incorrect symbol after statement part in block.');
-         9: writeln (' Period expected.');
-        10: writeln (' Semicolon between statements is missing.');
-        11: writeln (' Undeclared identifier.');
-        12: writeln (' Assignment to constant or procedure is not allowed.');
-        13: writeln (' Assignment operator := expected.');
-        14: writeln (' "call" must be followed by an identifier. Possible reserved-word case error.');
-        15: writeln (' Call of a constant or a variable is meaningless.');
-        16: writeln (' "then" expected. Possible reserved-word case error.');
-        17: writeln (' Semicolon or "end" expected. Possible reserved-word case error.');
-        18: writeln (' "do" expected. Possible reserved-word case error.');
-        19: writeln (' Incorrect symbol following statement.');
-        20: writeln (' Relational operator expected.');
-        21: writeln (' Expression must not contain a procedure identifier.');
-        22: writeln (' Right parenthesis missing.');
-        23: writeln (' The preceding compileFactor cannot be followed by this symbol.');
-        24: writeln (' An expression cannot begin with this symbol.');
-        30: writeln (' This number is too large.');
-        31: writeln (' Nested procedures are not supported.');
-        32: writeln (' Procedures may only be declared at global scope.')
-    end;
-end {reportError} ;
+    currentSourceContext := makeSourceContext(sourceFileName, charIndex)
+end {currentSourceContext} ;
 
 {Reads the next lexical token from the source file into the current token state.}
 procedure readNextToken;
@@ -200,7 +177,7 @@ procedure readNextToken;
         begin
             if eof(sourceFile) then
             begin
-                write(' PROGRAM INCOMPLETE');
+                emitDiagnostic(error, STATUS_PROGRAM_INCOMPLETE);
                 closeFilesAndHalt()
             end ;
             lineLength := 0;
@@ -267,7 +244,7 @@ begin {readNextToken}
             readNextChar
         until not (currentChar in ['0'..'9']);
         if digitCount > numberMaxDigits then
-            reportError (30)
+            reportCompilerError(ERR_NUMBER_TOO_LARGE, currentSourceContext, errorCount)
     end
     else
         case currentChar of
@@ -373,7 +350,7 @@ procedure emitInstruction(instructionOpcode: opcode; instructionLevel, instructi
 begin
     if codeIndex > codeMaxIndex then
     begin
-        write(' PROGRAM TOO LONG');
+        emitDiagnostic(error, STATUS_PROGRAM_TOO_LONG);
         closeFilesAndHalt()
     end ;
     with pCode[codeIndex] do
@@ -390,7 +367,7 @@ procedure recoverIfUnexpectedToken (allowedTokens, recoveryTokens: tokenSet; err
 begin
     if not (currentToken in allowedTokens) then
     begin
-        reportError(errorCode);
+        reportCompilerError(errorCode, currentSourceContext, errorCount);
         allowedTokens := allowedTokens + recoveryTokens;
         while not (currentToken in allowedTokens) do
             readNextToken
@@ -419,7 +396,7 @@ procedure compileBlock (currentLevel, tableIndex: integer; followTokens: tokenSe
                     begin
                         if currentNumber > maxAddress then
                         begin
-                            reportError (30);
+                            reportCompilerError(ERR_NUMBER_TOO_LARGE, currentSourceContext, errorCount);
                             currentNumber := 0
                         end ;
                         constantValue := currentNumber;
@@ -463,7 +440,7 @@ procedure compileBlock (currentLevel, tableIndex: integer; followTokens: tokenSe
         lexicalLevelDistance := currentLevel - targetDeclarationLevel;
         if (lexicalLevelDistance < 0) or (lexicalLevelDistance > 1) then
         begin
-            reportError(32);
+            reportCompilerError(ERR_PROCEDURES_GLOBAL_SCOPE_ONLY, currentSourceContext, errorCount);
             lexicalLevelDistance := 0
         end
     end {lexicalLevelDistance} ;
@@ -477,7 +454,7 @@ procedure compileBlock (currentLevel, tableIndex: integer; followTokens: tokenSe
             if currentToken in [eql, becomes] then
             begin
                 if currentToken = becomes then
-                    reportError(1);
+                    reportCompilerError(ERR_USE_EQUAL_NOT_BECOMES, currentSourceContext, errorCount);
                 readNextToken;
                 if currentToken = number then
                 begin
@@ -485,13 +462,13 @@ procedure compileBlock (currentLevel, tableIndex: integer; followTokens: tokenSe
                     readNextToken
                 end
                 else
-                    reportError (2)
+                    reportCompilerError(ERR_NUMBER_EXPECTED_AFTER_EQUAL, currentSourceContext, errorCount)
             end
             else
-                reportError (3)
+                reportCompilerError(ERR_IDENTIFIER_MUST_BE_FOLLOWED_BY_EQUAL, currentSourceContext, errorCount)
         end
         else
-            reportError (4)
+            reportCompilerError(ERR_DECLARATION_IDENTIFIER_EXPECTED, currentSourceContext, errorCount)
     end {parseConstantDeclaration} ;
 
     {Parses one variable declaration and records its stack address.}
@@ -503,7 +480,7 @@ procedure compileBlock (currentLevel, tableIndex: integer; followTokens: tokenSe
             readNextToken
         end
         else
-            reportError (4)
+            reportCompilerError(ERR_DECLARATION_IDENTIFIER_EXPECTED, currentSourceContext, errorCount)
     end {parseVariableDeclaration} ;
 
     {Writes the p-code instructions generated for the current block.}
@@ -535,19 +512,19 @@ procedure compileBlock (currentLevel, tableIndex: integer; followTokens: tokenSe
                 procedure compileFactor (followTokens: tokenSet);
                     var symbolIndex: integer;
                 begin
-                    recoverIfUnexpectedToken(factorStartTokens, followTokens, 24);
+                    recoverIfUnexpectedToken(factorStartTokens, followTokens, ERR_INVALID_TOKEN_AT_EXPRESSION_START);
                     while currentToken in factorStartTokens do
                     begin
                         if currentToken = ident then
                         begin symbolIndex := findSymbol(currentIdentifier);
                             if symbolIndex = 0 then
-                                reportError (11)
+                                reportCompilerError(ERR_UNDECLARED_IDENTIFIER, currentSourceContext, errorCount)
                             else
                                 with symbolTable[symbolIndex] do
                                 case declarationType of
                                     constant: emitInstruction(lit, 0, constantValue);
                                     variable: emitInstruction(lod, lexicalLevelDistance(declarationLevel), address);
-                                    proc: reportError (21)
+                                    proc: reportCompilerError(ERR_PROCEDURE_IDENTIFIER_IN_EXPRESSION, currentSourceContext, errorCount)
                                 end ;
                                 readNextToken
                         end
@@ -556,7 +533,7 @@ procedure compileBlock (currentLevel, tableIndex: integer; followTokens: tokenSe
                             begin
                                 if currentNumber > maxAddress then
                                 begin
-                                    reportError (30);
+                                    reportCompilerError(ERR_NUMBER_TOO_LARGE, currentSourceContext, errorCount);
                                     currentNumber := 0
                                 end ;
                                 emitInstruction(lit, 0, currentNumber); readNextToken
@@ -569,9 +546,9 @@ procedure compileBlock (currentLevel, tableIndex: integer; followTokens: tokenSe
                                     if currentToken = rparen then
                                         readNextToken
                                     else
-                                        reportError (22)
+                                        reportCompilerError(ERR_RIGHT_PARENTHESIS_MISSING, currentSourceContext, errorCount)
                                 end ;
-                        recoverIfUnexpectedToken (followTokens, [lparen], 23)
+                        recoverIfUnexpectedToken (followTokens, [lparen], ERR_INVALID_TOKEN_AFTER_FACTOR)
                     end
                 end { compileFactor} ;
 
@@ -626,7 +603,7 @@ procedure compileBlock (currentLevel, tableIndex: integer; followTokens: tokenSe
             begin
                 compileExpression([eql, neq, lss, gtr, leq, geq]+followTokens);
                 if not (currentToken in [eql, neq, lss, leq, gtr, geq]) then
-                    reportError (20)
+                    reportCompilerError(ERR_RELATIONAL_OPERATOR_EXPECTED, currentSourceContext, errorCount)
                 else
                 begin
                     relationalOperator := currentToken;
@@ -649,18 +626,18 @@ procedure compileBlock (currentLevel, tableIndex: integer; followTokens: tokenSe
         begin
             symbolIndex := findSymbol(currentIdentifier);
             if symbolIndex = 0 then
-                reportError (11)
+                reportCompilerError(ERR_UNDECLARED_IDENTIFIER, currentSourceContext, errorCount)
             else
                 if symbolTable[symbolIndex].declarationType <> variable then
                 begin {assignment to non-variable}
-                    reportError (12);
+                    reportCompilerError(ERR_ASSIGNMENT_TO_CONSTANT_OR_PROCEDURE, currentSourceContext, errorCount);
                     symbolIndex := 0
                 end ;
             readNextToken;
             if currentToken = becomes then
                 readNextToken
             else
-                reportError (13);
+                reportCompilerError(ERR_ASSIGNMENT_OPERATOR_EXPECTED, currentSourceContext, errorCount);
             compileExpression(followTokens);
             if symbolIndex <> 0 then
                 with symbolTable[symbolIndex] do
@@ -671,18 +648,18 @@ procedure compileBlock (currentLevel, tableIndex: integer; followTokens: tokenSe
             begin
                 readNextToken;
                 if currentToken <> ident then
-                    reportError (14)
+                    reportCompilerError(ERR_CALL_MUST_BE_FOLLOWED_BY_IDENTIFIER, currentSourceContext, errorCount)
                 else
                 begin
                     symbolIndex := findSymbol(currentIdentifier);
                     if symbolIndex = 0 then
-                        reportError (11)
+                        reportCompilerError(ERR_UNDECLARED_IDENTIFIER, currentSourceContext, errorCount)
                     else
                         with symbolTable[symbolIndex] do
                             if declarationType = proc then
                                 emitInstruction (cal, lexicalLevelDistance(declarationLevel), address)
                             else
-                                reportError (15);
+                                reportCompilerError(ERR_CALL_OF_CONSTANT_OR_VARIABLE, currentSourceContext, errorCount);
                     readNextToken
                 end
             end
@@ -694,7 +671,7 @@ procedure compileBlock (currentLevel, tableIndex: integer; followTokens: tokenSe
                     if currentToken = thensym then
                         readNextToken
                     else
-                        reportError (16);
+                        reportCompilerError(ERR_THEN_EXPECTED, currentSourceContext, errorCount);
                     conditionalJumpIndex := codeIndex;
                     emitInstruction(jpc,0,0);
                     compileStatement(followTokens);
@@ -705,20 +682,20 @@ procedure compileBlock (currentLevel, tableIndex: integer; followTokens: tokenSe
                     begin
                         readNextToken;
                         recoverIfUnexpectedToken(statementStartTokens+[ident],
-                                                 [semicolon, endsym]+followTokens, 7);
+                                                 [semicolon, endsym]+followTokens, ERR_STATEMENT_EXPECTED);
                         compileStatement([semicolon, endsym]+followTokens);
                         while currentToken in [semicolon]+statementStartTokens do
                         begin
                             if currentToken = semicolon then
                                 readNextToken
                             else
-                                reportError (10);
+                                reportCompilerError(ERR_MISSING_SEMICOLON_BETWEEN_STATEMENTS, currentSourceContext, errorCount);
                             compileStatement([semicolon, endsym]+followTokens)
                         end ;
                         if currentToken = endsym then
                             readNextToken
                         else
-                            reportError (17)
+                            reportCompilerError(ERR_SEMICOLON_OR_END_EXPECTED, currentSourceContext, errorCount)
                     end
                     else
                         if currentToken = whilesym then
@@ -731,12 +708,12 @@ procedure compileBlock (currentLevel, tableIndex: integer; followTokens: tokenSe
                             if currentToken = dosym then
                                 readNextToken
                             else
-                                reportError (18);
+                                reportCompilerError(ERR_DO_EXPECTED, currentSourceContext, errorCount);
                             compileStatement(followTokens);
                             emitInstruction(jmp, 0, conditionalJumpIndex);
                             pCode[loopExitJumpIndex].argument := codeIndex
                         end ;
-        recoverIfUnexpectedToken(followTokens, [ ], 19)
+        recoverIfUnexpectedToken(followTokens, [ ], ERR_INCORRECT_SYMBOL_FOLLOWING_STATEMENT)
      end {compileStatement} ;
 
 begin {compileBlock}
@@ -750,7 +727,7 @@ begin {compileBlock}
         emitInstruction(jmp,0,0); {skip top-level procedure bodies until the main block is entered}
     end;
     if currentLevel > 1 then
-        reportError (32);
+        reportCompilerError(ERR_PROCEDURES_GLOBAL_SCOPE_ONLY, currentSourceContext, errorCount);
     repeat
         if currentToken = constsym then
         begin
@@ -765,7 +742,7 @@ begin {compileBlock}
                 if currentToken = semicolon then
                     readNextToken
                 else
-                    reportError (5)
+                    reportCompilerError(ERR_SEMICOLON_OR_COMMA_MISSING, currentSourceContext, errorCount)
             until currentToken <> ident
         end ;
         if currentToken = varsym then
@@ -781,17 +758,17 @@ begin {compileBlock}
                 if currentToken = semicolon then
                     readNextToken
                 else
-                    reportError (5)
+                    reportCompilerError(ERR_SEMICOLON_OR_COMMA_MISSING, currentSourceContext, errorCount)
             until currentToken <> ident;
         end ;
         while allowProcedureDeclarations and (currentToken = procsym) do
         begin
             if currentLevel <> 0 then
             begin
-                reportError(31);
+                reportCompilerError(ERR_NESTED_PROCEDURES_NOT_SUPPORTED, currentSourceContext, errorCount);
                 readNextToken;
                 recoverIfUnexpectedToken([ident], [semicolon] + followTokens +
-                                         statementStartTokens + activeDeclarationStartTokens, 4);
+                                         statementStartTokens + activeDeclarationStartTokens, ERR_DECLARATION_IDENTIFIER_EXPECTED);
                 while not (currentToken in [semicolon] + followTokens +
                                         statementStartTokens + activeDeclarationStartTokens) do
                     readNextToken;
@@ -804,32 +781,32 @@ begin {compileBlock}
                 readNextToken
             end
             else
-                reportError (4);
+                reportCompilerError(ERR_DECLARATION_IDENTIFIER_EXPECTED, currentSourceContext, errorCount);
             if currentToken = semicolon then
                 readNextToken
             else
-                reportError (5);
+                reportCompilerError(ERR_SEMICOLON_OR_COMMA_MISSING, currentSourceContext, errorCount);
             compileBlock(currentLevel+1, tableIndex, [semicolon]+followTokens, false);
             if currentToken = semicolon then
             begin
                 readNextToken;
                 recoverIfUnexpectedToken(statementStartTokens+[ident] +
-                                         activeDeclarationStartTokens, followTokens, 6)
+                                         activeDeclarationStartTokens, followTokens, ERR_INVALID_TOKEN_AFTER_PROCEDURE_DECLARATION)
             end
             else
-                reportError (5)
+                reportCompilerError(ERR_SEMICOLON_OR_COMMA_MISSING, currentSourceContext, errorCount)
         end ;
         if (not allowProcedureDeclarations) and (currentToken = procsym) then
         begin
-            reportError(31);
+            reportCompilerError(ERR_NESTED_PROCEDURES_NOT_SUPPORTED, currentSourceContext, errorCount);
             readNextToken;
             recoverIfUnexpectedToken([ident], [semicolon] + followTokens +
-                                     statementStartTokens + activeDeclarationStartTokens, 4);
+                                     statementStartTokens + activeDeclarationStartTokens, ERR_DECLARATION_IDENTIFIER_EXPECTED);
             while not (currentToken in [semicolon] + followTokens +
                                     statementStartTokens + activeDeclarationStartTokens) do
                 readNextToken;
         end;
-        recoverIfUnexpectedToken(statementStartTokens+[ident], activeDeclarationStartTokens, 7)
+        recoverIfUnexpectedToken(statementStartTokens+[ident], activeDeclarationStartTokens, ERR_STATEMENT_EXPECTED)
     until not(currentToken in activeDeclarationStartTokens);
     if allowProcedureDeclarations then
         pCode[symbolTable[savedTableIndex].address].argument := codeIndex;
@@ -841,7 +818,7 @@ begin {compileBlock}
     emitInstruction(int, 0, dataAllocationIndex);
     compileStatement([semicolon, endsym]+followTokens);
     emitInstruction(opr, 0, 0); {return}
-    recoverIfUnexpectedToken(followTokens, [ ], 8);
+    recoverIfUnexpectedToken(followTokens, [ ], ERR_INVALID_TOKEN_AFTER_STATEMENT_PART_IN_BLOCK);
     listGeneratedCode;
 end {compileBlock} ;
 
@@ -855,7 +832,7 @@ begin
     Assign(pCodeFile, pCodeFileName);
     Rewrite(pCodeFile);
     
-    writeln('Processing file: ', sourceFileName);
+    emitDiagnostic(status, STATUS_COMPILER_PROCESSING_FILE + sourceFileName);
     reservedWords[ 1] := 'begin     ';
     reservedWords[ 2] := 'call      ';
     reservedWords[ 3] := 'const     ';
@@ -898,17 +875,17 @@ begin
     readNextToken;
     compileBlock(0, 0, [period]+declarationStartTokens+statementStartTokens, true);
     if currentToken <> period then
-        reportError (9);
+        reportCompilerError(ERR_PERIOD_EXPECTED, currentSourceContext, errorCount);
     if errorCount = 0 then
     begin
-        write(' PL/O PROGRAM COMPILED SUCCESSFULLY');
+        emitDiagnostic(status, STATUS_COMPILER_SUCCESS);
         for outputInstructionIndex := 0 to codeIndex - 1 do
             with pCode[outputInstructionIndex] do
                 writeln(pCodeFile, outputInstructionIndex,
                         opcodeMnemonics[operation]:5, lexicalLevel:3, argument:5);
     end
     else
-        write(' ERRORS IN PL/O PROGRAM');
+        emitDiagnostic(status, STATUS_COMPILER_ERRORS);
     closeFilesAndHalt()
 end {compileFile} ;
 

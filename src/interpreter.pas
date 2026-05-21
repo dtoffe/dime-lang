@@ -20,7 +20,7 @@ This file contains the interpreter.
 program interpreter;
 
 uses
-    SysUtils;
+    SysUtils, diagnostics;
 
 const
     maxNestingLevel = 1;    {the language has only global and procedure-local lexical scopes}
@@ -67,19 +67,19 @@ end {opcodeToString} ;
 {Writes a p-code loader trace entry.}
 procedure traceLoad(messageText: string);
 begin
-    writeln('[LOAD] ', messageText)
+    emitDiagnostic(debug, '[LOAD] ' + messageText)
 end {traceLoad} ;
 
 {Writes an execution-step trace entry.}
 procedure traceStep(messageText: string);
 begin
-    writeln('[STEP] ', messageText)
+    emitDiagnostic(debug, '[STEP] ' + messageText)
 end {traceStep} ;
 
 {Writes a store-operation trace entry.}
 procedure traceStore(messageText: string);
 begin
-    writeln('[STOR] ', messageText)
+    emitDiagnostic(debug, '[STOR] ' + messageText)
 end {traceStore} ;
 
 {Loads p-code instructions from the input file into memory.}
@@ -132,11 +132,11 @@ begin
 
         Val(lexicalLevelText, pCode[instructionIndex].lexicalLevel, conversionStatus);
         if conversionStatus <> 0 then
-            writeln('Error converting l-value');
+            reportRuntimeError(ERROR_INTERPRETER_INVALID_L_VALUE);
 
         Val(argumentText, pCode[instructionIndex].argument, conversionStatus);
         if conversionStatus <> 0 then
-            writeln('Error converting a-value');
+            reportRuntimeError(ERROR_INTERPRETER_INVALID_A_VALUE);
 
         {Advance to the next instruction slot.}
         instructionIndex := instructionIndex + 1;
@@ -146,7 +146,7 @@ begin
     {The full p-code listing has now been consumed.}
     Close(pCodeFile);
 
-    traceLoad('Reading complete. Records loaded: ' + IntToStr(instructionIndex));
+    emitDiagnostic(status, STATUS_PCODE_READING_COMPLETE + IntToStr(instructionIndex));
 
 end;
 
@@ -173,7 +173,7 @@ procedure executePCode;
      end {findBase} ;
 
 begin
-    traceStep('START PL/0');
+    emitDiagnostic(status, STATUS_INTERPRETER_START);
     stackTop := 0; basePointer := 1; programCounter := 0;
     runtimeStack[1] := 0; runtimeStack[2] := 0; runtimeStack[3] := 0;
     {Frame layout: static link, dynamic link, return address.}
@@ -258,13 +258,14 @@ begin
                  end
         end {with, case}
     until programCounter = 0;
-    traceStep('END PL/0');
+    emitDiagnostic(status, STATUS_INTERPRETER_END);
 end {executePCode} ;
 
 begin {main program}
+    setDiagnosticVerbosity(all);
     pCodeFileName := ParamStr(1);
     Assign(pCodeFile, pCodeFileName);
     Reset(pCodeFile);
     loadPCodeFile();
     executePCode();
-end .
+end.

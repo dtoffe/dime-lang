@@ -9,10 +9,12 @@ and this project is expected to follow [Semantic Versioning](https://semver.org/
 
 ### Added
 
+- Add diagnostics unit for error and diagnostics helpers.
 - Add main compiler program driver.
 
 ### Changed
 
+- Extract error reporting from compiler into diagnostics unit.
 - Extract main program driver from compiler, convert compiler into a unit.
 
 ## [v0.0.2] - 2026-05-20
