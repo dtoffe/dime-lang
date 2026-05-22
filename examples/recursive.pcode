@@ -1,7 +1,7 @@
 0JMP    0   24
 1INT    0    4
 2LOD    1    4
-3STO    0    3
+3STO    1    3
 4LOD    1    4
 5LIT    0    1
 6OPR    0    3
@@ -18,7 +18,7 @@
 17JPC    0   19
 18CAL    1    1
 19LOD    1    3
-20LOD    0    3
+20LOD    1    3
 21OPR    0    4
 22STO    1    3
 23OPR    0    0

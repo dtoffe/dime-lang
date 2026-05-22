@@ -9,6 +9,7 @@ and this project is expected to follow [Semantic Versioning](https://semver.org/
 
 ### Added
 
+- Add an abstract syntax tree unit and add ast creation into the parser.
 - Add symbol table unit for symbol table handling.
 - Add lexer unit for lexical analysis.
 - Add token unit for shared token data types.
