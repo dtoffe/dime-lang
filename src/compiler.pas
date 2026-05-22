@@ -27,7 +27,7 @@ procedure compileFile(const inputFileName: string);
 implementation
 
 uses
-  SysUtils, diagnostics, tokens, lexer, symtable, astree;
+  SysUtils, diagnostics, tokens, lexer, symtable, astree, semantics;
 
 const maxAddress = 2047;         {maximum address}
     maxNestingLevel = 1;         {the language has only global and procedure-local lexical scopes}
@@ -243,15 +243,13 @@ function compileBlock (currentLevel: integer; blockSymbolIndex: symbolIndex; fol
                             factorSource := lexerCurrentSourceContext;
                             factorNode := newIdentifierReferenceNode(lexerCurrentIdentifier, factorSource);
                             symbolIndex := lookupSymbol(lexerCurrentIdentifier);
-                            if symbolIndex = 0 then
-                                reportCompilerError(ERR_UNDECLARED_IDENTIFIER, lexerCurrentSourceContext, errorCount)
-                            else
+                            if symbolIndex <> 0 then
                                 case getDeclarationKind(symbolIndex) of
                                     constant: emitInstruction(lit, 0, getConstantValue(symbolIndex));
                                     variable: emitInstruction(lod, lexicalLevelDistance(currentLevel, getDeclarationLevel(symbolIndex),
                                                                                        lexerCurrentSourceContext, errorCount),
                                                               getAddress(symbolIndex));
-                                    proc: reportCompilerError(ERR_PROCEDURE_IDENTIFIER_IN_EXPRESSION, lexerCurrentSourceContext, errorCount)
+                                    proc: {reported later by semantics}
                                 end ;
                             compileFactor := factorNode;
                             readNextToken(errorCount)
@@ -394,14 +392,8 @@ function compileBlock (currentLevel: integer; blockSymbolIndex: symbolIndex; fol
             appendExpressionChild(compileStatement,
                                   newIdentifierReferenceNode(lexerCurrentIdentifier, statementSource));
             symbolIndex := lookupSymbol(lexerCurrentIdentifier);
-            if symbolIndex = 0 then
-                reportCompilerError(ERR_UNDECLARED_IDENTIFIER, lexerCurrentSourceContext, errorCount)
-            else
-                if getDeclarationKind(symbolIndex) <> variable then
-                begin {assignment to non-variable}
-                    reportCompilerError(ERR_ASSIGNMENT_TO_CONSTANT_OR_PROCEDURE, lexerCurrentSourceContext, errorCount);
-                    symbolIndex := 0
-                end ;
+            if (symbolIndex = 0) or (getDeclarationKind(symbolIndex) <> variable) then
+                symbolIndex := 0;
             readNextToken(errorCount);
             if lexerCurrentToken = becomes then
                 readNextToken(errorCount)
@@ -426,15 +418,10 @@ function compileBlock (currentLevel: integer; blockSymbolIndex: symbolIndex; fol
                     appendArgumentNode(compileStatement,
                                        newIdentifierReferenceNode(lexerCurrentIdentifier, lexerCurrentSourceContext));
                     symbolIndex := lookupSymbol(lexerCurrentIdentifier);
-                    if symbolIndex = 0 then
-                        reportCompilerError(ERR_UNDECLARED_IDENTIFIER, lexerCurrentSourceContext, errorCount)
-                    else
-                        if getDeclarationKind(symbolIndex) = proc then
-                            emitInstruction (cal, lexicalLevelDistance(currentLevel, getDeclarationLevel(symbolIndex),
-                                                                       lexerCurrentSourceContext, errorCount),
-                                             getAddress(symbolIndex))
-                        else
-                            reportCompilerError(ERR_CALL_OF_CONSTANT_OR_VARIABLE, lexerCurrentSourceContext, errorCount);
+                    if (symbolIndex <> 0) and (getDeclarationKind(symbolIndex) = proc) then
+                        emitInstruction (cal, lexicalLevelDistance(currentLevel, getDeclarationLevel(symbolIndex),
+                                                                   lexerCurrentSourceContext, errorCount),
+                                         getAddress(symbolIndex));
                     readNextToken(errorCount)
                 end
             end
@@ -642,6 +629,7 @@ begin
                 compileBlock(0, 0, [period]+declarationStartTokens+statementStartTokens, true));
     if lexerCurrentToken <> period then
         reportCompilerError(ERR_PERIOD_EXPECTED, lexerCurrentSourceContext, errorCount);
+    analyzeAst(programNode, errorCount);
     if errorCount = 0 then
     begin
         emitDiagnostic(status, STATUS_COMPILER_SUCCESS);
