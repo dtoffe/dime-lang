@@ -53,6 +53,7 @@ const
     ERR_NUMBER_TOO_LARGE = 30;
     ERR_NESTED_PROCEDURES_NOT_SUPPORTED = 31;
     ERR_PROCEDURES_GLOBAL_SCOPE_ONLY = 32;
+    ERR_SYMBOL_TABLE_OVERFLOW = 33;
 
     ERROR_INTERPRETER_INVALID_L_VALUE = 'Error converting l-value';
     ERROR_INTERPRETER_INVALID_A_VALUE = 'Error converting a-value';
@@ -175,7 +176,8 @@ begin
         ERR_INVALID_TOKEN_AT_EXPRESSION_START: compilerErrorMessage := 'An expression cannot begin with this symbol.';
         ERR_NUMBER_TOO_LARGE: compilerErrorMessage := 'This number is too large.';
         ERR_NESTED_PROCEDURES_NOT_SUPPORTED: compilerErrorMessage := 'Nested procedures are not supported.';
-        ERR_PROCEDURES_GLOBAL_SCOPE_ONLY: compilerErrorMessage := 'Procedures may only be declared at global scope.'
+        ERR_PROCEDURES_GLOBAL_SCOPE_ONLY: compilerErrorMessage := 'Procedures may only be declared at global scope.';
+        ERR_SYMBOL_TABLE_OVERFLOW: compilerErrorMessage := 'Symbol table capacity exceeded.'
     else
         compilerErrorMessage := 'Unknown compiler error.'
     end

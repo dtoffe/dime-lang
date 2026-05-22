@@ -27,15 +27,13 @@ procedure compileFile(const inputFileName: string);
 implementation
 
 uses
-  SysUtils, diagnostics, tokens, lexer;
+  SysUtils, diagnostics, tokens, lexer, symtable;
 
-const symbolTableMax = 100;      {length of identifier table}
-    maxAddress = 2047;           {maximum address}
+const maxAddress = 2047;         {maximum address}
     maxNestingLevel = 1;         {the language has only global and procedure-local lexical scopes}
     codeMaxIndex = 200;          {maximum code array index}
 
-type declarationKind = (constant, variable, proc);
-    opcode = (lit, opr, lod, sto, cal, int, jmp, jpc); {functions}
+type opcode = (lit, opr, lod, sto, cal, int, jmp, jpc); {functions}
     pCodeInstruction = packed record
                     operation: opcode;                  {virtual machine opcode}
                     lexicalLevel: 0..maxNestingLevel;   {static-link distance}
@@ -56,13 +54,6 @@ var errorCount: integer;
     opcodeMnemonics: array [opcode] of
                 packed array [1 .. 5] of char; {fixed-width listing/output text}
     declarationStartTokens, statementStartTokens, factorStartTokens: symbolSet;
-    symbolTable: array [0..symbolTableMax] of
-              record identifier: identifier; {sentinel slot 0 is used by findSymbol}
-                case declarationType: declarationKind of
-                  constant: (constantValue: integer);
-                  variable, proc: (declarationLevel, address: integer)
-                  {for variables, address is the stack slot; for procedures, the entry point}
-              end ;
 
     pCodeFile: Text;
     pCodeFileName: string;
@@ -139,75 +130,13 @@ end {recoverIfUnexpectedToken} ;
 
 {Compiles a PL/0 block with declarations and a statement body.
  Top-level blocks may declare procedures; procedure bodies may not.}
-procedure compileBlock (currentLevel, tableIndex: integer; followTokens: symbolSet;
+procedure compileBlock (currentLevel: integer; blockSymbolIndex: symbolIndex; followTokens: symbolSet;
                         allowProcedureDeclarations: boolean);
     var dataAllocationIndex,     {next local-variable slot; slots 0..2 are the activation record header}
-        savedTableIndex,         {symbol table size on entry so locals can shadow outer names}
+        procedureSymbolIndex,    {symbol table slot for a declared procedure before compiling its body}
+        scopeMarker,             {symbol table size on entry so locals can shadow outer names}
         blockCodeStart: integer; {first emitted instruction that belongs to this block body}
         activeDeclarationStartTokens: symbolSet;
-
-    {Adds the current identifier as a constant, variable, or procedure declaration.}
-    procedure enterDeclaration(declarationToEnter: declarationKind);
-    begin {enterDeclaration object into table}
-        tableIndex := tableIndex + 1;
-        with symbolTable[tableIndex] do
-        begin
-            identifier := lexerCurrentIdentifier;
-            declarationType := declarationToEnter;
-            case declarationToEnter of
-                constant:
-                    begin
-                        if lexerCurrentNumber > maxAddress then
-                        begin
-                            reportCompilerError(ERR_NUMBER_TOO_LARGE, lexerCurrentSourceContext, errorCount);
-                            constantValue := 0
-                        end
-                        else
-                            constantValue := lexerCurrentNumber;
-                        traceDeclaration('const ' + identifierToString(identifier) +
-                                         ' = ' + IntToStr(constantValue))
-                    end ;
-                variable:
-                    begin
-                        declarationLevel := currentLevel;
-                        address := dataAllocationIndex;
-                        dataAllocationIndex := dataAllocationIndex + 1;
-                        traceDeclaration('var ' + identifierToString(identifier) +
-                                         ' level=' + IntToStr(declarationLevel) +
-                                         ' addr=' + IntToStr(address))
-                    end ;
-                proc:
-                    begin
-                        declarationLevel := currentLevel;
-                        traceDeclaration('procedure ' + identifierToString(identifier) +
-                                         ' level=' + IntToStr(declarationLevel))
-                    end
-            end
-        end
-    end {enterDeclaration} ;
-
-    {Finds an identifier in the active symbol table, returning zero when absent.}
-    function findSymbol(identifierToFind: identifier): integer;
-        var searchIndex: integer;
-    begin {find identifier id in table}
-        symbolTable[0].identifier := identifierToFind;
-        searchIndex := tableIndex;
-        while symbolTable[searchIndex].identifier <> identifierToFind do
-            searchIndex := searchIndex - 1;
-        findSymbol := searchIndex
-    end { findSymbol} ;
-
-    {Returns the outward lexical distance for a resolved symbol reference.
-     The language now allows only two scopes: global (0) and procedure-local (1).}
-    function lexicalLevelDistance(targetDeclarationLevel: integer): integer;
-    begin
-        lexicalLevelDistance := currentLevel - targetDeclarationLevel;
-        if (lexicalLevelDistance < 0) or (lexicalLevelDistance > 1) then
-        begin
-            reportCompilerError(ERR_PROCEDURES_GLOBAL_SCOPE_ONLY, lexerCurrentSourceContext, errorCount);
-            lexicalLevelDistance := 0
-        end
-    end {lexicalLevelDistance} ;
 
     {Parses one constant declaration and records it in the symbol table.}
     procedure parseConstantDeclaration;
@@ -222,7 +151,9 @@ procedure compileBlock (currentLevel, tableIndex: integer; followTokens: symbolS
                 readNextToken(errorCount);
                 if lexerCurrentToken = number then
                 begin
-                    enterDeclaration(constant);
+                    enterDeclaration(constant, lexerCurrentIdentifier, lexerCurrentNumber,
+                                     currentLevel, maxAddress, lexerCurrentSourceContext,
+                                     dataAllocationIndex, errorCount);
                     readNextToken(errorCount)
                 end
                 else
@@ -240,7 +171,9 @@ procedure compileBlock (currentLevel, tableIndex: integer; followTokens: symbolS
     begin
         if lexerCurrentToken = ident then
         begin
-            enterDeclaration (variable);
+            enterDeclaration(variable, lexerCurrentIdentifier, 0, currentLevel,
+                             maxAddress,
+                             lexerCurrentSourceContext, dataAllocationIndex, errorCount);
             readNextToken(errorCount)
         end
         else
@@ -280,14 +213,15 @@ procedure compileBlock (currentLevel, tableIndex: integer; followTokens: symbolS
                     while lexerCurrentToken in factorStartTokens do
                     begin
                         if lexerCurrentToken = ident then
-                        begin symbolIndex := findSymbol(lexerCurrentIdentifier);
+                        begin symbolIndex := lookupSymbol(lexerCurrentIdentifier);
                             if symbolIndex = 0 then
                                 reportCompilerError(ERR_UNDECLARED_IDENTIFIER, lexerCurrentSourceContext, errorCount)
                             else
-                                with symbolTable[symbolIndex] do
-                                case declarationType of
-                                    constant: emitInstruction(lit, 0, constantValue);
-                                    variable: emitInstruction(lod, lexicalLevelDistance(declarationLevel), address);
+                                case getDeclarationKind(symbolIndex) of
+                                    constant: emitInstruction(lit, 0, getConstantValue(symbolIndex));
+                                    variable: emitInstruction(lod, lexicalLevelDistance(currentLevel, getDeclarationLevel(symbolIndex),
+                                                                                       lexerCurrentSourceContext, errorCount),
+                                                              getAddress(symbolIndex));
                                     proc: reportCompilerError(ERR_PROCEDURE_IDENTIFIER_IN_EXPRESSION, lexerCurrentSourceContext, errorCount)
                                 end ;
                                 readNextToken(errorCount)
@@ -390,11 +324,11 @@ procedure compileBlock (currentLevel, tableIndex: integer; followTokens: symbolS
     begin {compileStatement}
         if lexerCurrentToken = ident then
         begin
-            symbolIndex := findSymbol(lexerCurrentIdentifier);
+            symbolIndex := lookupSymbol(lexerCurrentIdentifier);
             if symbolIndex = 0 then
                 reportCompilerError(ERR_UNDECLARED_IDENTIFIER, lexerCurrentSourceContext, errorCount)
             else
-                if symbolTable[symbolIndex].declarationType <> variable then
+                if getDeclarationKind(symbolIndex) <> variable then
                 begin {assignment to non-variable}
                     reportCompilerError(ERR_ASSIGNMENT_TO_CONSTANT_OR_PROCEDURE, lexerCurrentSourceContext, errorCount);
                     symbolIndex := 0
@@ -406,8 +340,9 @@ procedure compileBlock (currentLevel, tableIndex: integer; followTokens: symbolS
                 reportCompilerError(ERR_ASSIGNMENT_OPERATOR_EXPECTED, lexerCurrentSourceContext, errorCount);
             compileExpression(followTokens);
             if symbolIndex <> 0 then
-                with symbolTable[symbolIndex] do
-                    emitInstruction(sto, lexicalLevelDistance(declarationLevel), address)
+                emitInstruction(sto, lexicalLevelDistance(currentLevel, getDeclarationLevel(symbolIndex),
+                                                          lexerCurrentSourceContext, errorCount),
+                                getAddress(symbolIndex))
         end
         else
             if lexerCurrentToken = callsym then
@@ -417,15 +352,16 @@ procedure compileBlock (currentLevel, tableIndex: integer; followTokens: symbolS
                     reportCompilerError(ERR_CALL_MUST_BE_FOLLOWED_BY_IDENTIFIER, lexerCurrentSourceContext, errorCount)
                 else
                 begin
-                    symbolIndex := findSymbol(lexerCurrentIdentifier);
+                    symbolIndex := lookupSymbol(lexerCurrentIdentifier);
                     if symbolIndex = 0 then
                         reportCompilerError(ERR_UNDECLARED_IDENTIFIER, lexerCurrentSourceContext, errorCount)
                     else
-                        with symbolTable[symbolIndex] do
-                            if declarationType = proc then
-                                emitInstruction (cal, lexicalLevelDistance(declarationLevel), address)
-                            else
-                                reportCompilerError(ERR_CALL_OF_CONSTANT_OR_VARIABLE, lexerCurrentSourceContext, errorCount);
+                        if getDeclarationKind(symbolIndex) = proc then
+                            emitInstruction (cal, lexicalLevelDistance(currentLevel, getDeclarationLevel(symbolIndex),
+                                                                       lexerCurrentSourceContext, errorCount),
+                                             getAddress(symbolIndex))
+                        else
+                            reportCompilerError(ERR_CALL_OF_CONSTANT_OR_VARIABLE, lexerCurrentSourceContext, errorCount);
                     readNextToken(errorCount)
                 end
             end
@@ -484,12 +420,12 @@ procedure compileBlock (currentLevel, tableIndex: integer; followTokens: symbolS
 
 begin {compileBlock}
     dataAllocationIndex := 3; {reserve static link, dynamic link, and return address}
-    savedTableIndex := tableIndex;
+    scopeMarker := markScope;
     activeDeclarationStartTokens := [constsym, varsym];
     if allowProcedureDeclarations then
     begin
         activeDeclarationStartTokens := activeDeclarationStartTokens + [procsym];
-        symbolTable[tableIndex].address := codeIndex;
+        setAddress(blockSymbolIndex, codeIndex);
         emitInstruction(jmp,0,0); {skip top-level procedure bodies until the main block is entered}
     end;
     if currentLevel > 1 then
@@ -543,7 +479,9 @@ begin {compileBlock}
             readNextToken(errorCount);
             if lexerCurrentToken = ident then
             begin
-                enterDeclaration(proc);
+                procedureSymbolIndex := enterDeclaration(proc, lexerCurrentIdentifier, 0,
+                                                         currentLevel, maxAddress, lexerCurrentSourceContext,
+                                                         dataAllocationIndex, errorCount);
                 readNextToken(errorCount)
             end
             else
@@ -552,7 +490,7 @@ begin {compileBlock}
                 readNextToken(errorCount)
             else
                 reportCompilerError(ERR_SEMICOLON_OR_COMMA_MISSING, lexerCurrentSourceContext, errorCount);
-            compileBlock(currentLevel+1, tableIndex, [semicolon]+followTokens, false);
+            compileBlock(currentLevel+1, procedureSymbolIndex, [semicolon]+followTokens, false);
             if lexerCurrentToken = semicolon then
             begin
                 readNextToken(errorCount);
@@ -575,17 +513,16 @@ begin {compileBlock}
         recoverIfUnexpectedToken(statementStartTokens+[ident], activeDeclarationStartTokens, ERR_STATEMENT_EXPECTED)
     until not(lexerCurrentToken in activeDeclarationStartTokens);
     if allowProcedureDeclarations then
-        pCode[symbolTable[savedTableIndex].address].argument := codeIndex;
-    with symbolTable[savedTableIndex] do
-    begin
-        address := codeIndex; {entry point of this block after declarations}
-    end ;
+        pCode[getAddress(blockSymbolIndex)].argument := codeIndex;
+    if (currentLevel = 0) or (blockSymbolIndex <> 0) then
+        setAddress(blockSymbolIndex, codeIndex); {entry point of this block after declarations}
     blockCodeStart := codeIndex;
     emitInstruction(int, 0, dataAllocationIndex);
     compileStatement([semicolon, endsym]+followTokens);
     emitInstruction(opr, 0, 0); {return}
     recoverIfUnexpectedToken(followTokens, [ ], ERR_INVALID_TOKEN_AFTER_STATEMENT_PART_IN_BLOCK);
     listGeneratedCode;
+    restoreScope(scopeMarker)
 end {compileBlock} ;
 
 procedure compileFile(const inputFileName: string);
@@ -608,6 +545,7 @@ begin
     statementStartTokens := [beginsym, callsym, ifsym, whilesym];
     factorStartTokens := [ident, number, lparen];
     codeIndex := 0;
+    initializeSymbolTable;
     compileBlock(0, 0, [period]+declarationStartTokens+statementStartTokens, true);
     if lexerCurrentToken <> period then
         reportCompilerError(ERR_PERIOD_EXPECTED, lexerCurrentSourceContext, errorCount);

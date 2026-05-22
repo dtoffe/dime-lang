@@ -9,6 +9,7 @@ and this project is expected to follow [Semantic Versioning](https://semver.org/
 
 ### Added
 
+- Add symbol table unit for symbol table handling.
 - Add lexer unit for lexical analysis.
 - Add token unit for shared token data types.
 - Add diagnostics unit for error and diagnostics helpers.
@@ -16,6 +17,7 @@ and this project is expected to follow [Semantic Versioning](https://semver.org/
 
 ### Changed
 
+- Extract symbol table and symbol handling into its own unit.
 - Extract lexer state and routines into its own unit.
 - Extract token data types from parser into tokens unit.
 - Extract error reporting from compiler into diagnostics unit.
