@@ -9,6 +9,7 @@ and this project is expected to follow [Semantic Versioning](https://semver.org/
 
 ### Added
 
+- Add pcode generation unit.
 - Add a new unit for semantic checks pass.
 - Add an abstract syntax tree unit and add ast creation into the parser.
 - Add symbol table unit for symbol table handling.
@@ -19,6 +20,7 @@ and this project is expected to follow [Semantic Versioning](https://semver.org/
 
 ### Changed
 
+- Extract pcode generation from the compiler unit. 
 - Extract some semantic checks into semantics unit.
 - Extract symbol table and symbol handling into its own unit.
 - Extract lexer state and routines into its own unit.

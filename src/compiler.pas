@@ -18,7 +18,7 @@ This file contains the compiler.
 }
 
 unit compiler;
-{PL/0 compiler with code generation}
+{PL/0 compiler front end: parse, analyze, then invoke code generation}
 
 interface
 
@@ -27,18 +27,7 @@ procedure compileFile(const inputFileName: string);
 implementation
 
 uses
-  SysUtils, diagnostics, tokens, lexer, symtable, astree, semantics;
-
-const maxAddress = 2047;         {maximum address}
-    maxNestingLevel = 1;         {the language has only global and procedure-local lexical scopes}
-    codeMaxIndex = 200;          {maximum code array index}
-
-type opcode = (lit, opr, lod, sto, cal, int, jmp, jpc); {functions}
-    pCodeInstruction = packed record
-                    operation: opcode;                  {virtual machine opcode}
-                    lexicalLevel: 0..maxNestingLevel;   {static-link distance}
-                    argument: 0..maxAddress;            {opcode-specific operand}
-                  end ;
+  SysUtils, diagnostics, tokens, lexer, astree, semantics, codegen;
 {   LIT 0,a  :  load constant a
     OPR 0,a  :  execute operation a
     LOD l,a  :  load variable l,a
@@ -49,15 +38,7 @@ type opcode = (lit, opr, lod, sto, cal, int, jmp, jpc); {functions}
     JPC 0,a  :  jump conditional to a      }
 
 var errorCount: integer;
-    codeIndex: integer;       {index of the next instruction to emit}
-    pCode: array [0..codeMaxIndex] of pCodeInstruction; {generated program image}
-    opcodeMnemonics: array [opcode] of
-                packed array [1 .. 5] of char; {fixed-width listing/output text}
     declarationStartTokens, statementStartTokens, factorStartTokens: symbolSet;
-
-    pCodeFile: Text;
-    pCodeFileName: string;
-    outputInstructionIndex: integer; {used when flushing generated code to disk}
 
 {Converts a fixed-width identifier buffer into a trimmed string for trace output.}
 function identifierToString(const identifier: identifier): string;
@@ -69,52 +50,11 @@ begin
     identifierToString := TrimRight(identifierToString)
 end {identifierToString} ;
 
-{Converts an opcode mnemonic array entry into a trimmed string for trace output.}
-function opcodeMnemonicToString(instructionOpcode: opcode): string;
-    var characterIndex: integer;
-begin
-    opcodeMnemonicToString := '';
-    for characterIndex := 1 to 5 do
-        opcodeMnemonicToString := opcodeMnemonicToString + opcodeMnemonics[instructionOpcode][characterIndex];
-    opcodeMnemonicToString := TrimRight(opcodeMnemonicToString)
-end {opcodeMnemonicToString} ;
-
-{Writes a generated-instruction trace entry.}
-procedure traceInstruction(messageText: string);
-begin
-    emitDiagnostic(debug, '[EMIT] ' + messageText)
-end {traceInstruction} ;
-
 procedure dumpAstIfVerbose(rootNode: astNode);
 begin
     if getDiagnosticVerbosity = diagnostics.all then
         dumpAstPreOrder(rootNode)
 end {dumpAstIfVerbose} ;
-
-{Closes the open compiler files and terminates the process.}
-procedure closeFilesAndHalt;
-begin
-    writeln;
-    close(pCodeFile);
-    halt
-end {closeFilesAndHalt} ;
-
-{Appends one p-code instruction to the generated instruction array.}
-procedure emitInstruction(instructionOpcode: opcode; instructionLevel, instructionArgument: integer);
-begin
-    if codeIndex > codeMaxIndex then
-    begin
-        emitDiagnostic(error, STATUS_PROGRAM_TOO_LONG);
-        closeFilesAndHalt()
-    end ;
-    with pCode[codeIndex] do
-    begin
-        operation := instructionOpcode;
-        lexicalLevel := instructionLevel;
-        argument := instructionArgument
-    end ;
-    codeIndex := codeIndex + 1
-end {emitInstruction} ;
 
 {Reports an unexpected token and skips input until parsing can safely resume.}
 procedure recoverIfUnexpectedToken (allowedTokens, recoveryTokens: symbolSet; errorCode: integer);
@@ -128,19 +68,15 @@ begin
     end
 end {recoverIfUnexpectedToken} ;
 
-{Compiles a PL/0 block with declarations and a statement body.
+{Parses a PL/0 block into AST declarations and a statement body.
  Top-level blocks may declare procedures; procedure bodies may not.}
-function compileBlock (currentLevel: integer; blockSymbolIndex: symbolIndex; followTokens: symbolSet;
+function compileBlock (currentLevel: integer; followTokens: symbolSet;
                        allowProcedureDeclarations: boolean): astNode;
-    var dataAllocationIndex: integer;     {next local-variable slot; slots 0..2 are the activation record header}
-        declarationNode: astNode;         {AST node produced for one declaration}
-        procedureSymbolIndex: symbolIndex;{symbol table slot for a declared procedure before compiling its body}
-        scopeMarker: symbolIndex;         {symbol table size on entry so locals can shadow outer names}
-        blockCodeStart: integer;          {first emitted instruction that belongs to this block body}
+    var declarationNode: astNode;         {AST node produced for one declaration}
         blockNode: astNode;      {AST node for the current block}
         activeDeclarationStartTokens: symbolSet;
 
-    {Parses one constant declaration and records it in the symbol table.}
+    {Parses one constant declaration and builds its AST node.}
     function parseConstantDeclaration: astNode;
         var declarationIdentifier: identifier;
             declarationValue: integer;
@@ -160,9 +96,6 @@ function compileBlock (currentLevel: integer; blockSymbolIndex: symbolIndex; fol
                 if lexerCurrentToken = number then
                 begin
                     declarationValue := lexerCurrentNumber;
-                    enterDeclaration(constant, lexerCurrentIdentifier, lexerCurrentNumber,
-                                     currentLevel, maxAddress, lexerCurrentSourceContext,
-                                     dataAllocationIndex, errorCount);
                     parseConstantDeclaration := newConstDeclarationNode(declarationIdentifier,
                                                                         declarationValue,
                                                                         declarationSource);
@@ -178,7 +111,7 @@ function compileBlock (currentLevel: integer; blockSymbolIndex: symbolIndex; fol
             reportCompilerError(ERR_DECLARATION_IDENTIFIER_EXPECTED, lexerCurrentSourceContext, errorCount)
     end {parseConstantDeclaration} ;
 
-    {Parses one variable declaration and records its stack address.}
+    {Parses one variable declaration and builds its AST node.}
     function parseVariableDeclaration: astNode;
         var declarationIdentifier: identifier;
             declarationSource: sourceContext;
@@ -188,9 +121,6 @@ function compileBlock (currentLevel: integer; blockSymbolIndex: symbolIndex; fol
         begin
             declarationIdentifier := lexerCurrentIdentifier;
             declarationSource := lexerCurrentSourceContext;
-            enterDeclaration(variable, lexerCurrentIdentifier, 0, currentLevel,
-                             maxAddress,
-                             lexerCurrentSourceContext, dataAllocationIndex, errorCount);
             parseVariableDeclaration := newVarDeclarationNode(declarationIdentifier, declarationSource);
             readNextToken(errorCount)
         end
@@ -198,40 +128,25 @@ function compileBlock (currentLevel: integer; blockSymbolIndex: symbolIndex; fol
             reportCompilerError(ERR_DECLARATION_IDENTIFIER_EXPECTED, lexerCurrentSourceContext, errorCount)
     end {parseVariableDeclaration} ;
 
-    {Writes the p-code instructions generated for the current block.}
-    procedure listGeneratedCode;
-        var instructionIndex: integer;
-    begin {list code generated for this block}
-        for instructionIndex := blockCodeStart to codeIndex-1 do
-            with pCode[instructionIndex] do
-                traceInstruction(Format('%4d %-5s %3d %5d',
-                                        [instructionIndex,
-                                         opcodeMnemonicToString(operation),
-                                         lexicalLevel,
-                                         argument]));
-    end {listGeneratedCode} ;
-
-    {Compiles one statement and emits the p-code needed to execute it.}
+    {Parses one statement into AST form.}
     function compileStatement (followTokens: symbolSet): astNode;
-        var symbolIndex, conditionalJumpIndex, loopExitJumpIndex: integer;
-            statementSource: sourceContext;
+        var statementSource: sourceContext;
 
-        {Compiles an expression, including leading signs and additive operators.}
+        {Parses an expression, including leading signs and additive operators.}
         function compileExpression(followTokens: symbolSet): astNode;
             var additiveOperator: symbol;
                 expressionNode, rightHandNode, termNode: astNode;
                 expressionSource: sourceContext;
 
-            {Compiles a term and emits multiplication or division operations.}
+            {Parses a term.}
             function compileTerm(followTokens: symbolSet): astNode;
                 var multiplicativeOperator: symbol;
                     factorNode, rightHandNode, termNode: astNode;
                     termSource: sourceContext;
 
-                {Compiles a factor such as an identifier, number, or parenthesized expression.}
+                {Parses a factor such as an identifier, number, or parenthesized expression.}
                 function compileFactor (followTokens: symbolSet): astNode;
-                    var symbolIndex: integer;
-                        factorNode: astNode;
+                    var factorNode: astNode;
                         factorSource: sourceContext;
                 begin
                     compileFactor := nil;
@@ -242,15 +157,6 @@ function compileBlock (currentLevel: integer; blockSymbolIndex: symbolIndex; fol
                         begin
                             factorSource := lexerCurrentSourceContext;
                             factorNode := newIdentifierReferenceNode(lexerCurrentIdentifier, factorSource);
-                            symbolIndex := lookupSymbol(lexerCurrentIdentifier);
-                            if symbolIndex <> 0 then
-                                case getDeclarationKind(symbolIndex) of
-                                    constant: emitInstruction(lit, 0, getConstantValue(symbolIndex));
-                                    variable: emitInstruction(lod, lexicalLevelDistance(currentLevel, getDeclarationLevel(symbolIndex),
-                                                                                       lexerCurrentSourceContext, errorCount),
-                                                              getAddress(symbolIndex));
-                                    proc: {reported later by semantics}
-                                end ;
                             compileFactor := factorNode;
                             readNextToken(errorCount)
                         end
@@ -260,12 +166,7 @@ function compileBlock (currentLevel: integer; blockSymbolIndex: symbolIndex; fol
                                 factorSource := lexerCurrentSourceContext;
                                 factorNode := newNumberLiteralNode(lexerCurrentNumber, factorSource);
                                 if lexerCurrentNumber > maxAddress then
-                                begin
                                     reportCompilerError(ERR_NUMBER_TOO_LARGE, lexerCurrentSourceContext, errorCount);
-                                    emitInstruction(lit, 0, 0)
-                                end ;
-                                if lexerCurrentNumber <= maxAddress then
-                                    emitInstruction(lit, 0, lexerCurrentNumber);
                                 compileFactor := factorNode;
                                 readNextToken(errorCount)
                             end
@@ -296,11 +197,7 @@ function compileBlock (currentLevel: integer; blockSymbolIndex: symbolIndex; fol
                     factorNode := newBinaryExpressionNode(multiplicativeOperator, termSource);
                     appendExpressionChild(factorNode, termNode);
                     appendExpressionChild(factorNode, rightHandNode);
-                    termNode := factorNode;
-                    if multiplicativeOperator = times then
-                        emitInstruction(opr, 0, 4)
-                    else
-                        emitInstruction(opr, 0, 5)
+                    termNode := factorNode
                 end;
                 compileTerm := termNode
             end {compileTerm} ;
@@ -313,9 +210,7 @@ function compileBlock (currentLevel: integer; blockSymbolIndex: symbolIndex; fol
                 readNextToken(errorCount);
                 termNode := compileTerm(followTokens+[plus, minus]);
                 expressionNode := newUnaryExpressionNode(additiveOperator, expressionSource);
-                appendExpressionChild(expressionNode, termNode);
-                if additiveOperator = minus then
-                    emitInstruction(opr,0,1)
+                appendExpressionChild(expressionNode, termNode)
             end
             else
                 expressionNode := compileTerm(followTokens+[plus, minus]);
@@ -328,16 +223,12 @@ function compileBlock (currentLevel: integer; blockSymbolIndex: symbolIndex; fol
                 termNode := newBinaryExpressionNode(additiveOperator, expressionSource);
                 appendExpressionChild(termNode, expressionNode);
                 appendExpressionChild(termNode, rightHandNode);
-                expressionNode := termNode;
-                if additiveOperator = plus then
-                    emitInstruction(opr,0,2)
-                else
-                    emitInstruction(opr,0,3)
+                expressionNode := termNode
             end;
             compileExpression := expressionNode
         end {compileExpression} ;
 
-        {Compiles a boolean condition and emits the comparison operation.}
+        {Parses a boolean condition.}
         function compileCondition(followTokens: symbolSet): astNode;
             var relationalOperator: symbol;
                 conditionNode, leftExpressionNode, rightExpressionNode: astNode;
@@ -349,8 +240,7 @@ function compileBlock (currentLevel: integer; blockSymbolIndex: symbolIndex; fol
                 readNextToken(errorCount);
                 leftExpressionNode := compileExpression(followTokens);
                 conditionNode := newConditionNode(oddsym, conditionSource);
-                appendExpressionChild(conditionNode, leftExpressionNode);
-                emitInstruction(opr,0,6)
+                appendExpressionChild(conditionNode, leftExpressionNode)
             end
             else
             begin
@@ -369,15 +259,7 @@ function compileBlock (currentLevel: integer; blockSymbolIndex: symbolIndex; fol
                     rightExpressionNode := compileExpression(followTokens);
                     conditionNode := newConditionNode(relationalOperator, conditionSource);
                     appendExpressionChild(conditionNode, leftExpressionNode);
-                    appendExpressionChild(conditionNode, rightExpressionNode);
-                    case relationalOperator of
-                        eql: emitInstruction(opr,0, 8);
-                        neq: emitInstruction(opr,0, 9);
-                        lss: emitInstruction(opr,0,10);
-                        geq: emitInstruction(opr,0,11);
-                        gtr: emitInstruction(opr,0,12);
-                        leq: emitInstruction(opr,0,13);
-                    end
+                    appendExpressionChild(conditionNode, rightExpressionNode)
                 end
             end;
             compileCondition := conditionNode
@@ -391,19 +273,12 @@ function compileBlock (currentLevel: integer; blockSymbolIndex: symbolIndex; fol
             compileStatement := newAssignmentStatementNode(statementSource);
             appendExpressionChild(compileStatement,
                                   newIdentifierReferenceNode(lexerCurrentIdentifier, statementSource));
-            symbolIndex := lookupSymbol(lexerCurrentIdentifier);
-            if (symbolIndex = 0) or (getDeclarationKind(symbolIndex) <> variable) then
-                symbolIndex := 0;
             readNextToken(errorCount);
             if lexerCurrentToken = becomes then
                 readNextToken(errorCount)
             else
                 reportCompilerError(ERR_ASSIGNMENT_OPERATOR_EXPECTED, lexerCurrentSourceContext, errorCount);
-            appendExpressionChild(compileStatement, compileExpression(followTokens));
-            if symbolIndex <> 0 then
-                emitInstruction(sto, lexicalLevelDistance(currentLevel, getDeclarationLevel(symbolIndex),
-                                                          lexerCurrentSourceContext, errorCount),
-                                getAddress(symbolIndex))
+            appendExpressionChild(compileStatement, compileExpression(followTokens))
         end
         else
             if lexerCurrentToken = callsym then
@@ -417,11 +292,6 @@ function compileBlock (currentLevel: integer; blockSymbolIndex: symbolIndex; fol
                 begin
                     appendArgumentNode(compileStatement,
                                        newIdentifierReferenceNode(lexerCurrentIdentifier, lexerCurrentSourceContext));
-                    symbolIndex := lookupSymbol(lexerCurrentIdentifier);
-                    if (symbolIndex <> 0) and (getDeclarationKind(symbolIndex) = proc) then
-                        emitInstruction (cal, lexicalLevelDistance(currentLevel, getDeclarationLevel(symbolIndex),
-                                                                   lexerCurrentSourceContext, errorCount),
-                                         getAddress(symbolIndex));
                     readNextToken(errorCount)
                 end
             end
@@ -436,10 +306,7 @@ function compileBlock (currentLevel: integer; blockSymbolIndex: symbolIndex; fol
                         readNextToken(errorCount)
                     else
                         reportCompilerError(ERR_THEN_EXPECTED, lexerCurrentSourceContext, errorCount);
-                    conditionalJumpIndex := codeIndex;
-                    emitInstruction(jpc,0,0);
-                    appendStatementNode(compileStatement, compileStatement(followTokens));
-                    pCode[conditionalJumpIndex].argument := codeIndex
+                    appendStatementNode(compileStatement, compileStatement(followTokens))
                 end
                 else
                     if lexerCurrentToken = beginsym then
@@ -470,33 +337,22 @@ function compileBlock (currentLevel: integer; blockSymbolIndex: symbolIndex; fol
                         begin
                             statementSource := lexerCurrentSourceContext;
                             compileStatement := newWhileStatementNode(statementSource);
-                            conditionalJumpIndex := codeIndex;
                             readNextToken(errorCount);
                             appendChild(compileStatement, compileCondition([dosym]+followTokens));
-                            loopExitJumpIndex := codeIndex;
-                            emitInstruction(jpc,0,0);
                             if lexerCurrentToken = dosym then
                                 readNextToken(errorCount)
                             else
                                 reportCompilerError(ERR_DO_EXPECTED, lexerCurrentSourceContext, errorCount);
-                            appendStatementNode(compileStatement, compileStatement(followTokens));
-                            emitInstruction(jmp, 0, conditionalJumpIndex);
-                            pCode[loopExitJumpIndex].argument := codeIndex
+                            appendStatementNode(compileStatement, compileStatement(followTokens))
                         end ;
         recoverIfUnexpectedToken(followTokens, [ ], ERR_INCORRECT_SYMBOL_FOLLOWING_STATEMENT)
      end {compileStatement} ;
 
 begin {compileBlock}
     blockNode := newBlockNode(lexerCurrentSourceContext);
-    dataAllocationIndex := 3; {reserve static link, dynamic link, and return address}
-    scopeMarker := markScope;
     activeDeclarationStartTokens := [constsym, varsym];
     if allowProcedureDeclarations then
-    begin
         activeDeclarationStartTokens := activeDeclarationStartTokens + [procsym];
-        setAddress(blockSymbolIndex, codeIndex);
-        emitInstruction(jmp,0,0); {skip top-level procedure bodies until the main block is entered}
-    end;
     if currentLevel > 1 then
         reportCompilerError(ERR_PROCEDURES_GLOBAL_SCOPE_ONLY, lexerCurrentSourceContext, errorCount);
     repeat
@@ -553,9 +409,6 @@ begin {compileBlock}
             if lexerCurrentToken = ident then
             begin
                 declarationNode := newProcedureDeclarationNode(lexerCurrentIdentifier, lexerCurrentSourceContext);
-                procedureSymbolIndex := enterDeclaration(proc, lexerCurrentIdentifier, 0,
-                                                         currentLevel, maxAddress, lexerCurrentSourceContext,
-                                                         dataAllocationIndex, errorCount);
                 readNextToken(errorCount)
             end
             else
@@ -565,7 +418,7 @@ begin {compileBlock}
             else
                 reportCompilerError(ERR_SEMICOLON_OR_COMMA_MISSING, lexerCurrentSourceContext, errorCount);
             appendChild(declarationNode,
-                        compileBlock(currentLevel+1, procedureSymbolIndex, [semicolon]+followTokens, false));
+                        compileBlock(currentLevel+1, [semicolon]+followTokens, false));
             appendDeclarationNode(blockNode, declarationNode);
             if lexerCurrentToken = semicolon then
             begin
@@ -588,17 +441,8 @@ begin {compileBlock}
         end;
         recoverIfUnexpectedToken(statementStartTokens+[ident], activeDeclarationStartTokens, ERR_STATEMENT_EXPECTED)
     until not(lexerCurrentToken in activeDeclarationStartTokens);
-    if allowProcedureDeclarations then
-        pCode[getAddress(blockSymbolIndex)].argument := codeIndex;
-    if (currentLevel = 0) or (blockSymbolIndex <> 0) then
-        setAddress(blockSymbolIndex, codeIndex); {entry point of this block after declarations}
-    blockCodeStart := codeIndex;
-    emitInstruction(int, 0, dataAllocationIndex);
     appendStatementNode(blockNode, compileStatement([semicolon, endsym]+followTokens));
-    emitInstruction(opr, 0, 0); {return}
     recoverIfUnexpectedToken(followTokens, [ ], ERR_INVALID_TOKEN_AFTER_STATEMENT_PART_IN_BLOCK);
-    listGeneratedCode;
-    restoreScope(scopeMarker);
     compileBlock := blockNode
 end {compileBlock} ;
 
@@ -607,43 +451,37 @@ procedure compileFile(const inputFileName: string);
 begin
     errorCount := 0;
     initializeLexer(inputFileName, errorCount);
-    pCodeFileName := ChangeFileExt(inputFileName, '.pcode');
-    Assign(pCodeFile, pCodeFileName);
-    Rewrite(pCodeFile);
+    initializeCodegen(ChangeFileExt(inputFileName, '.pcode'));
     emitDiagnostic(status, STATUS_COMPILER_PROCESSING_FILE + inputFileName);
-    opcodeMnemonics[lit] := 'LIT  ';
-    opcodeMnemonics[opr] := 'OPR  ';
-    opcodeMnemonics[lod] := 'LOD  ';
-    opcodeMnemonics[sto] := 'STO  ';
-    opcodeMnemonics[cal] := 'CAL  ';
-    opcodeMnemonics[int] := 'INT  ';
-    opcodeMnemonics[jmp] := 'JMP  ';
-    opcodeMnemonics[jpc] := 'JPC  ';
     declarationStartTokens := [constsym, varsym, procsym];
     statementStartTokens := [beginsym, callsym, ifsym, whilesym];
     factorStartTokens := [ident, number, lparen];
-    codeIndex := 0;
-    initializeSymbolTable;
     programNode := newProgramNode(lexerCurrentSourceContext);
     appendChild(programNode,
-                compileBlock(0, 0, [period]+declarationStartTokens+statementStartTokens, true));
+                compileBlock(0, [period]+declarationStartTokens+statementStartTokens, true));
     if lexerCurrentToken <> period then
         reportCompilerError(ERR_PERIOD_EXPECTED, lexerCurrentSourceContext, errorCount);
     analyzeAst(programNode, errorCount);
     if errorCount = 0 then
     begin
-        emitDiagnostic(status, STATUS_COMPILER_SUCCESS);
-        dumpAstIfVerbose(programNode);
-        for outputInstructionIndex := 0 to codeIndex - 1 do
-            with pCode[outputInstructionIndex] do
-                writeln(pCodeFile, outputInstructionIndex,
-                        opcodeMnemonics[operation]:5, lexicalLevel:3, argument:5);
+        generateProgram(programNode, errorCount);
+        if errorCount = 0 then
+        begin
+            emitDiagnostic(status, STATUS_COMPILER_SUCCESS);
+            dumpAstIfVerbose(programNode);
+            traceGeneratedCode(0);
+            writeProgramImage
+        end
+        else
+            emitDiagnostic(status, STATUS_COMPILER_ERRORS)
     end
     else
         emitDiagnostic(status, STATUS_COMPILER_ERRORS);
     cleanupLexer;
+    cleanupCodegen;
     freeAst(programNode);
-    closeFilesAndHalt()
+    writeln;
+    halt
 end {compileFile} ;
 
 end.
