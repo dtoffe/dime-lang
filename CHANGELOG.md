@@ -20,6 +20,7 @@ and this project is expected to follow [Semantic Versioning](https://semver.org/
 
 ### Changed
 
+- Rename compiler unit to parser, small cleanups and adjustements in all other units.
 - Extract pcode generation from the compiler unit. 
 - Extract some semantic checks into semantics unit.
 - Extract symbol table and symbol handling into its own unit.

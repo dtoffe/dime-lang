@@ -13,7 +13,10 @@ unit tokens;
 
 interface
 
-const maxIdentLength = 10;
+const
+    maxIdentLength = 10;
+    maxNumericValue = 2047;
+    maxLexicalNestingLevel = 1;
 
 type
     { Lexical symbols produced by lexer.pas.  Reserved words are represented by

@@ -14,41 +14,25 @@ NOTE: This is a modified version of the original Program 5.6, changing
 the code generation so that the code is emitted directly to a file, and
 moving the interpreter to a separate program that reads the p-code from
 the file and executes it.
-This file contains the compiler.
+This file contains the parser front end.
 }
 
-unit compiler;
-{PL/0 compiler front end: parse, analyze, then invoke code generation}
+unit parser;
+{PL/0 parser front end: parse, analyze, then invoke code generation}
 
 interface
 
-procedure compileFile(const inputFileName: string);
+procedure parseFile(const inputFileName: string);
 
 implementation
 
 uses
   SysUtils, diagnostics, tokens, lexer, astree, semantics, codegen;
-{   LIT 0,a  :  load constant a
-    OPR 0,a  :  execute operation a
-    LOD l,a  :  load variable l,a
-    STO l,a  :  store variable l,a
-    CAL l,a  :  call procedure a at level l
-    INT 0,a  :  increment t-register by a
-    JMP 0,a  :  jump to a
-    JPC 0,a  :  jump conditional to a      }
 
-var errorCount: integer;
-    declarationStartTokens, statementStartTokens, factorStartTokens: symbolSet;
-
-{Converts a fixed-width identifier buffer into a trimmed string for trace output.}
-function identifierToString(const identifier: identifier): string;
-    var characterIndex: integer;
-begin
-    identifierToString := '';
-    for characterIndex := Low(identifier) to High(identifier) do
-        identifierToString := identifierToString + identifier[characterIndex];
-    identifierToString := TrimRight(identifierToString)
-end {identifierToString} ;
+const
+  declarationStartTokens: symbolSet = [constsym, varsym, procsym];
+  statementStartTokens: symbolSet = [beginsym, callsym, ifsym, whilesym];
+  factorStartTokens: symbolSet = [ident, number, lparen];
 
 procedure dumpAstIfVerbose(rootNode: astNode);
 begin
@@ -57,7 +41,8 @@ begin
 end {dumpAstIfVerbose} ;
 
 {Reports an unexpected token and skips input until parsing can safely resume.}
-procedure recoverIfUnexpectedToken (allowedTokens, recoveryTokens: symbolSet; errorCode: integer);
+procedure recoverIfUnexpectedToken (allowedTokens, recoveryTokens: symbolSet; errorCode: integer;
+                                    var errorCount: integer);
 begin
     if not (lexerCurrentToken in allowedTokens) then
     begin
@@ -71,7 +56,8 @@ end {recoverIfUnexpectedToken} ;
 {Parses a PL/0 block into AST declarations and a statement body.
  Top-level blocks may declare procedures; procedure bodies may not.}
 function compileBlock (currentLevel: integer; followTokens: symbolSet;
-                       allowProcedureDeclarations: boolean): astNode;
+                       allowProcedureDeclarations: boolean;
+                       var errorCount: integer): astNode;
     var declarationNode: astNode;         {AST node produced for one declaration}
         blockNode: astNode;      {AST node for the current block}
         activeDeclarationStartTokens: symbolSet;
@@ -150,7 +136,8 @@ function compileBlock (currentLevel: integer; followTokens: symbolSet;
                         factorSource: sourceContext;
                 begin
                     compileFactor := nil;
-                    recoverIfUnexpectedToken(factorStartTokens, followTokens, ERR_INVALID_TOKEN_AT_EXPRESSION_START);
+                    recoverIfUnexpectedToken(factorStartTokens, followTokens, ERR_INVALID_TOKEN_AT_EXPRESSION_START,
+                                             errorCount);
                     while lexerCurrentToken in factorStartTokens do
                     begin
                         if lexerCurrentToken = ident then
@@ -165,7 +152,7 @@ function compileBlock (currentLevel: integer; followTokens: symbolSet;
                             begin
                                 factorSource := lexerCurrentSourceContext;
                                 factorNode := newNumberLiteralNode(lexerCurrentNumber, factorSource);
-                                if lexerCurrentNumber > maxAddress then
+                                if lexerCurrentNumber > maxNumericValue then
                                     reportCompilerError(ERR_NUMBER_TOO_LARGE, lexerCurrentSourceContext, errorCount);
                                 compileFactor := factorNode;
                                 readNextToken(errorCount)
@@ -182,7 +169,8 @@ function compileBlock (currentLevel: integer; followTokens: symbolSet;
                                         reportCompilerError(ERR_RIGHT_PARENTHESIS_MISSING, lexerCurrentSourceContext, errorCount);
                                     compileFactor := factorNode
                                 end ;
-                        recoverIfUnexpectedToken (followTokens, [lparen], ERR_INVALID_TOKEN_AFTER_FACTOR)
+                        recoverIfUnexpectedToken (followTokens, [lparen], ERR_INVALID_TOKEN_AFTER_FACTOR,
+                                                  errorCount)
                     end
                 end {compileFactor} ;
 
@@ -315,7 +303,8 @@ function compileBlock (currentLevel: integer; followTokens: symbolSet;
                         compileStatement := newCompoundStatementNode(statementSource);
                         readNextToken(errorCount);
                         recoverIfUnexpectedToken(statementStartTokens+[ident],
-                                                 [semicolon, endsym]+followTokens, ERR_STATEMENT_EXPECTED);
+                                                 [semicolon, endsym]+followTokens, ERR_STATEMENT_EXPECTED,
+                                                 errorCount);
                         appendStatementNode(compileStatement,
                                             compileStatement([semicolon, endsym]+followTokens));
                         while lexerCurrentToken in [semicolon]+statementStartTokens do
@@ -345,7 +334,7 @@ function compileBlock (currentLevel: integer; followTokens: symbolSet;
                                 reportCompilerError(ERR_DO_EXPECTED, lexerCurrentSourceContext, errorCount);
                             appendStatementNode(compileStatement, compileStatement(followTokens))
                         end ;
-        recoverIfUnexpectedToken(followTokens, [ ], ERR_INCORRECT_SYMBOL_FOLLOWING_STATEMENT)
+        recoverIfUnexpectedToken(followTokens, [ ], ERR_INCORRECT_SYMBOL_FOLLOWING_STATEMENT, errorCount)
      end {compileStatement} ;
 
 begin {compileBlock}
@@ -353,8 +342,6 @@ begin {compileBlock}
     activeDeclarationStartTokens := [constsym, varsym];
     if allowProcedureDeclarations then
         activeDeclarationStartTokens := activeDeclarationStartTokens + [procsym];
-    if currentLevel > 1 then
-        reportCompilerError(ERR_PROCEDURES_GLOBAL_SCOPE_ONLY, lexerCurrentSourceContext, errorCount);
     repeat
         if lexerCurrentToken = constsym then
         begin
@@ -399,7 +386,8 @@ begin {compileBlock}
                 reportCompilerError(ERR_NESTED_PROCEDURES_NOT_SUPPORTED, lexerCurrentSourceContext, errorCount);
                 readNextToken(errorCount);
                 recoverIfUnexpectedToken([ident], [semicolon] + followTokens +
-                                         statementStartTokens + activeDeclarationStartTokens, ERR_DECLARATION_IDENTIFIER_EXPECTED);
+                                         statementStartTokens + activeDeclarationStartTokens,
+                                         ERR_DECLARATION_IDENTIFIER_EXPECTED, errorCount);
                 while not (lexerCurrentToken in [semicolon] + followTokens +
                                         statementStartTokens + activeDeclarationStartTokens) do
                     readNextToken(errorCount);
@@ -418,13 +406,14 @@ begin {compileBlock}
             else
                 reportCompilerError(ERR_SEMICOLON_OR_COMMA_MISSING, lexerCurrentSourceContext, errorCount);
             appendChild(declarationNode,
-                        compileBlock(currentLevel+1, [semicolon]+followTokens, false));
+                        compileBlock(currentLevel+1, [semicolon]+followTokens, false, errorCount));
             appendDeclarationNode(blockNode, declarationNode);
             if lexerCurrentToken = semicolon then
             begin
                 readNextToken(errorCount);
                 recoverIfUnexpectedToken(statementStartTokens+[ident] +
-                                         activeDeclarationStartTokens, followTokens, ERR_INVALID_TOKEN_AFTER_PROCEDURE_DECLARATION)
+                                         activeDeclarationStartTokens, followTokens,
+                                         ERR_INVALID_TOKEN_AFTER_PROCEDURE_DECLARATION, errorCount)
             end
             else
                 reportCompilerError(ERR_SEMICOLON_OR_COMMA_MISSING, lexerCurrentSourceContext, errorCount)
@@ -434,36 +423,36 @@ begin {compileBlock}
             reportCompilerError(ERR_NESTED_PROCEDURES_NOT_SUPPORTED, lexerCurrentSourceContext, errorCount);
             readNextToken(errorCount);
             recoverIfUnexpectedToken([ident], [semicolon] + followTokens +
-                                     statementStartTokens + activeDeclarationStartTokens, ERR_DECLARATION_IDENTIFIER_EXPECTED);
+                                     statementStartTokens + activeDeclarationStartTokens,
+                                     ERR_DECLARATION_IDENTIFIER_EXPECTED, errorCount);
             while not (lexerCurrentToken in [semicolon] + followTokens +
                                     statementStartTokens + activeDeclarationStartTokens) do
                 readNextToken(errorCount);
         end;
-        recoverIfUnexpectedToken(statementStartTokens+[ident], activeDeclarationStartTokens, ERR_STATEMENT_EXPECTED)
+        recoverIfUnexpectedToken(statementStartTokens+[ident], activeDeclarationStartTokens,
+                                 ERR_STATEMENT_EXPECTED, errorCount)
     until not(lexerCurrentToken in activeDeclarationStartTokens);
     appendStatementNode(blockNode, compileStatement([semicolon, endsym]+followTokens));
-    recoverIfUnexpectedToken(followTokens, [ ], ERR_INVALID_TOKEN_AFTER_STATEMENT_PART_IN_BLOCK);
+    recoverIfUnexpectedToken(followTokens, [ ], ERR_INVALID_TOKEN_AFTER_STATEMENT_PART_IN_BLOCK, errorCount);
     compileBlock := blockNode
 end {compileBlock} ;
 
-procedure compileFile(const inputFileName: string);
+procedure parseFile(const inputFileName: string);
     var programNode: astNode;
+        errorCount: integer;
 begin
     errorCount := 0;
     initializeLexer(inputFileName, errorCount);
-    initializeCodegen(ChangeFileExt(inputFileName, '.pcode'));
     emitDiagnostic(status, STATUS_COMPILER_PROCESSING_FILE + inputFileName);
-    declarationStartTokens := [constsym, varsym, procsym];
-    statementStartTokens := [beginsym, callsym, ifsym, whilesym];
-    factorStartTokens := [ident, number, lparen];
     programNode := newProgramNode(lexerCurrentSourceContext);
     appendChild(programNode,
-                compileBlock(0, [period]+declarationStartTokens+statementStartTokens, true));
+                compileBlock(0, [period]+declarationStartTokens+statementStartTokens, true, errorCount));
     if lexerCurrentToken <> period then
         reportCompilerError(ERR_PERIOD_EXPECTED, lexerCurrentSourceContext, errorCount);
     analyzeAst(programNode, errorCount);
     if errorCount = 0 then
     begin
+        initializeCodegen(ChangeFileExt(inputFileName, '.pcode'));
         generateProgram(programNode, errorCount);
         if errorCount = 0 then
         begin
@@ -473,15 +462,13 @@ begin
             writeProgramImage
         end
         else
-            emitDiagnostic(status, STATUS_COMPILER_ERRORS)
+            emitDiagnostic(status, STATUS_COMPILER_ERRORS);
+        cleanupCodegen
     end
     else
         emitDiagnostic(status, STATUS_COMPILER_ERRORS);
     cleanupLexer;
-    cleanupCodegen;
     freeAst(programNode);
-    writeln;
-    halt
-end {compileFile} ;
+end {parseFile} ;
 
 end.

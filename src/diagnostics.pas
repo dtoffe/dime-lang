@@ -12,12 +12,8 @@ interface
 type
     diagnosticLevel = (debug, info, warn, error, status);
     diagnosticVerbosity = (quiet, all);
-    {Source context travels with diagnostics, but only the fields already owned
-     cleanly by the current caller should be populated.
-     Pending lexer extraction work:
-     - fill line from lexer-owned line tracking
-     - fill sourceText from the current lexer line buffer
-     - make lexer the primary producer of this record}
+    {Source context travels with diagnostics and is typically produced by the
+     lexer, then carried forward into AST, semantic, and codegen reporting.}
     sourceContext = record
         sourceName: string;
         line: integer;
@@ -70,7 +66,8 @@ const
 procedure setDiagnosticVerbosity(verbosity: diagnosticVerbosity);
 function getDiagnosticVerbosity: diagnosticVerbosity;
 function tryParseDiagnosticVerbosity(const text: string; var verbosity: diagnosticVerbosity): boolean;
-function makeSourceContext(const sourceName: string; column: integer): sourceContext;
+function makeSourceContext(const sourceName: string; line, column: integer;
+                           const sourceText: string): sourceContext;
 procedure emitDiagnostic(level: diagnosticLevel; const messageText: string);
 procedure reportCompilerError(errorCode: integer; const context: sourceContext; var errorCount: integer);
 procedure reportRuntimeError(const messageText: string);
@@ -108,12 +105,13 @@ begin
     tryParseDiagnosticVerbosity := true
 end;
 
-function makeSourceContext(const sourceName: string; column: integer): sourceContext;
+function makeSourceContext(const sourceName: string; line, column: integer;
+                           const sourceText: string): sourceContext;
 begin
     makeSourceContext.sourceName := sourceName;
-    makeSourceContext.line := 0;
+    makeSourceContext.line := line;
     makeSourceContext.column := column;
-    makeSourceContext.sourceText := ''
+    makeSourceContext.sourceText := sourceText
 end;
 
 function shouldEmitDiagnostic(level: diagnosticLevel): boolean;

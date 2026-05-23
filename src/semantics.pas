@@ -2,7 +2,7 @@
   License: MIT. See LICENSE in the project root.
   Date: 2026-05-22
 
-  First semantic-analysis pass for the compiler.  This pass is intentionally
+  First semantic-analysis pass for the parser pipeline.  This pass is intentionally
   narrow and read-only over the AST.  It currently owns:
   - declaration collection into a temporary symbol table
   - undeclared identifier checks
@@ -187,11 +187,15 @@ begin
     astConstDeclaration:
       begin
         declaredSymbol := addConstant(node^.identifierText, node^.numberValue);
+        if declaredSymbol = 0 then
+          reportCompilerError(ERR_SYMBOL_TABLE_OVERFLOW, nodeSourceContext(node), errorCount);
         rememberResolvedSymbol(node, declaredSymbol)
       end;
     astVarDeclaration:
       begin
         declaredSymbol := addVariable(node^.identifierText, sema.currentLevel, sema.nextAddress);
+        if declaredSymbol = 0 then
+          reportCompilerError(ERR_SYMBOL_TABLE_OVERFLOW, nodeSourceContext(node), errorCount);
         rememberResolvedSymbol(node, declaredSymbol)
       end;
     astProcedureDeclaration:
@@ -204,6 +208,8 @@ begin
         else
         begin
           declaredSymbol := addProcedure(node^.identifierText, sema.currentLevel);
+          if declaredSymbol = 0 then
+            reportCompilerError(ERR_SYMBOL_TABLE_OVERFLOW, nodeSourceContext(node), errorCount);
           rememberResolvedSymbol(node, declaredSymbol)
         end;
 

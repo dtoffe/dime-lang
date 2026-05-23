@@ -2,7 +2,7 @@
   License: MIT. See LICENSE in the project root.
   Date: 2026-05-22
 
-  P-code generation support for the compiler.  This unit owns instruction
+  P-code generation support for the parser pipeline.  This unit owns instruction
   types, opcode mnemonics, the generated program image, emit/patch helpers,
   trace listing, and final program-image output.  It does not parse source
   text or perform semantic checks. }
@@ -11,40 +11,10 @@ unit codegen;
 interface
 
 uses
-  astree, diagnostics;
-
-const
-  maxAddress = 2047;         {maximum address}
-  maxNestingLevel = 1;       {the language has only global and procedure-local lexical scopes}
-  codeMaxIndex = 200;        {maximum code array index}
-
-type
-  opcode = (lit, opr, lod, sto, cal, int, jmp, jpc); {functions}
-  pCodeInstruction = packed record
-    operation: opcode;                   {virtual machine opcode}
-    lexicalLevel: 0..maxNestingLevel;    {static-link distance}
-    argument: 0..maxAddress;             {opcode-specific operand}
-  end;
+  astree;
 
 procedure initializeCodegen(const outputFileName: string);
 procedure cleanupCodegen;
-procedure resetCodegenState;
-procedure emitInstruction(instructionOpcode: opcode; instructionLevel, instructionArgument: integer);
-procedure emitLoadConst(const constantValue: integer);
-procedure emitLoadVar(lexicalLevel, address: integer);
-procedure emitStoreVar(lexicalLevel, address: integer);
-procedure emitCall(lexicalLevel, address: integer);
-procedure emitBinaryOp(operationCode: integer);
-procedure emitUnaryOp(operationCode: integer);
-function emitConditionalJump: integer;
-procedure emitJump(targetAddress: integer);
-procedure emitBlockAllocation(localSlotCount: integer);
-procedure emitReturn;
-function reserveJump(jumpOpcode: opcode): integer;
-procedure patchInstructionArgument(instructionIndex, newArgument: integer);
-procedure patchJumpToCurrent(instructionIndex: integer);
-function currentCodeIndex: integer;
-function currentCodeAddress: integer;
 procedure generateProgram(rootNode: astNode; var errorCount: integer);
 procedure traceGeneratedCode(blockStartIndex: integer);
 procedure writeProgramImage;
@@ -52,7 +22,18 @@ procedure writeProgramImage;
 implementation
 
 uses
-  SysUtils, semantics, symtable, tokens;
+  SysUtils, diagnostics, semantics, symtable, tokens;
+
+const
+  codeMaxIndex = 200;        {maximum code array index}
+
+type
+  opcode = (lit, opr, lod, sto, cal, int, jmp, jpc); {functions}
+  pCodeInstruction = packed record
+    operation: opcode;                              {virtual machine opcode}
+    lexicalLevel: 0..maxLexicalNestingLevel;        {static-link distance}
+    argument: 0..maxNumericValue;                   {opcode-specific operand}
+  end;
 
 var
   codeIndex: integer;       {index of the next instruction to emit}
@@ -66,6 +47,9 @@ type
   codegenContext = record
     currentLevel: integer;
   end;
+
+function reserveJump(jumpOpcode: opcode): integer; forward;
+function currentCodeIndex: integer; forward;
 
 function opcodeMnemonicToString(instructionOpcode: opcode): string;
 var
@@ -108,11 +92,6 @@ end;
 procedure cleanupCodegen;
 begin
   close(pCodeFile)
-end;
-
-procedure resetCodegenState;
-begin
-  codeIndex := 0
 end;
 
 procedure emitInstruction(instructionOpcode: opcode; instructionLevel, instructionArgument: integer);

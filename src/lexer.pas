@@ -2,7 +2,7 @@
   License: MIT. See LICENSE in the project root.
   Date: 2026-05-21
 
-  Lexical analysis for the compiler.  This unit owns lexer state, source file
+  Lexical analysis for the parser front end.  This unit owns lexer state, source file
   reading, reserved-word recognition, tokenization, and the minimal setup and
   cleanup needed to feed tokens to the parser. }
 unit lexer;
@@ -29,8 +29,6 @@ const reservedWordCount = 11;
     numberMaxDigits = 14;
 
 type sourceLineBuffer = array [1..81] of char;
-    reservedWordTable = array [1..reservedWordCount] of identifier;
-    reservedWordTokenTable = array [1..reservedWordCount] of symbol;
     LexerState = record
                    sourceFile: Text;
                    sourceFileName: string;
@@ -38,6 +36,7 @@ type sourceLineBuffer = array [1..81] of char;
                    currentToken: symbol;
                    currentIdentifier: identifier;
                    currentNumber: integer;
+                   currentLineNumber: integer;
                    charIndex: integer;
                    lineLength: integer;
                    sourceLine: sourceLineBuffer;
@@ -46,8 +45,34 @@ type sourceLineBuffer = array [1..81] of char;
                  end;
 
 var lexState: LexerState;
-    reservedWords: reservedWordTable;
-    reservedWordTokens: reservedWordTokenTable;
+
+const
+  reservedWords: array [1..reservedWordCount] of identifier = (
+    'begin     ',
+    'call      ',
+    'const     ',
+    'do        ',
+    'end       ',
+    'if        ',
+    'odd       ',
+    'procedure ',
+    'then      ',
+    'var       ',
+    'while     '
+  );
+  reservedWordTokens: array [1..reservedWordCount] of symbol = (
+    beginsym,
+    callsym,
+    constsym,
+    dosym,
+    endsym,
+    ifsym,
+    oddsym,
+    procsym,
+    thensym,
+    varsym,
+    whilesym
+  );
 
 function identifierToString(const identifier: identifier): string;
     var characterIndex: integer;
@@ -74,8 +99,17 @@ begin
 end {lexerCurrentNumber} ;
 
 function lexerCurrentSourceContext: sourceContext;
+var
+  sourceText: string;
+  characterIndex: integer;
 begin
-    lexerCurrentSourceContext := makeSourceContext(lexState.sourceFileName, lexState.charIndex)
+    sourceText := '';
+    for characterIndex := 1 to lexState.lineLength - 1 do
+        sourceText := sourceText + lexState.sourceLine[characterIndex];
+    lexerCurrentSourceContext := makeSourceContext(lexState.sourceFileName,
+                                                   lexState.currentLineNumber,
+                                                   lexState.charIndex,
+                                                   sourceText)
 end {lexerCurrentSourceContext} ;
 
 procedure traceSourceLine;
@@ -121,6 +155,7 @@ procedure readNextToken(var errorCount: integer);
             end ;
             lexState.lineLength := 0;
             lexState.charIndex := 0;
+            lexState.currentLineNumber := lexState.currentLineNumber + 1;
             while not eoln(lexState.sourceFile) do
             begin
                 lexState.lineLength := lexState.lineLength + 1;
@@ -316,6 +351,7 @@ begin
     reservedWordTokens[11] := whilesym;
     lexState.charIndex := 0;
     lexState.lineLength := 0;
+    lexState.currentLineNumber := 0;
     lexState.currentChar := ' ';
     lexState.identifierBufferLength := maxIdentLength;
     readNextToken(errorCount)

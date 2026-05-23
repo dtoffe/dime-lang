@@ -2,14 +2,14 @@
   License: MIT. See LICENSE in the project root.
   Date: 2026-05-21
 
-  Command-line entry point for the compiler front-end.  This program parses
+  Command-line entry point for the parser front-end.  This program parses
   command-line arguments, configures diagnostic verbosity, and invokes
-  compiler.pas on the requested source file. }
+  parser.pas on the requested source file. }
 program dimec;
 
 uses
     SysUtils,
-    compiler,
+    parser,
     diagnostics;
 
 var
@@ -33,5 +33,5 @@ begin
         setDiagnosticVerbosity(verbosity)
     end;
 
-    compileFile(ParamStr(1))
+    parseFile(ParamStr(1))
 end.

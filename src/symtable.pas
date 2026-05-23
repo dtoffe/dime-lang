@@ -2,9 +2,9 @@
   License: MIT. See LICENSE in the project root.
   Date: 2026-05-22
 
-  Symbol table support for the compiler.  This unit owns symbol storage,
+  Symbol table support for semantic analysis and code generation.  This unit owns symbol storage,
   scope save/restore, declaration insertion, identifier lookup, and accessors
-  for declaration metadata used by parsing and code generation. }
+  for declaration metadata used by later passes. }
 unit symtable;
 
 interface
@@ -29,12 +29,6 @@ function addVariable(const declarationIdentifier: identifier;
                      var nextAddress: integer): symbolIndex;
 function addProcedure(const declarationIdentifier: identifier;
                       declarationLevel: integer): symbolIndex;
-function enterDeclaration(declarationToEnter: declarationKind;
-                          const declarationIdentifier: identifier;
-                          declarationNumber, declarationLevel, maxDeclarationValue: integer;
-                          const declarationSourceContext: sourceContext;
-                          var nextAddress: integer;
-                          var declarationErrorCount: integer): symbolIndex;
 function lookupSymbol(const declarationIdentifier: identifier): symbolIndex;
 function lexicalLevelDistance(currentLevel, targetDeclarationLevel: integer;
                               const sourceContext: sourceContext;
@@ -62,33 +56,6 @@ type
 var
   tableTop: symbolIndex;
   tableEntries: array [symbolIndex] of symbolTableEntry;
-
-function identifierToString(const declarationIdentifier: identifier): string;
-var
-  characterIndex: integer;
-begin
-  identifierToString := '';
-  for characterIndex := Low(declarationIdentifier) to High(declarationIdentifier) do
-    identifierToString := identifierToString + declarationIdentifier[characterIndex];
-  identifierToString := TrimRight(identifierToString)
-end;
-
-procedure traceDeclaration(messageText: string);
-begin
-  emitDiagnostic(debug, '[DECL] ' + messageText)
-end;
-
-function hasSymbolTableCapacity(const declarationSourceContext: sourceContext;
-                                var declarationErrorCount: integer): boolean;
-begin
-  if tableTop >= symbolTableMax then
-  begin
-    reportCompilerError(ERR_SYMBOL_TABLE_OVERFLOW, declarationSourceContext, declarationErrorCount);
-    hasSymbolTableCapacity := false
-  end
-  else
-    hasSymbolTableCapacity := true
-end;
 
 function tryReserveEntry: boolean;
 begin
@@ -169,52 +136,6 @@ begin
     address := 0
   end;
   addProcedure := tableTop
-end;
-
-function enterDeclaration(declarationToEnter: declarationKind;
-                          const declarationIdentifier: identifier;
-                          declarationNumber, declarationLevel, maxDeclarationValue: integer;
-                          const declarationSourceContext: sourceContext;
-                          var nextAddress: integer;
-                          var declarationErrorCount: integer): symbolIndex;
-var
-  constantValue, allocatedAddress: integer;
-begin
-  if not hasSymbolTableCapacity(declarationSourceContext, declarationErrorCount) then
-  begin
-    enterDeclaration := 0;
-    exit
-  end;
-
-  case declarationToEnter of
-    constant:
-      begin
-        if declarationNumber > maxDeclarationValue then
-        begin
-          reportCompilerError(ERR_NUMBER_TOO_LARGE, declarationSourceContext, declarationErrorCount);
-          constantValue := 0
-        end
-        else
-          constantValue := declarationNumber;
-        enterDeclaration := addConstant(declarationIdentifier, constantValue);
-        traceDeclaration('const ' + identifierToString(declarationIdentifier) +
-                         ' = ' + IntToStr(constantValue))
-      end;
-    variable:
-      begin
-        allocatedAddress := nextAddress;
-        enterDeclaration := addVariable(declarationIdentifier, declarationLevel, nextAddress);
-        traceDeclaration('var ' + identifierToString(declarationIdentifier) +
-                         ' level=' + IntToStr(declarationLevel) +
-                         ' addr=' + IntToStr(allocatedAddress))
-      end;
-    proc:
-      begin
-        enterDeclaration := addProcedure(declarationIdentifier, declarationLevel);
-        traceDeclaration('procedure ' + identifierToString(declarationIdentifier) +
-                         ' level=' + IntToStr(declarationLevel))
-      end
-  end
 end;
 
 function lookupSymbol(const declarationIdentifier: identifier): symbolIndex;

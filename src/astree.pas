@@ -2,7 +2,7 @@
   License: MIT. See LICENSE in the project root.
   Date: 2026-05-22
 
-  Abstract syntax tree support for the compiler.  This unit owns AST node
+  Abstract syntax tree support for the parser pipeline.  This unit owns AST node
   kinds, node allocation helpers, tree ownership/freeing, and traversal
   utilities.  It does not parse source text, perform semantic checks, or
   generate code. }
@@ -16,7 +16,7 @@ uses
   diagnostics, tokens;
 
 type
-  { Minimal AST node kinds for the grammar currently parsed by compiler.pas.
+  { Minimal AST node kinds for the grammar currently parsed by parser.pas.
     Expected child layouts are:
       astProgram               block
       astBlock                 declarations/statements in source order
