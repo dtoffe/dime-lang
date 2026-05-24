@@ -229,9 +229,13 @@ OPR 0,2    // add x
 
 Unary minus compiles the term and then emits `OPR 0,1`.
 
-### Conditions
+### Boolean Conditions
 
-Relational conditions compile both expressions and then emit the matching
+`if` and `while` now compile an ordinary expression in condition position.
+Semantic analysis is responsible for ensuring that the expression resolves to a
+boolean value.
+
+Relational expressions compile both operands and then emit the matching
 comparison operation:
 
 ```text
@@ -243,7 +247,7 @@ left > right   -> OPR 0,12
 left <= right  -> OPR 0,13
 ```
 
-The result remains on the stack for `if` and `while`.
+The boolean result remains on the stack for `if` and `while`.
 
 ### Assignment
 
@@ -278,35 +282,35 @@ separate source statements.
 ### `if`
 
 ```pl0
-if condition then statement
+if expression then statement
 ```
 
 Compiles to:
 
 ```text
-... condition leaves 0 or 1 on stack ...
+... expression leaves 0 or 1 on stack ...
 JPC 0, afterThen
 ... statement ...
 afterThen:
 ```
 
-`JPC` consumes the condition value.
+`JPC` consumes the boolean expression value.
 
 ### `while`
 
 ```pl0
-while condition do statement
+while expression do statement
 ```
 
 Compiles to:
 
 ```text
 loopStart:
-... condition leaves 0 or 1 on stack ...
+... expression leaves 0 or 1 on stack ...
 JPC 0, afterLoop
 ... statement ...
 JMP 0, loopStart
 afterLoop:
 ```
 
-The condition is re-evaluated before each iteration.
+The boolean expression is re-evaluated before each iteration.

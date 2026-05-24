@@ -33,6 +33,7 @@ const
   declarationStartTokens: symbolSet = [constsym, varsym, procsym];
   statementStartTokens: symbolSet = [beginsym, callsym, ifsym, whilesym];
   factorStartTokens: symbolSet = [ident, number, truesym, falsesym, lparen, plus, minus];
+  relationalOperatorTokens: symbolSet = [eql, neq, lss, leq, gtr, geq];
 
 type
   binaryOperatorPrecedenceEntry = record
@@ -41,11 +42,17 @@ type
   end;
 
 const
-  binaryOperatorPrecedenceTable: array [1..4] of binaryOperatorPrecedenceEntry = (
-    (operatorToken: plus; precedence: 1),
-    (operatorToken: minus; precedence: 1),
-    (operatorToken: times; precedence: 2),
-    (operatorToken: slash; precedence: 2)
+  binaryOperatorPrecedenceTable: array [1..10] of binaryOperatorPrecedenceEntry = (
+    (operatorToken: eql; precedence: 1),
+    (operatorToken: neq; precedence: 1),
+    (operatorToken: lss; precedence: 1),
+    (operatorToken: leq; precedence: 1),
+    (operatorToken: gtr; precedence: 1),
+    (operatorToken: geq; precedence: 1),
+    (operatorToken: plus; precedence: 2),
+    (operatorToken: minus; precedence: 2),
+    (operatorToken: times; precedence: 3),
+    (operatorToken: slash; precedence: 3)
   );
 
 procedure dumpAstIfVerbose(rootNode: astNode);
@@ -279,7 +286,7 @@ function compileBlock (currentLevel: integer; followTokens: symbolSet;
                     leftNode, rightNode, binaryNode: astNode;
                     operatorSource: sourceContext;
             begin
-                leftNode := compilePrimary(followTokens+[plus, minus, times, slash]);
+                leftNode := compilePrimary(followTokens+relationalOperatorTokens+[plus, minus, times, slash]);
                 operatorPrecedence := binaryOperatorPrecedence(lexerCurrentToken);
                 while operatorPrecedence >= minPrecedence do
                 begin
@@ -287,7 +294,7 @@ function compileBlock (currentLevel: integer; followTokens: symbolSet;
                     operatorSource := lexerCurrentSourceContext;
                     readNextToken(errorCount);
                     rightNode := compileExpressionWithPrecedence(operatorPrecedence + 1,
-                                                                 followTokens+[plus, minus, times, slash]);
+                                                                 followTokens+relationalOperatorTokens+[plus, minus, times, slash]);
                     binaryNode := newBinaryExpressionNode(currentOperator, operatorSource);
                     appendExpressionChild(binaryNode, leftNode);
                     appendExpressionChild(binaryNode, rightNode);
@@ -301,32 +308,6 @@ function compileBlock (currentLevel: integer; followTokens: symbolSet;
             expressionNode := compileExpressionWithPrecedence(1, followTokens);
             compileExpression := expressionNode
         end {compileExpression} ;
-
-        {Parses a boolean condition.}
-        function compileCondition(followTokens: symbolSet): astNode;
-            var relationalOperator: symbol;
-                conditionNode, leftExpressionNode, rightExpressionNode: astNode;
-                conditionSource: sourceContext;
-        begin
-            leftExpressionNode := compileExpression([eql, neq, lss, gtr, leq, geq]+followTokens);
-            conditionSource := lexerCurrentSourceContext;
-            if not (lexerCurrentToken in [eql, neq, lss, leq, gtr, geq]) then
-            begin
-                reportCompilerError(ERR_RELATIONAL_OPERATOR_EXPECTED, lexerCurrentSourceContext, errorCount);
-                conditionNode := newConditionNode(nul, conditionSource);
-                appendExpressionChild(conditionNode, leftExpressionNode)
-            end
-            else
-            begin
-                relationalOperator := lexerCurrentToken;
-                readNextToken(errorCount);
-                rightExpressionNode := compileExpression(followTokens);
-                conditionNode := newConditionNode(relationalOperator, conditionSource);
-                appendExpressionChild(conditionNode, leftExpressionNode);
-                appendExpressionChild(conditionNode, rightExpressionNode)
-            end;
-            compileCondition := conditionNode
-        end {compileCondition} ;
 
     begin {compileStatement}
         compileStatement := nil;
@@ -364,7 +345,7 @@ function compileBlock (currentLevel: integer; followTokens: symbolSet;
                     statementSource := lexerCurrentSourceContext;
                     compileStatement := newIfStatementNode(statementSource);
                     readNextToken(errorCount);
-                    appendChild(compileStatement, compileCondition([thensym, dosym]+followTokens));
+                    appendChild(compileStatement, compileExpression([thensym, dosym]+followTokens));
                     if lexerCurrentToken = thensym then
                         readNextToken(errorCount)
                     else
@@ -402,7 +383,7 @@ function compileBlock (currentLevel: integer; followTokens: symbolSet;
                             statementSource := lexerCurrentSourceContext;
                             compileStatement := newWhileStatementNode(statementSource);
                             readNextToken(errorCount);
-                            appendChild(compileStatement, compileCondition([dosym]+followTokens));
+                            appendChild(compileStatement, compileExpression([dosym]+followTokens));
                             if lexerCurrentToken = dosym then
                                 readNextToken(errorCount)
                             else

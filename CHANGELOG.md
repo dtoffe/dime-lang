@@ -11,6 +11,15 @@ and this project is expected to follow [Semantic Versioning](https://semver.org/
 
 - Add support for `boolean` datatype, `true` and `false` literals in declarations.
 
+### Changed
+
+- Update grammar and p-code documentation so `if`/`while` use `expression` syntactically, with semantic analysis requiring a boolean result.
+- Make relational operators produce boolean expression values instead of using a separate condition-only parse path.
+
+### Removed
+
+- Remove legacy condition-only AST, semantic, and codegen scaffolding now that conditions use ordinary expressions.
+
 ## [v0.0.4] - 2026-05-24
 
 ### Added

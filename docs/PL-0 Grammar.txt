@@ -87,29 +87,32 @@ procedureBlock = [ "const" constantDeclaration { "," constantDeclaration } ";" ]
                  [ "var" variableDeclaration { "," variableDeclaration } ";" ]
                  statement ;
 
-constantDeclaration = ident ":" "integer" "=" number ;
+constantDeclaration = ident ":" typeName "=" literal ;
 
-variableDeclaration = ident ":" "integer" ;
+variableDeclaration = ident ":" typeName ;
 
 statement = [ ident ":=" expression
             | "call" ident 
             | "begin" statement { ";" statement } "end" 
-            | "if" condition "then" statement 
-            | "while" condition "do" statement ] ;
+            | "if" expression "then" statement 
+            | "while" expression "do" statement ] ;
 
 // The outer brackets mean a statement position may be empty in some contexts.
 // This matches the current recursive-descent parser. However, once `begin` is
 // seen, at least one inner statement is required before the matching `end`.
 
-// Conditions are currently relational expressions. A later milestone will
-// generalize them into ordinary boolean expressions.
-condition = expression ( "=" | "<>" | "<" | "<=" | ">" | ">=" ) expression ;
+// Syntax accepts any expression in `if` and `while` condition position.
+// Semantic analysis must ensure that the expression resolves to a boolean value.
+
+typeName = "integer" | "boolean" ;
+
+literal = number | "true" | "false" ;
 
 expression = [ "+" | "-" ] term { ( "+" | "-" ) term } ;
 
 term = factor { ( "*" | "/" ) factor } ;
 
-factor = ident | number | "(" expression ")" ;
+factor = ident | number | "true" | "false" | "(" expression ")" ;
 
 // Procedure identifiers are valid lexical identifiers, but they are not valid
 // expression factors semantically. Using a procedure name in an expression is

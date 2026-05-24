@@ -44,6 +44,11 @@ type
 var
   semanticBindings: semanticBinding;
 
+function isRelationalOperator(operatorSymbol: symbol): boolean;
+begin
+  isRelationalOperator := operatorSymbol in [eql, neq, lss, leq, gtr, geq]
+end;
+
 function nodeSourceContext(node: astNode): sourceContext;
 begin
   nodeSourceContext := node^.source
@@ -106,7 +111,6 @@ end;
 
 procedure analyzeDeclaration(node: astNode; var sema: semanticContext; var errorCount: integer); forward;
 procedure analyzeExpression(node: astNode; var sema: semanticContext; var errorCount: integer); forward;
-procedure analyzeCondition(node: astNode; var sema: semanticContext; var errorCount: integer); forward;
 procedure analyzeStatement(node: astNode; var sema: semanticContext; var errorCount: integer); forward;
 procedure analyzeBlock(node: astNode; var sema: semanticContext; var errorCount: integer); forward;
 
@@ -147,7 +151,6 @@ begin
         setNodeType(node, typeBoolean);
         exit
       end;
-    astBinaryExpression,
     astUnaryExpression:
       begin
         childNode := node^.firstChild;
@@ -157,6 +160,19 @@ begin
           childNode := childNode^.nextSibling
         end;
         setNodeType(node, typeInteger)
+      end;
+    astBinaryExpression:
+      begin
+        childNode := node^.firstChild;
+        while childNode <> nil do
+        begin
+          analyzeExpression(childNode, sema, errorCount);
+          childNode := childNode^.nextSibling
+        end;
+        if isRelationalOperator(node^.operatorSymbol) then
+          setNodeType(node, typeBoolean)
+        else
+          setNodeType(node, typeInteger)
       end
   else
     begin
@@ -165,27 +181,9 @@ begin
       begin
         analyzeExpression(childNode, sema, errorCount);
         childNode := childNode^.nextSibling
-      end;
-      if node^.kind = astCondition then
-        setNodeType(node, typeBoolean)
+      end
     end
   end
-end;
-
-procedure analyzeCondition(node: astNode; var sema: semanticContext; var errorCount: integer);
-var
-  childNode: astNode;
-begin
-  if node = nil then
-    exit;
-
-  childNode := node^.firstChild;
-  while childNode <> nil do
-  begin
-    analyzeExpression(childNode, sema, errorCount);
-    childNode := childNode^.nextSibling
-  end;
-  setNodeType(node, typeBoolean)
 end;
 
 procedure analyzeDeclaration(node: astNode; var sema: semanticContext; var errorCount: integer);
@@ -306,7 +304,7 @@ begin
         thenOrBodyNode := nil;
         if conditionNode <> nil then
           thenOrBodyNode := conditionNode^.nextSibling;
-        analyzeCondition(conditionNode, sema, errorCount);
+        analyzeExpression(conditionNode, sema, errorCount);
         analyzeStatement(thenOrBodyNode, sema, errorCount)
       end;
     astWhileStatement:
@@ -315,7 +313,7 @@ begin
         thenOrBodyNode := nil;
         if conditionNode <> nil then
           thenOrBodyNode := conditionNode^.nextSibling;
-        analyzeCondition(conditionNode, sema, errorCount);
+        analyzeExpression(conditionNode, sema, errorCount);
         analyzeStatement(thenOrBodyNode, sema, errorCount)
       end
   else
@@ -343,9 +341,7 @@ begin
       astCallStatement,
       astIfStatement,
       astWhileStatement:
-        analyzeStatement(childNode, sema, errorCount);
-      astCondition:
-        analyzeCondition(childNode, sema, errorCount);
+        analyzeStatement(childNode, sema, errorCount)
     else
       analyzeExpression(childNode, sema, errorCount)
     end;

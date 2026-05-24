@@ -207,7 +207,6 @@ procedure generateBlockBody(blockNode: astNode; var context: codegenContext; var
 procedure generateProcedureDeclaration(node: astNode; var context: codegenContext; var errorCount: integer); forward;
 
 procedure generateExpression(node: astNode; var context: codegenContext; var errorCount: integer); forward;
-procedure generateCondition(node: astNode; var context: codegenContext; var errorCount: integer); forward;
 procedure generateStatement(node: astNode; var context: codegenContext; var errorCount: integer); forward;
 procedure generateBlock(node: astNode; var context: codegenContext; var errorCount: integer); forward;
 
@@ -260,32 +259,14 @@ begin
           minus: emitBinaryOp(3);
           times: emitBinaryOp(4);
           slash: emitBinaryOp(5);
+          eql: emitBinaryOp(8);
+          neq: emitBinaryOp(9);
+          lss: emitBinaryOp(10);
+          geq: emitBinaryOp(11);
+          gtr: emitBinaryOp(12);
+          leq: emitBinaryOp(13);
         end
       end
-  end
-end;
-
-procedure generateCondition(node: astNode; var context: codegenContext; var errorCount: integer);
-var
-  leftNode, rightNode: astNode;
-begin
-  if node = nil then
-    exit;
-
-  leftNode := node^.firstChild;
-  rightNode := nil;
-  if leftNode <> nil then
-    rightNode := leftNode^.nextSibling;
-
-  generateExpression(leftNode, context, errorCount);
-  generateExpression(rightNode, context, errorCount);
-  case node^.operatorSymbol of
-    eql: emitBinaryOp(8);
-    neq: emitBinaryOp(9);
-    lss: emitBinaryOp(10);
-    geq: emitBinaryOp(11);
-    gtr: emitBinaryOp(12);
-    leq: emitBinaryOp(13);
   end
 end;
 
@@ -344,7 +325,7 @@ begin
         secondChildNode := nil;
         if firstChildNode <> nil then
           secondChildNode := firstChildNode^.nextSibling;
-        generateCondition(firstChildNode, context, errorCount);
+        generateExpression(firstChildNode, context, errorCount);
         conditionalJumpIndex := emitConditionalJump;
         generateStatement(secondChildNode, context, errorCount);
         patchJumpToCurrent(conditionalJumpIndex)
@@ -356,7 +337,7 @@ begin
         secondChildNode := nil;
         if firstChildNode <> nil then
           secondChildNode := firstChildNode^.nextSibling;
-        generateCondition(firstChildNode, context, errorCount);
+        generateExpression(firstChildNode, context, errorCount);
         loopExitJumpIndex := emitConditionalJump;
         generateStatement(secondChildNode, context, errorCount);
         emitJump(loopStartAddress);

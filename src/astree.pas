@@ -25,8 +25,7 @@ type
       astCallStatement         callee identifier
       astIfStatement           condition, then-statement
       astWhileStatement        condition, body statement
-      astCondition             left expression, right expression for relational operators
-      astBinaryExpression      left operand, right operand
+      astBinaryExpression      left operand, right operand, including relational operators
       astUnaryExpression       operand
       astCompoundStatement     statement children in source order }
   astNodeKind = (
@@ -40,7 +39,6 @@ type
     astCallStatement,
     astIfStatement,
     astWhileStatement,
-    astCondition,
     astBinaryExpression,
     astUnaryExpression,
     astIdentifierReference,
@@ -84,8 +82,6 @@ function newAssignmentStatementNode(const source: sourceContext): astNode;
 function newCallStatementNode(const source: sourceContext): astNode;
 function newIfStatementNode(const source: sourceContext): astNode;
 function newWhileStatementNode(const source: sourceContext): astNode;
-function newConditionNode(conditionOperator: symbol;
-                          const source: sourceContext): astNode;
 function newBinaryExpressionNode(expressionOperator: symbol;
                                  const source: sourceContext): astNode;
 function newUnaryExpressionNode(expressionOperator: symbol;
@@ -139,7 +135,6 @@ begin
     astCallStatement: astNodeKindToString := 'CallStmt';
     astIfStatement: astNodeKindToString := 'IfStmt';
     astWhileStatement: astNodeKindToString := 'WhileStmt';
-    astCondition: astNodeKindToString := 'Condition';
     astBinaryExpression: astNodeKindToString := 'BinaryExpr';
     astUnaryExpression: astNodeKindToString := 'UnaryExpr';
     astIdentifierReference: astNodeKindToString := 'IdentifierRef';
@@ -161,7 +156,7 @@ begin
         astNodeSummary := astNodeSummary + ' false'
       else
         astNodeSummary := astNodeSummary + ' true';
-    astCondition, astBinaryExpression, astUnaryExpression:
+    astBinaryExpression, astUnaryExpression:
       astNodeSummary := astNodeSummary + ' op=' + IntToStr(Ord(node^.operatorSymbol))
   end;
   if node^.hasResolvedType then
@@ -253,13 +248,6 @@ end;
 function newWhileStatementNode(const source: sourceContext): astNode;
 begin
   newWhileStatementNode := newAstNode(astWhileStatement, source)
-end;
-
-function newConditionNode(conditionOperator: symbol;
-                          const source: sourceContext): astNode;
-begin
-  newConditionNode := newAstNode(astCondition, source);
-  newConditionNode^.operatorSymbol := conditionOperator
 end;
 
 function newBinaryExpressionNode(expressionOperator: symbol;
