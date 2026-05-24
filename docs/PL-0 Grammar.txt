@@ -108,11 +108,18 @@ typeName = "integer" | "boolean" ;
 
 literal = number | "true" | "false" ;
 
-expression = [ "+" | "-" ] term { ( "+" | "-" ) term } ;
+// Relational operators have the lowest precedence among binary operators and
+// are non-associative, so chaining like `a < b < c` is not part of the grammar.
+
+expression = simpleExpression [ relationalOperator simpleExpression ] ;
+
+simpleExpression = [ "+" | "-" ] term { ( "+" | "-" ) term } ;
 
 term = factor { ( "*" | "/" ) factor } ;
 
 factor = ident | number | "true" | "false" | "(" expression ")" ;
+
+relationalOperator = "=" | "<>" | "<" | "<=" | ">" | ">=" ;
 
 // Procedure identifiers are valid lexical identifiers, but they are not valid
 // expression factors semantically. Using a procedure name in an expression is

@@ -39,20 +39,21 @@ type
   binaryOperatorPrecedenceEntry = record
     operatorToken: symbol;
     precedence: integer;
+    isNonAssociative: boolean;
   end;
 
 const
   binaryOperatorPrecedenceTable: array [1..10] of binaryOperatorPrecedenceEntry = (
-    (operatorToken: eql; precedence: 1),
-    (operatorToken: neq; precedence: 1),
-    (operatorToken: lss; precedence: 1),
-    (operatorToken: leq; precedence: 1),
-    (operatorToken: gtr; precedence: 1),
-    (operatorToken: geq; precedence: 1),
-    (operatorToken: plus; precedence: 2),
-    (operatorToken: minus; precedence: 2),
-    (operatorToken: times; precedence: 3),
-    (operatorToken: slash; precedence: 3)
+    (operatorToken: eql; precedence: 1; isNonAssociative: true),
+    (operatorToken: neq; precedence: 1; isNonAssociative: true),
+    (operatorToken: lss; precedence: 1; isNonAssociative: true),
+    (operatorToken: leq; precedence: 1; isNonAssociative: true),
+    (operatorToken: gtr; precedence: 1; isNonAssociative: true),
+    (operatorToken: geq; precedence: 1; isNonAssociative: true),
+    (operatorToken: plus; precedence: 2; isNonAssociative: false),
+    (operatorToken: minus; precedence: 2; isNonAssociative: false),
+    (operatorToken: times; precedence: 3; isNonAssociative: false),
+    (operatorToken: slash; precedence: 3; isNonAssociative: false)
   );
 
 procedure dumpAstIfVerbose(rootNode: astNode);
@@ -205,6 +206,18 @@ function compileBlock (currentLevel: integer; followTokens: symbolSet;
                     end
             end {binaryOperatorPrecedence} ;
 
+            function operatorIsNonAssociative(currentToken: symbol): boolean;
+                var precedenceEntry: binaryOperatorPrecedenceEntry;
+            begin
+                operatorIsNonAssociative := false;
+                for precedenceEntry in binaryOperatorPrecedenceTable do
+                    if precedenceEntry.operatorToken = currentToken then
+                    begin
+                        operatorIsNonAssociative := precedenceEntry.isNonAssociative;
+                        exit
+                    end
+            end {operatorIsNonAssociative} ;
+
             function compileExpressionWithPrecedence(minPrecedence: integer;
                                                      followTokens: symbolSet): astNode; forward;
 
@@ -299,7 +312,10 @@ function compileBlock (currentLevel: integer; followTokens: symbolSet;
                     appendExpressionChild(binaryNode, leftNode);
                     appendExpressionChild(binaryNode, rightNode);
                     leftNode := binaryNode;
-                    operatorPrecedence := binaryOperatorPrecedence(lexerCurrentToken)
+                    if operatorIsNonAssociative(currentOperator) then
+                        operatorPrecedence := 0
+                    else
+                        operatorPrecedence := binaryOperatorPrecedence(lexerCurrentToken)
                 end;
                 compileExpressionWithPrecedence := leftNode
             end {compileExpressionWithPrecedence} ;

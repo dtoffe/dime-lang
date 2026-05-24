@@ -15,6 +15,7 @@ and this project is expected to follow [Semantic Versioning](https://semver.org/
 
 - Update grammar and p-code documentation so `if`/`while` use `expression` syntactically, with semantic analysis requiring a boolean result.
 - Make relational operators produce boolean expression values instead of using a separate condition-only parse path.
+- Make relational operators non-associative in the precedence parser while keeping them at the lowest binary precedence.
 
 ### Removed
 

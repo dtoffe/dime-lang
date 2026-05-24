@@ -1,0 +1,8 @@
+const truth: boolean = true;
+var flag: boolean;
+
+begin
+  flag := 1 < 2;
+  if flag then
+    flag := truth = false
+end.
