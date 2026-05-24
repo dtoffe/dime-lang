@@ -27,11 +27,11 @@ function addConstant(const declarationIdentifier: identifier;
                      declarationValue: integer;
                      declaredType: typeValue): symbolIndex;
 function addVariable(const declarationIdentifier: identifier;
-                     declarationLevel: integer;
+                     declarationLevelValue: integer;
                      var nextAddress: integer;
                      declaredType: typeValue): symbolIndex;
 function addProcedure(const declarationIdentifier: identifier;
-                      declarationLevel: integer): symbolIndex;
+                      declarationLevelValue: integer): symbolIndex;
 function lookupSymbol(const declarationIdentifier: identifier): symbolIndex;
 function lexicalLevelDistance(currentLevel, targetDeclarationLevel: integer;
                               const sourceContext: sourceContext;
@@ -51,7 +51,6 @@ uses
 type
   symbolTableEntry = record
     identifier: identifier; {sentinel slot 0 is used by lookupSymbol}
-    declaredType: typeValue;
     case declarationType: declarationKind of
       constant: (constantValue: integer);
       variable, proc: (declarationLevel, address: integer)
@@ -61,6 +60,8 @@ type
 var
   tableTop: symbolIndex;
   tableEntries: array [symbolIndex] of symbolTableEntry;
+  entryTypes: array [symbolIndex] of typeValue;
+  entryVisible: array [symbolIndex] of boolean;
 
 function tryReserveEntry: boolean;
 begin
@@ -75,7 +76,8 @@ end;
 
 procedure initializeSymbolTable;
 begin
-  tableTop := 0
+  tableTop := 0;
+  entryVisible[0] := false
 end;
 
 function markScope: symbolIndex;
@@ -84,8 +86,11 @@ begin
 end;
 
 procedure restoreScope(scopeMarker: symbolIndex);
+var
+  entryIndex: symbolIndex;
 begin
-  tableTop := scopeMarker
+  for entryIndex := scopeMarker + 1 to tableTop do
+    entryVisible[entryIndex] := false
 end;
 
 function addConstant(const declarationIdentifier: identifier;
@@ -100,7 +105,8 @@ begin
   with tableEntries[tableTop] do
   begin
     identifier := declarationIdentifier;
-    tableEntries[tableTop].declaredType := declaredType;
+    entryTypes[tableTop] := declaredType;
+    entryVisible[tableTop] := true;
     declarationType := constant;
     constantValue := declarationValue
   end;
@@ -108,7 +114,7 @@ begin
 end;
 
 function addVariable(const declarationIdentifier: identifier;
-                     declarationLevel: integer;
+                     declarationLevelValue: integer;
                      var nextAddress: integer;
                      declaredType: typeValue): symbolIndex;
 begin
@@ -120,9 +126,10 @@ begin
   with tableEntries[tableTop] do
   begin
     identifier := declarationIdentifier;
-    tableEntries[tableTop].declaredType := declaredType;
+    entryTypes[tableTop] := declaredType;
+    entryVisible[tableTop] := true;
     declarationType := variable;
-    tableEntries[tableTop].declarationLevel := declarationLevel;
+    declarationLevel := declarationLevelValue;
     address := nextAddress
   end;
   nextAddress := nextAddress + 1;
@@ -130,7 +137,7 @@ begin
 end;
 
 function addProcedure(const declarationIdentifier: identifier;
-                      declarationLevel: integer): symbolIndex;
+                      declarationLevelValue: integer): symbolIndex;
 begin
   if not tryReserveEntry then
   begin
@@ -140,9 +147,10 @@ begin
   with tableEntries[tableTop] do
   begin
     identifier := declarationIdentifier;
-    declaredType := typeInteger;
+    entryTypes[tableTop] := typeInteger;
+    entryVisible[tableTop] := true;
     declarationType := proc;
-    tableEntries[tableTop].declarationLevel := declarationLevel;
+    declarationLevel := declarationLevelValue;
     address := 0
   end;
   addProcedure := tableTop
@@ -154,7 +162,9 @@ var
 begin
   tableEntries[0].identifier := declarationIdentifier;
   searchIndex := tableTop;
-  while tableEntries[searchIndex].identifier <> declarationIdentifier do
+  while (searchIndex > 0) and
+        ((not entryVisible[searchIndex]) or
+         (tableEntries[searchIndex].identifier <> declarationIdentifier)) do
     searchIndex := searchIndex - 1;
   lookupSymbol := searchIndex
 end;
@@ -178,7 +188,7 @@ end;
 
 function getDeclarationType(index: symbolIndex): typeValue;
 begin
-  getDeclarationType := tableEntries[index].declaredType
+  getDeclarationType := entryTypes[index]
 end;
 
 function getDeclarationLevel(index: symbolIndex): integer;
