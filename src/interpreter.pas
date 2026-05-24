@@ -210,7 +210,6 @@ begin
                  5: begin stackTop := stackTop-1;
                         runtimeStack[stackTop] := runtimeStack[stackTop] div runtimeStack[stackTop+1]
                     end ;
-                 6: runtimeStack[stackTop] := ord(odd(runtimeStack[stackTop]));
                  8: begin stackTop := stackTop-1;
                         runtimeStack[stackTop] := ord(runtimeStack[stackTop]=runtimeStack[stackTop+1])
                     end ;

@@ -22,6 +22,10 @@ and this project is expected to follow [Semantic Versioning](https://semver.org/
 
 - Fix unwinding symbol table bug, leftover from codegen separation from parser.
 
+### Removed
+
+- Remove support for the `odd` operator.
+
 ## [v0.0.3] - 2026-05-22
 
 ### Added

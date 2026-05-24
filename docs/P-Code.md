@@ -66,7 +66,6 @@ Boolean results are stored as `0` for false and `1` for true.
 | `3` | subtraction | `x y -> x - y` |
 | `4` | multiplication | `x y -> x * y` |
 | `5` | integer division | `x y -> x div y` |
-| `6` | odd test | `x -> ord(odd(x))` |
 | `8` | equals | `x y -> ord(x = y)` |
 | `9` | not equals | `x y -> ord(x <> y)` |
 | `10` | less than | `x y -> ord(x < y)` |
@@ -231,12 +230,6 @@ OPR 0,2    // add x
 Unary minus compiles the term and then emits `OPR 0,1`.
 
 ### Conditions
-
-`odd expression` compiles the expression and emits:
-
-```text
-OPR 0,6
-```
 
 Relational conditions compile both expressions and then emit the matching
 comparison operation:

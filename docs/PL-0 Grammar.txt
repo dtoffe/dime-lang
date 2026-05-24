@@ -101,8 +101,9 @@ statement = [ ident ":=" expression
 // This matches the current recursive-descent parser. However, once `begin` is
 // seen, at least one inner statement is required before the matching `end`.
 
-condition = "odd" expression |
-            expression ( "=" | "<>" | "<" | "<=" | ">" | ">=" ) expression ;
+// Conditions are currently relational expressions. A later milestone will
+// generalize them into ordinary boolean expressions.
+condition = expression ( "=" | "<>" | "<" | "<=" | ">" | ">=" ) expression ;
 
 expression = [ "+" | "-" ] term { ( "+" | "-" ) term } ;
 

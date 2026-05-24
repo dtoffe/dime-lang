@@ -276,23 +276,15 @@ begin
   if leftNode <> nil then
     rightNode := leftNode^.nextSibling;
 
-  if node^.operatorSymbol = oddsym then
-  begin
-    generateExpression(leftNode, context, errorCount);
-    emitUnaryOp(6)
-  end
-  else
-  begin
-    generateExpression(leftNode, context, errorCount);
-    generateExpression(rightNode, context, errorCount);
-    case node^.operatorSymbol of
-      eql: emitBinaryOp(8);
-      neq: emitBinaryOp(9);
-      lss: emitBinaryOp(10);
-      geq: emitBinaryOp(11);
-      gtr: emitBinaryOp(12);
-      leq: emitBinaryOp(13);
-    end
+  generateExpression(leftNode, context, errorCount);
+  generateExpression(rightNode, context, errorCount);
+  case node^.operatorSymbol of
+    eql: emitBinaryOp(8);
+    neq: emitBinaryOp(9);
+    lss: emitBinaryOp(10);
+    geq: emitBinaryOp(11);
+    gtr: emitBinaryOp(12);
+    leq: emitBinaryOp(13);
   end
 end;
 

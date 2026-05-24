@@ -27,7 +27,7 @@ type
       current compiler/grammar.  Future roadmap symbols should be added back
       only when the lexer and parser implement them. }
     symbol =
-        (nul, ident, number, plus, minus, times, slash, oddsym,
+        (nul, ident, number, plus, minus, times, slash,
         eql, neq, lss, leq, gtr, geq, lparen, rparen, comma, semicolon,
         period, colon, becomes, beginsym, endsym, ifsym, thensym,
         whilesym, dosym, callsym, constsym, varsym, procsym, integersym);

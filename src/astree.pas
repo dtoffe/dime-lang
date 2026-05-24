@@ -25,7 +25,7 @@ type
       astCallStatement         callee identifier
       astIfStatement           condition, then-statement
       astWhileStatement        condition, body statement
-      astCondition             one child for odd, two children for relational operators
+      astCondition             left expression, right expression for relational operators
       astBinaryExpression      left operand, right operand
       astUnaryExpression       operand
       astCompoundStatement     statement children in source order }

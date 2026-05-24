@@ -25,7 +25,7 @@ implementation
 uses
   SysUtils;
 
-const reservedWordCount = 12;
+const reservedWordCount = 11;
     numberMaxDigits = 14;
 
 type sourceLineBuffer = array [1..81] of char;
@@ -55,7 +55,6 @@ const
     'end       ',
     'if        ',
     'integer   ',
-    'odd       ',
     'procedure ',
     'then      ',
     'var       ',
@@ -69,7 +68,6 @@ const
     endsym,
     ifsym,
     integersym,
-    oddsym,
     procsym,
     thensym,
     varsym,
@@ -336,11 +334,10 @@ begin
     reservedWords[ 5] := 'end       ';
     reservedWords[ 6] := 'if        ';
     reservedWords[ 7] := 'integer   ';
-    reservedWords[ 8] := 'odd       ';
-    reservedWords[ 9] := 'procedure ';
-    reservedWords[10] := 'then      ';
-    reservedWords[11] := 'var       ';
-    reservedWords[12] := 'while     ';
+    reservedWords[ 8] := 'procedure ';
+    reservedWords[ 9] := 'then      ';
+    reservedWords[10] := 'var       ';
+    reservedWords[11] := 'while     ';
     reservedWordTokens[ 1] := beginsym;
     reservedWordTokens[ 2] := callsym;
     reservedWordTokens[ 3] := constsym;
@@ -348,11 +345,10 @@ begin
     reservedWordTokens[ 5] := endsym;
     reservedWordTokens[ 6] := ifsym;
     reservedWordTokens[ 7] := integersym;
-    reservedWordTokens[ 8] := oddsym;
-    reservedWordTokens[ 9] := procsym;
-    reservedWordTokens[10] := thensym;
-    reservedWordTokens[11] := varsym;
-    reservedWordTokens[12] := whilesym;
+    reservedWordTokens[ 8] := procsym;
+    reservedWordTokens[ 9] := thensym;
+    reservedWordTokens[10] := varsym;
+    reservedWordTokens[11] := whilesym;
     lexState.charIndex := 0;
     lexState.lineLength := 0;
     lexState.currentLineNumber := 0;

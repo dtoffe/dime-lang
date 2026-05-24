@@ -268,33 +268,22 @@ function compileBlock (currentLevel: integer; followTokens: symbolSet;
                 conditionNode, leftExpressionNode, rightExpressionNode: astNode;
                 conditionSource: sourceContext;
         begin
-            if lexerCurrentToken = oddsym then
+            leftExpressionNode := compileExpression([eql, neq, lss, gtr, leq, geq]+followTokens);
+            conditionSource := lexerCurrentSourceContext;
+            if not (lexerCurrentToken in [eql, neq, lss, leq, gtr, geq]) then
             begin
-                conditionSource := lexerCurrentSourceContext;
-                readNextToken(errorCount);
-                leftExpressionNode := compileExpression(followTokens);
-                conditionNode := newConditionNode(oddsym, conditionSource);
+                reportCompilerError(ERR_RELATIONAL_OPERATOR_EXPECTED, lexerCurrentSourceContext, errorCount);
+                conditionNode := newConditionNode(nul, conditionSource);
                 appendExpressionChild(conditionNode, leftExpressionNode)
             end
             else
             begin
-                leftExpressionNode := compileExpression([eql, neq, lss, gtr, leq, geq]+followTokens);
-                conditionSource := lexerCurrentSourceContext;
-                if not (lexerCurrentToken in [eql, neq, lss, leq, gtr, geq]) then
-                begin
-                    reportCompilerError(ERR_RELATIONAL_OPERATOR_EXPECTED, lexerCurrentSourceContext, errorCount);
-                    conditionNode := newConditionNode(nul, conditionSource);
-                    appendExpressionChild(conditionNode, leftExpressionNode)
-                end
-                else
-                begin
-                    relationalOperator := lexerCurrentToken;
-                    readNextToken(errorCount);
-                    rightExpressionNode := compileExpression(followTokens);
-                    conditionNode := newConditionNode(relationalOperator, conditionSource);
-                    appendExpressionChild(conditionNode, leftExpressionNode);
-                    appendExpressionChild(conditionNode, rightExpressionNode)
-                end
+                relationalOperator := lexerCurrentToken;
+                readNextToken(errorCount);
+                rightExpressionNode := compileExpression(followTokens);
+                conditionNode := newConditionNode(relationalOperator, conditionSource);
+                appendExpressionChild(conditionNode, leftExpressionNode);
+                appendExpressionChild(conditionNode, rightExpressionNode)
             end;
             compileCondition := conditionNode
         end {compileCondition} ;
