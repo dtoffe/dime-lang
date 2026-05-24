@@ -32,7 +32,21 @@ uses
 const
   declarationStartTokens: symbolSet = [constsym, varsym, procsym];
   statementStartTokens: symbolSet = [beginsym, callsym, ifsym, whilesym];
-  factorStartTokens: symbolSet = [ident, number, lparen];
+  factorStartTokens: symbolSet = [ident, number, lparen, plus, minus];
+
+type
+  binaryOperatorPrecedenceEntry = record
+    operatorToken: symbol;
+    precedence: integer;
+  end;
+
+const
+  binaryOperatorPrecedenceTable: array [1..4] of binaryOperatorPrecedenceEntry = (
+    (operatorToken: plus; precedence: 1),
+    (operatorToken: minus; precedence: 1),
+    (operatorToken: times; precedence: 2),
+    (operatorToken: slash; precedence: 2)
+  );
 
 procedure dumpAstIfVerbose(rootNode: astNode);
 begin
@@ -146,99 +160,105 @@ function compileBlock (currentLevel: integer; followTokens: symbolSet;
 
         {Parses an expression, including leading signs and additive operators.}
         function compileExpression(followTokens: symbolSet): astNode;
-            var additiveOperator: symbol;
-                expressionNode, rightHandNode, termNode: astNode;
-                expressionSource: sourceContext;
+            var expressionNode: astNode;
 
-            {Parses a term.}
-            function compileTerm(followTokens: symbolSet): astNode;
-                var multiplicativeOperator: symbol;
-                    factorNode, rightHandNode, termNode: astNode;
-                    termSource: sourceContext;
-
-                {Parses a factor such as an identifier, number, or parenthesized expression.}
-                function compileFactor (followTokens: symbolSet): astNode;
-                    var factorNode: astNode;
-                        factorSource: sourceContext;
-                begin
-                    compileFactor := nil;
-                    recoverIfUnexpectedToken(factorStartTokens, followTokens, ERR_INVALID_TOKEN_AT_EXPRESSION_START,
-                                             errorCount);
-                    while lexerCurrentToken in factorStartTokens do
+            function binaryOperatorPrecedence(currentToken: symbol): integer;
+                var precedenceEntry: binaryOperatorPrecedenceEntry;
+            begin
+                binaryOperatorPrecedence := 0;
+                for precedenceEntry in binaryOperatorPrecedenceTable do
+                    if precedenceEntry.operatorToken = currentToken then
                     begin
-                        if lexerCurrentToken = ident then
+                        binaryOperatorPrecedence := precedenceEntry.precedence;
+                        exit
+                    end
+            end {binaryOperatorPrecedence} ;
+
+            function compileExpressionWithPrecedence(minPrecedence: integer;
+                                                     followTokens: symbolSet): astNode; forward;
+
+            {Parses an identifier, number, or parenthesized expression.}
+            function compilePrimary(followTokens: symbolSet): astNode;
+                var primaryNode: astNode;
+                    primarySource: sourceContext;
+                    unaryOperator: symbol;
+            begin
+                compilePrimary := nil;
+                recoverIfUnexpectedToken(factorStartTokens, followTokens, ERR_INVALID_TOKEN_AT_EXPRESSION_START,
+                                         errorCount);
+                while lexerCurrentToken in factorStartTokens do
+                begin
+                    if lexerCurrentToken in [plus, minus] then
+                    begin
+                        unaryOperator := lexerCurrentToken;
+                        primarySource := lexerCurrentSourceContext;
+                        readNextToken(errorCount);
+                        primaryNode := newUnaryExpressionNode(unaryOperator, primarySource);
+                        appendExpressionChild(primaryNode, compilePrimary(followTokens));
+                        compilePrimary := primaryNode
+                    end
+                    else
+                    if lexerCurrentToken = ident then
+                    begin
+                        primarySource := lexerCurrentSourceContext;
+                        primaryNode := newIdentifierReferenceNode(lexerCurrentIdentifier, primarySource);
+                        compilePrimary := primaryNode;
+                        readNextToken(errorCount)
+                    end
+                    else
+                        if lexerCurrentToken = number then
                         begin
-                            factorSource := lexerCurrentSourceContext;
-                            factorNode := newIdentifierReferenceNode(lexerCurrentIdentifier, factorSource);
-                            compileFactor := factorNode;
+                            primarySource := lexerCurrentSourceContext;
+                            primaryNode := newNumberLiteralNode(lexerCurrentNumber, primarySource);
+                            if lexerCurrentNumber > maxNumericValue then
+                                reportCompilerError(ERR_NUMBER_TOO_LARGE, lexerCurrentSourceContext, errorCount);
+                            compilePrimary := primaryNode;
                             readNextToken(errorCount)
                         end
                         else
-                            if lexerCurrentToken = number then
+                            if lexerCurrentToken = lparen then
                             begin
-                                factorSource := lexerCurrentSourceContext;
-                                factorNode := newNumberLiteralNode(lexerCurrentNumber, factorSource);
-                                if lexerCurrentNumber > maxNumericValue then
-                                    reportCompilerError(ERR_NUMBER_TOO_LARGE, lexerCurrentSourceContext, errorCount);
-                                compileFactor := factorNode;
-                                readNextToken(errorCount)
-                            end
-                            else
-                                if lexerCurrentToken = lparen then
-                                begin
-                                    factorSource := lexerCurrentSourceContext;
-                                    readNextToken(errorCount);
-                                    factorNode := compileExpression([rparen]+followTokens);
-                                    if lexerCurrentToken = rparen then
-                                        readNextToken(errorCount)
-                                    else
-                                        reportCompilerError(ERR_RIGHT_PARENTHESIS_MISSING, lexerCurrentSourceContext, errorCount);
-                                    compileFactor := factorNode
-                                end ;
-                        recoverIfUnexpectedToken (followTokens, [lparen], ERR_INVALID_TOKEN_AFTER_FACTOR,
-                                                  errorCount)
-                    end
-                end {compileFactor} ;
+                                primarySource := lexerCurrentSourceContext;
+                                readNextToken(errorCount);
+                                primaryNode := compileExpressionWithPrecedence(1, [rparen]+followTokens);
+                                if lexerCurrentToken = rparen then
+                                    readNextToken(errorCount)
+                                else
+                                    reportCompilerError(ERR_RIGHT_PARENTHESIS_MISSING, lexerCurrentSourceContext, errorCount);
+                                compilePrimary := primaryNode
+                            end;
+                    recoverIfUnexpectedToken (followTokens, [lparen], ERR_INVALID_TOKEN_AFTER_FACTOR,
+                                              errorCount)
+                end
+            end {compilePrimary} ;
 
-            begin {compileTerm}
-                termNode := compileFactor(followTokens+[times, slash]);
-                while lexerCurrentToken in [times, slash] do
+            function compileExpressionWithPrecedence(minPrecedence: integer;
+                                                     followTokens: symbolSet): astNode;
+                var currentOperator: symbol;
+                    operatorPrecedence: integer;
+                    leftNode, rightNode, binaryNode: astNode;
+                    operatorSource: sourceContext;
+            begin
+                leftNode := compilePrimary(followTokens+[plus, minus, times, slash]);
+                operatorPrecedence := binaryOperatorPrecedence(lexerCurrentToken);
+                while operatorPrecedence >= minPrecedence do
                 begin
-                    multiplicativeOperator := lexerCurrentToken;
-                    termSource := lexerCurrentSourceContext;
+                    currentOperator := lexerCurrentToken;
+                    operatorSource := lexerCurrentSourceContext;
                     readNextToken(errorCount);
-                    rightHandNode := compileFactor(followTokens+[times, slash]);
-                    factorNode := newBinaryExpressionNode(multiplicativeOperator, termSource);
-                    appendExpressionChild(factorNode, termNode);
-                    appendExpressionChild(factorNode, rightHandNode);
-                    termNode := factorNode
+                    rightNode := compileExpressionWithPrecedence(operatorPrecedence + 1,
+                                                                 followTokens+[plus, minus, times, slash]);
+                    binaryNode := newBinaryExpressionNode(currentOperator, operatorSource);
+                    appendExpressionChild(binaryNode, leftNode);
+                    appendExpressionChild(binaryNode, rightNode);
+                    leftNode := binaryNode;
+                    operatorPrecedence := binaryOperatorPrecedence(lexerCurrentToken)
                 end;
-                compileTerm := termNode
-            end {compileTerm} ;
+                compileExpressionWithPrecedence := leftNode
+            end {compileExpressionWithPrecedence} ;
 
         begin {compileExpression}
-            if lexerCurrentToken in [plus, minus] then
-            begin
-                additiveOperator := lexerCurrentToken;
-                expressionSource := lexerCurrentSourceContext;
-                readNextToken(errorCount);
-                termNode := compileTerm(followTokens+[plus, minus]);
-                expressionNode := newUnaryExpressionNode(additiveOperator, expressionSource);
-                appendExpressionChild(expressionNode, termNode)
-            end
-            else
-                expressionNode := compileTerm(followTokens+[plus, minus]);
-            while lexerCurrentToken in [plus, minus] do
-            begin
-                additiveOperator := lexerCurrentToken;
-                expressionSource := lexerCurrentSourceContext;
-                readNextToken(errorCount);
-                rightHandNode := compileTerm(followTokens+[plus, minus]);
-                termNode := newBinaryExpressionNode(additiveOperator, expressionSource);
-                appendExpressionChild(termNode, expressionNode);
-                appendExpressionChild(termNode, rightHandNode);
-                expressionNode := termNode
-            end;
+            expressionNode := compileExpressionWithPrecedence(1, followTokens);
             compileExpression := expressionNode
         end {compileExpression} ;
 

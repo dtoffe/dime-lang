@@ -9,11 +9,15 @@ and this project is expected to follow [Semantic Versioning](https://semver.org/
 
 ### Added
 
-- Added support for type declaration in `var` and `const`, mandatory and only `integer` datatype for now.
+- Add support for type declaration in `var` and `const`, mandatory and only `integer` datatype for now.
+
+### Changed
+
+- Replace grammar based parsing with an operator precedence climbing (Pratt) parser.
 
 ### Fixed
 
-- Fixed unwinding symbol table bug, leftover from codegen separation from parser.
+- Fix unwinding symbol table bug, leftover from codegen separation from parser.
 
 ## [v0.0.3] - 2026-05-22
 
