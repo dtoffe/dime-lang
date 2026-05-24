@@ -29,8 +29,9 @@ type
     symbol =
         (nul, ident, number, plus, minus, times, slash,
         eql, neq, lss, leq, gtr, geq, lparen, rparen, comma, semicolon,
-        period, colon, becomes, beginsym, endsym, ifsym, thensym,
-        whilesym, dosym, callsym, constsym, varsym, procsym, integersym);
+        period, colon, becomes, beginsym, booleansym, endsym, falsesym,
+        ifsym, thensym, truesym, whilesym, dosym, callsym, constsym, varsym,
+        procsym, integersym);
     symbolSet = set of symbol;
 
     identifier = packed array [1 .. maxIdentLength] of char;

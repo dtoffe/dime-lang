@@ -32,7 +32,7 @@ uses
 const
   declarationStartTokens: symbolSet = [constsym, varsym, procsym];
   statementStartTokens: symbolSet = [beginsym, callsym, ifsym, whilesym];
-  factorStartTokens: symbolSet = [ident, number, lparen, plus, minus];
+  factorStartTokens: symbolSet = [ident, number, truesym, falsesym, lparen, plus, minus];
 
 type
   binaryOperatorPrecedenceEntry = record
@@ -84,7 +84,15 @@ function compileBlock (currentLevel: integer; followTokens: symbolSet;
         begin
             readNextToken(errorCount);
             if lexerCurrentToken = integersym then
+            begin
+                parseDeclarationType := typeInteger;
                 readNextToken(errorCount)
+            end
+            else if lexerCurrentToken = booleansym then
+            begin
+                parseDeclarationType := typeBoolean;
+                readNextToken(errorCount)
+            end
             else
             begin
                 reportCompilerError(ERR_TYPE_NAME_EXPECTED, lexerCurrentSourceContext, errorCount);
@@ -110,7 +118,7 @@ function compileBlock (currentLevel: integer; followTokens: symbolSet;
             declarationSource := lexerCurrentSourceContext;
             readNextToken(errorCount);
             declarationType := parseDeclarationType([eql, becomes, comma, semicolon]);
-            if lexerCurrentToken in [eql, becomes] then
+                if lexerCurrentToken in [eql, becomes] then
             begin
                 if lexerCurrentToken = becomes then
                     reportCompilerError(ERR_USE_EQUAL_NOT_BECOMES, lexerCurrentSourceContext, errorCount);
@@ -120,6 +128,22 @@ function compileBlock (currentLevel: integer; followTokens: symbolSet;
                     declarationValue := lexerCurrentNumber;
                     parseConstantDeclaration := newConstDeclarationNode(declarationIdentifier,
                                                                         declarationValue,
+                                                                        declarationType,
+                                                                        declarationSource);
+                    readNextToken(errorCount)
+                end
+                else if lexerCurrentToken = truesym then
+                begin
+                    parseConstantDeclaration := newConstDeclarationNode(declarationIdentifier,
+                                                                        1,
+                                                                        declarationType,
+                                                                        declarationSource);
+                    readNextToken(errorCount)
+                end
+                else if lexerCurrentToken = falsesym then
+                begin
+                    parseConstantDeclaration := newConstDeclarationNode(declarationIdentifier,
+                                                                        0,
                                                                         declarationType,
                                                                         declarationSource);
                     readNextToken(errorCount)
@@ -205,8 +229,8 @@ function compileBlock (currentLevel: integer; followTokens: symbolSet;
                         compilePrimary := primaryNode;
                         readNextToken(errorCount)
                     end
-                    else
-                        if lexerCurrentToken = number then
+                        else
+                            if lexerCurrentToken = number then
                         begin
                             primarySource := lexerCurrentSourceContext;
                             primaryNode := newNumberLiteralNode(lexerCurrentNumber, primarySource);
@@ -215,6 +239,22 @@ function compileBlock (currentLevel: integer; followTokens: symbolSet;
                             compilePrimary := primaryNode;
                             readNextToken(errorCount)
                         end
+                        else
+                            if lexerCurrentToken = truesym then
+                            begin
+                                primarySource := lexerCurrentSourceContext;
+                                primaryNode := newBooleanLiteralNode(true, primarySource);
+                                compilePrimary := primaryNode;
+                                readNextToken(errorCount)
+                            end
+                            else
+                                if lexerCurrentToken = falsesym then
+                                begin
+                                    primarySource := lexerCurrentSourceContext;
+                                    primaryNode := newBooleanLiteralNode(false, primarySource);
+                                    compilePrimary := primaryNode;
+                                    readNextToken(errorCount)
+                                end
                         else
                             if lexerCurrentToken = lparen then
                             begin

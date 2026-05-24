@@ -142,6 +142,11 @@ begin
         setNodeType(node, typeInteger);
         exit
       end;
+    astBooleanLiteral:
+      begin
+        setNodeType(node, typeBoolean);
+        exit
+      end;
     astBinaryExpression,
     astUnaryExpression:
       begin

@@ -44,7 +44,8 @@ type
     astBinaryExpression,
     astUnaryExpression,
     astIdentifierReference,
-    astNumberLiteral
+    astNumberLiteral,
+    astBooleanLiteral
   );
 
   astNode = ^astNodeRecord;
@@ -95,6 +96,8 @@ function newIdentifierNode(const identifierName: identifier;
                            const source: sourceContext): astNode; deprecated 'Use newIdentifierReferenceNode';
 function newNumberLiteralNode(literalValue: integer;
                               const source: sourceContext): astNode;
+function newBooleanLiteralNode(literalValue: boolean;
+                               const source: sourceContext): astNode;
 procedure setNodeType(node: astNode; resolvedType: typeValue);
 function hasNodeType(node: astNode): boolean;
 function getNodeType(node: astNode): typeValue;
@@ -140,7 +143,8 @@ begin
     astBinaryExpression: astNodeKindToString := 'BinaryExpr';
     astUnaryExpression: astNodeKindToString := 'UnaryExpr';
     astIdentifierReference: astNodeKindToString := 'IdentifierRef';
-    astNumberLiteral: astNodeKindToString := 'NumberLiteral'
+    astNumberLiteral: astNodeKindToString := 'NumberLiteral';
+    astBooleanLiteral: astNodeKindToString := 'BooleanLiteral'
   end
 end;
 
@@ -152,6 +156,11 @@ begin
       astNodeSummary := astNodeSummary + ' ' + identifierToString(node^.identifierText);
     astNumberLiteral:
       astNodeSummary := astNodeSummary + ' ' + IntToStr(node^.numberValue);
+    astBooleanLiteral:
+      if node^.numberValue = 0 then
+        astNodeSummary := astNodeSummary + ' false'
+      else
+        astNodeSummary := astNodeSummary + ' true';
     astCondition, astBinaryExpression, astUnaryExpression:
       astNodeSummary := astNodeSummary + ' op=' + IntToStr(Ord(node^.operatorSymbol))
   end;
@@ -285,6 +294,16 @@ function newNumberLiteralNode(literalValue: integer;
 begin
   newNumberLiteralNode := newAstNode(astNumberLiteral, source);
   newNumberLiteralNode^.numberValue := literalValue
+end;
+
+function newBooleanLiteralNode(literalValue: boolean;
+                               const source: sourceContext): astNode;
+begin
+  newBooleanLiteralNode := newAstNode(astBooleanLiteral, source);
+  if literalValue then
+    newBooleanLiteralNode^.numberValue := 1
+  else
+    newBooleanLiteralNode^.numberValue := 0
 end;
 
 procedure setNodeType(node: astNode; resolvedType: typeValue);

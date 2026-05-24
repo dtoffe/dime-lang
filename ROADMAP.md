@@ -64,12 +64,4 @@ This roadmap is intentionally conservative. The goal is to build the project in 
 - Rework conditions to use the new boolean datatype, adjust grammar to reflect that.
 - Tighten type checking, diagnostics, examples, and codegen for boolean logic.
 
-### v0.0.4 - Expression and Type Foundations
-
-- Add mandatory datatype declaration for vars and consts, integer only for now.
-- Replace the current expression handling with a precedence climbing (Pratt) parser.
-- Add a type table layer separated from the symbol table.
-- Ensure the AST is typed independently of the symbol table.
-- Remove `odd` operator.
-
 For older releases, see [CHANGELOG.md](./CHANGELOG.md).

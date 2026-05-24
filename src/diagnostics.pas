@@ -151,7 +151,7 @@ function compilerErrorMessage(errorCode: integer): string;
 begin
     case errorCode of
         ERR_USE_EQUAL_NOT_BECOMES: compilerErrorMessage := 'Use = instead of :=.';
-        ERR_NUMBER_EXPECTED_AFTER_EQUAL: compilerErrorMessage := '= must be followed by a number.';
+        ERR_NUMBER_EXPECTED_AFTER_EQUAL: compilerErrorMessage := '= must be followed by a literal value.';
         ERR_IDENTIFIER_MUST_BE_FOLLOWED_BY_EQUAL: compilerErrorMessage := 'Identifier must be followed by =.';
         ERR_DECLARATION_IDENTIFIER_EXPECTED: compilerErrorMessage := '"const", "var", "procedure" must be followed by an identifier. Possible reserved-word case error.';
         ERR_SEMICOLON_OR_COMMA_MISSING: compilerErrorMessage := 'Semicolon or comma missing.';

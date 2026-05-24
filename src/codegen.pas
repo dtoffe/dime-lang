@@ -237,7 +237,8 @@ begin
             {procedure-in-expression is rejected during semantics}
         end
       end;
-    astNumberLiteral:
+    astNumberLiteral,
+    astBooleanLiteral:
       emitLoadConst(node^.numberValue);
     astUnaryExpression:
       begin
