@@ -25,7 +25,7 @@ implementation
 uses
   SysUtils;
 
-const reservedWordCount = 11;
+const reservedWordCount = 12;
     numberMaxDigits = 14;
 
 type sourceLineBuffer = array [1..81] of char;
@@ -54,6 +54,7 @@ const
     'do        ',
     'end       ',
     'if        ',
+    'integer   ',
     'odd       ',
     'procedure ',
     'then      ',
@@ -67,6 +68,7 @@ const
     dosym,
     endsym,
     ifsym,
+    integersym,
     oddsym,
     procsym,
     thensym,
@@ -283,7 +285,7 @@ begin {readNextToken}
                         readNextChar
                     end
                     else
-                        lexState.currentToken := nul;
+                        lexState.currentToken := colon;
                 end;
             '<':
                 begin
@@ -333,22 +335,24 @@ begin
     reservedWords[ 4] := 'do        ';
     reservedWords[ 5] := 'end       ';
     reservedWords[ 6] := 'if        ';
-    reservedWords[ 7] := 'odd       ';
-    reservedWords[ 8] := 'procedure ';
-    reservedWords[ 9] := 'then      ';
-    reservedWords[10] := 'var       ';
-    reservedWords[11] := 'while     ';
+    reservedWords[ 7] := 'integer   ';
+    reservedWords[ 8] := 'odd       ';
+    reservedWords[ 9] := 'procedure ';
+    reservedWords[10] := 'then      ';
+    reservedWords[11] := 'var       ';
+    reservedWords[12] := 'while     ';
     reservedWordTokens[ 1] := beginsym;
     reservedWordTokens[ 2] := callsym;
     reservedWordTokens[ 3] := constsym;
     reservedWordTokens[ 4] := dosym;
     reservedWordTokens[ 5] := endsym;
     reservedWordTokens[ 6] := ifsym;
-    reservedWordTokens[ 7] := oddsym;
-    reservedWordTokens[ 8] := procsym;
-    reservedWordTokens[ 9] := thensym;
-    reservedWordTokens[10] := varsym;
-    reservedWordTokens[11] := whilesym;
+    reservedWordTokens[ 7] := integersym;
+    reservedWordTokens[ 8] := oddsym;
+    reservedWordTokens[ 9] := procsym;
+    reservedWordTokens[10] := thensym;
+    reservedWordTokens[11] := varsym;
+    reservedWordTokens[12] := whilesym;
     lexState.charIndex := 0;
     lexState.lineLength := 0;
     lexState.currentLineNumber := 0;

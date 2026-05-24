@@ -16,6 +16,7 @@ const
   symbolTableMax = 100;      {length of identifier table}
 
 type
+  typeValue = (typeInteger);
   declarationKind = (constant, variable, proc);
   symbolIndex = 0..symbolTableMax;
 
@@ -23,10 +24,12 @@ procedure initializeSymbolTable;
 function markScope: symbolIndex;
 procedure restoreScope(scopeMarker: symbolIndex);
 function addConstant(const declarationIdentifier: identifier;
-                     declarationValue: integer): symbolIndex;
+                     declarationValue: integer;
+                     declaredType: typeValue): symbolIndex;
 function addVariable(const declarationIdentifier: identifier;
                      declarationLevel: integer;
-                     var nextAddress: integer): symbolIndex;
+                     var nextAddress: integer;
+                     declaredType: typeValue): symbolIndex;
 function addProcedure(const declarationIdentifier: identifier;
                       declarationLevel: integer): symbolIndex;
 function lookupSymbol(const declarationIdentifier: identifier): symbolIndex;
@@ -34,6 +37,7 @@ function lexicalLevelDistance(currentLevel, targetDeclarationLevel: integer;
                               const sourceContext: sourceContext;
                               var errorCount: integer): integer;
 function getDeclarationKind(index: symbolIndex): declarationKind;
+function getDeclarationType(index: symbolIndex): typeValue;
 function getDeclarationLevel(index: symbolIndex): integer;
 function getAddress(index: symbolIndex): integer;
 procedure setAddress(index: symbolIndex; newAddress: integer);
@@ -47,6 +51,7 @@ uses
 type
   symbolTableEntry = record
     identifier: identifier; {sentinel slot 0 is used by lookupSymbol}
+    declaredType: typeValue;
     case declarationType: declarationKind of
       constant: (constantValue: integer);
       variable, proc: (declarationLevel, address: integer)
@@ -84,7 +89,8 @@ begin
 end;
 
 function addConstant(const declarationIdentifier: identifier;
-                     declarationValue: integer): symbolIndex;
+                     declarationValue: integer;
+                     declaredType: typeValue): symbolIndex;
 begin
   if not tryReserveEntry then
   begin
@@ -94,6 +100,7 @@ begin
   with tableEntries[tableTop] do
   begin
     identifier := declarationIdentifier;
+    tableEntries[tableTop].declaredType := declaredType;
     declarationType := constant;
     constantValue := declarationValue
   end;
@@ -102,7 +109,8 @@ end;
 
 function addVariable(const declarationIdentifier: identifier;
                      declarationLevel: integer;
-                     var nextAddress: integer): symbolIndex;
+                     var nextAddress: integer;
+                     declaredType: typeValue): symbolIndex;
 begin
   if not tryReserveEntry then
   begin
@@ -112,6 +120,7 @@ begin
   with tableEntries[tableTop] do
   begin
     identifier := declarationIdentifier;
+    tableEntries[tableTop].declaredType := declaredType;
     declarationType := variable;
     tableEntries[tableTop].declarationLevel := declarationLevel;
     address := nextAddress
@@ -131,6 +140,7 @@ begin
   with tableEntries[tableTop] do
   begin
     identifier := declarationIdentifier;
+    declaredType := typeInteger;
     declarationType := proc;
     tableEntries[tableTop].declarationLevel := declarationLevel;
     address := 0
@@ -164,6 +174,11 @@ end;
 function getDeclarationKind(index: symbolIndex): declarationKind;
 begin
   getDeclarationKind := tableEntries[index].declarationType
+end;
+
+function getDeclarationType(index: symbolIndex): typeValue;
+begin
+  getDeclarationType := tableEntries[index].declaredType
 end;
 
 function getDeclarationLevel(index: symbolIndex): integer;

@@ -2,3 +2,5 @@ attic
 *.o
 *.ppu
 *.exe
+dimec
+interpreter

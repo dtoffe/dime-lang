@@ -27,7 +27,7 @@ procedure parseFile(const inputFileName: string);
 implementation
 
 uses
-  SysUtils, diagnostics, tokens, lexer, astree, semantics, codegen;
+  SysUtils, diagnostics, tokens, lexer, astree, semantics, codegen, symtable;
 
 const
   declarationStartTokens: symbolSet = [constsym, varsym, procsym];
@@ -62,9 +62,30 @@ function compileBlock (currentLevel: integer; followTokens: symbolSet;
         blockNode: astNode;      {AST node for the current block}
         activeDeclarationStartTokens: symbolSet;
 
+    {Parses the shared mandatory declaration type annotation.}
+    function parseDeclarationType(followTokens: symbolSet): typeValue;
+    begin
+        parseDeclarationType := typeInteger;
+        if lexerCurrentToken = colon then
+        begin
+            readNextToken(errorCount);
+            if lexerCurrentToken = integersym then
+                readNextToken(errorCount)
+            else
+            begin
+                reportCompilerError(ERR_TYPE_NAME_EXPECTED, lexerCurrentSourceContext, errorCount);
+                if not (lexerCurrentToken in followTokens) then
+                    readNextToken(errorCount)
+            end
+        end
+        else
+            reportCompilerError(ERR_TYPE_ANNOTATION_EXPECTED, lexerCurrentSourceContext, errorCount)
+    end {parseDeclarationType} ;
+
     {Parses one constant declaration and builds its AST node.}
     function parseConstantDeclaration: astNode;
         var declarationIdentifier: identifier;
+            declarationType: typeValue;
             declarationValue: integer;
             declarationSource: sourceContext;
     begin
@@ -74,6 +95,7 @@ function compileBlock (currentLevel: integer; followTokens: symbolSet;
             declarationIdentifier := lexerCurrentIdentifier;
             declarationSource := lexerCurrentSourceContext;
             readNextToken(errorCount);
+            declarationType := parseDeclarationType([eql, becomes, comma, semicolon]);
             if lexerCurrentToken in [eql, becomes] then
             begin
                 if lexerCurrentToken = becomes then
@@ -84,6 +106,7 @@ function compileBlock (currentLevel: integer; followTokens: symbolSet;
                     declarationValue := lexerCurrentNumber;
                     parseConstantDeclaration := newConstDeclarationNode(declarationIdentifier,
                                                                         declarationValue,
+                                                                        declarationType,
                                                                         declarationSource);
                     readNextToken(errorCount)
                 end
@@ -100,6 +123,7 @@ function compileBlock (currentLevel: integer; followTokens: symbolSet;
     {Parses one variable declaration and builds its AST node.}
     function parseVariableDeclaration: astNode;
         var declarationIdentifier: identifier;
+            declarationType: typeValue;
             declarationSource: sourceContext;
     begin
         parseVariableDeclaration := nil;
@@ -107,8 +131,10 @@ function compileBlock (currentLevel: integer; followTokens: symbolSet;
         begin
             declarationIdentifier := lexerCurrentIdentifier;
             declarationSource := lexerCurrentSourceContext;
-            parseVariableDeclaration := newVarDeclarationNode(declarationIdentifier, declarationSource);
-            readNextToken(errorCount)
+            readNextToken(errorCount);
+            declarationType := parseDeclarationType([comma, semicolon]);
+            parseVariableDeclaration := newVarDeclarationNode(declarationIdentifier, declarationType,
+                                                              declarationSource)
         end
         else
             reportCompilerError(ERR_DECLARATION_IDENTIFIER_EXPECTED, lexerCurrentSourceContext, errorCount)

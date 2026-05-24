@@ -61,10 +61,4 @@ This roadmap is intentionally conservative. The goal is to build the project in 
 - Ensure the AST is typed independently of the symbol table.
 - Rework conditions to use the new boolean datatype, adjust grammar to reflect that.
 
-### v0.0.3 - Compiler Layer Separation
-
-- Separate the compiler into main program and units for better project structure.
-- Establish at least these layers: `diagnostics`, `tokens`, `lexer`, `symbol table`, `ast`, `semantics`, `parser`, `codegen`.
-- Reduce cross-unit global state and make dependencies more explicit for better maintainability.
-
 For older releases, see [CHANGELOG.md](./CHANGELOG.md).

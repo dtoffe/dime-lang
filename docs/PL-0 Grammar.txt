@@ -78,14 +78,18 @@
 
 program = globalBlock "." ;
 
-globalBlock = [ "const" ident "=" number { "," ident "=" number } ";" ]
-              [ "var" ident { "," ident } ";" ]
+globalBlock = [ "const" constantDeclaration { "," constantDeclaration } ";" ]
+              [ "var" variableDeclaration { "," variableDeclaration } ";" ]
               { "procedure" ident ";" procedureBlock ";" }
               statement ;
 
-procedureBlock = [ "const" ident "=" number { "," ident "=" number } ";" ]
-                 [ "var" ident { "," ident } ";" ]
+procedureBlock = [ "const" constantDeclaration { "," constantDeclaration } ";" ]
+                 [ "var" variableDeclaration { "," variableDeclaration } ";" ]
                  statement ;
+
+constantDeclaration = ident ":" "integer" "=" number ;
+
+variableDeclaration = ident ":" "integer" ;
 
 statement = [ ident ":=" expression
             | "call" ident 

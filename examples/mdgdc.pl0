@@ -1,9 +1,9 @@
-const m = 7, n = 85;
+const m: integer = 7, n: integer = 85;
 
-var x, y, z, q, r;
+var x: integer, y: integer, z: integer, q: integer, r: integer;
 
 procedure multiply;
-    var a, b;
+    var a: integer, b: integer;
 begin
     a := x;
     b := y;
@@ -18,7 +18,7 @@ begin
 end;
 
 procedure divide;
-    var w;
+    var w: integer;
 begin
     r := x;
     q := 0;
@@ -38,7 +38,7 @@ begin
 end;
 
 procedure gcd;
-    var f, g;
+    var f: integer, g: integer;
 begin
     f := x;
     g := y;

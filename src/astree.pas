@@ -13,7 +13,7 @@ unit astree;
 interface
 
 uses
-  diagnostics, tokens;
+  diagnostics, tokens, symtable;
 
 type
   { Minimal AST node kinds for the grammar currently parsed by parser.pas.
@@ -57,6 +57,7 @@ type
     sourceColumn: integer;
     identifierText: identifier;
     numberValue: integer;
+    declaredType: typeValue;
     operatorSymbol: symbol;
     firstChild: astNode;
     lastChild: astNode;
@@ -68,8 +69,10 @@ function newProgramNode(const source: sourceContext): astNode;
 function newBlockNode(const source: sourceContext): astNode;
 function newConstDeclarationNode(const declarationIdentifier: identifier;
                                  declarationValue: integer;
+                                 declaredType: typeValue;
                                  const source: sourceContext): astNode;
 function newVarDeclarationNode(const declarationIdentifier: identifier;
+                               declaredType: typeValue;
                                const source: sourceContext): astNode;
 function newProcedureDeclarationNode(const declarationIdentifier: identifier;
                                      const source: sourceContext): astNode;
@@ -160,6 +163,7 @@ begin
   newAstNode^.sourceColumn := source.column;
   FillChar(newAstNode^.identifierText, SizeOf(newAstNode^.identifierText), ' ');
   newAstNode^.numberValue := 0;
+  newAstNode^.declaredType := typeInteger;
   newAstNode^.operatorSymbol := nul;
   newAstNode^.firstChild := nil;
   newAstNode^.lastChild := nil;
@@ -178,18 +182,22 @@ end;
 
 function newConstDeclarationNode(const declarationIdentifier: identifier;
                                  declarationValue: integer;
+                                 declaredType: typeValue;
                                  const source: sourceContext): astNode;
 begin
   newConstDeclarationNode := newAstNode(astConstDeclaration, source);
   newConstDeclarationNode^.identifierText := declarationIdentifier;
-  newConstDeclarationNode^.numberValue := declarationValue
+  newConstDeclarationNode^.numberValue := declarationValue;
+  newConstDeclarationNode^.declaredType := declaredType
 end;
 
 function newVarDeclarationNode(const declarationIdentifier: identifier;
+                               declaredType: typeValue;
                                const source: sourceContext): astNode;
 begin
   newVarDeclarationNode := newAstNode(astVarDeclaration, source);
-  newVarDeclarationNode^.identifierText := declarationIdentifier
+  newVarDeclarationNode^.identifierText := declarationIdentifier;
+  newVarDeclarationNode^.declaredType := declaredType
 end;
 
 function newProcedureDeclarationNode(const declarationIdentifier: identifier;

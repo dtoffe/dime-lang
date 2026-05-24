@@ -186,14 +186,16 @@ begin
   case node^.kind of
     astConstDeclaration:
       begin
-        declaredSymbol := addConstant(node^.identifierText, node^.numberValue);
+        declaredSymbol := addConstant(node^.identifierText, node^.numberValue,
+                                      node^.declaredType);
         if declaredSymbol = 0 then
           reportCompilerError(ERR_SYMBOL_TABLE_OVERFLOW, nodeSourceContext(node), errorCount);
         rememberResolvedSymbol(node, declaredSymbol)
       end;
     astVarDeclaration:
       begin
-        declaredSymbol := addVariable(node^.identifierText, sema.currentLevel, sema.nextAddress);
+        declaredSymbol := addVariable(node^.identifierText, sema.currentLevel, sema.nextAddress,
+                                      node^.declaredType);
         if declaredSymbol = 0 then
           reportCompilerError(ERR_SYMBOL_TABLE_OVERFLOW, nodeSourceContext(node), errorCount);
         rememberResolvedSymbol(node, declaredSymbol)
