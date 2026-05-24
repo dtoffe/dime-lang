@@ -58,6 +58,8 @@ type
     identifierText: identifier;
     numberValue: integer;
     declaredType: typeValue;
+    hasResolvedType: boolean;
+    resolvedType: typeValue;
     operatorSymbol: symbol;
     firstChild: astNode;
     lastChild: astNode;
@@ -93,6 +95,9 @@ function newIdentifierNode(const identifierName: identifier;
                            const source: sourceContext): astNode; deprecated 'Use newIdentifierReferenceNode';
 function newNumberLiteralNode(literalValue: integer;
                               const source: sourceContext): astNode;
+procedure setNodeType(node: astNode; resolvedType: typeValue);
+function hasNodeType(node: astNode): boolean;
+function getNodeType(node: astNode): typeValue;
 
 procedure appendChild(parentNode, childNode: astNode);
 procedure appendDeclarationNode(listOwnerNode, declarationNode: astNode);
@@ -150,6 +155,13 @@ begin
     astCondition, astBinaryExpression, astUnaryExpression:
       astNodeSummary := astNodeSummary + ' op=' + IntToStr(Ord(node^.operatorSymbol))
   end;
+  if node^.hasResolvedType then
+    case node^.resolvedType of
+      typeInteger:
+        astNodeSummary := astNodeSummary + ' :integer';
+      typeBoolean:
+        astNodeSummary := astNodeSummary + ' :boolean'
+    end;
   astNodeSummary := astNodeSummary +
                     Format(' @%d:%d', [node^.sourceLine, node^.sourceColumn])
 end;
@@ -164,6 +176,8 @@ begin
   FillChar(newAstNode^.identifierText, SizeOf(newAstNode^.identifierText), ' ');
   newAstNode^.numberValue := 0;
   newAstNode^.declaredType := typeInteger;
+  newAstNode^.hasResolvedType := false;
+  newAstNode^.resolvedType := typeInteger;
   newAstNode^.operatorSymbol := nul;
   newAstNode^.firstChild := nil;
   newAstNode^.lastChild := nil;
@@ -271,6 +285,28 @@ function newNumberLiteralNode(literalValue: integer;
 begin
   newNumberLiteralNode := newAstNode(astNumberLiteral, source);
   newNumberLiteralNode^.numberValue := literalValue
+end;
+
+procedure setNodeType(node: astNode; resolvedType: typeValue);
+begin
+  if node = nil then
+    exit;
+
+  node^.hasResolvedType := true;
+  node^.resolvedType := resolvedType
+end;
+
+function hasNodeType(node: astNode): boolean;
+begin
+  hasNodeType := (node <> nil) and node^.hasResolvedType
+end;
+
+function getNodeType(node: astNode): typeValue;
+begin
+  if node = nil then
+    getNodeType := typeInteger
+  else
+    getNodeType := node^.resolvedType
 end;
 
 procedure appendChild(parentNode, childNode: astNode);

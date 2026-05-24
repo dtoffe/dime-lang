@@ -9,6 +9,7 @@ and this project is expected to follow [Semantic Versioning](https://semver.org/
 
 ### Added
 
+- Add type information to ast nodes, filled by the semantics pass.
 - Add new type table unit, very minimal for now.
 - Add support for type declaration in `var` and `const`, mandatory and only `integer` datatype for now.
 

@@ -27,7 +27,7 @@ function resolvedSymbolOf(node: astNode): symbolIndex;
 implementation
 
 uses
-  diagnostics, tokens;
+  diagnostics, tokens, typetable;
 
 type
   semanticContext = record
@@ -121,6 +121,7 @@ begin
   else
   begin
     rememberResolvedSymbol(node, resolvedSymbol);
+    setNodeType(node, getDeclarationType(resolvedSymbol));
     if identifierUseIsExpression and (getDeclarationKind(resolvedSymbol) = proc) then
       reportCompilerError(ERR_PROCEDURE_IDENTIFIER_IN_EXPRESSION, nodeSourceContext(node), errorCount)
   end
@@ -137,7 +138,10 @@ begin
     astIdentifierReference:
       analyzeIdentifierReference(node, true, errorCount);
     astNumberLiteral:
-      exit;
+      begin
+        setNodeType(node, typeInteger);
+        exit
+      end;
     astBinaryExpression,
     astUnaryExpression:
       begin
@@ -146,7 +150,8 @@ begin
         begin
           analyzeExpression(childNode, sema, errorCount);
           childNode := childNode^.nextSibling
-        end
+        end;
+        setNodeType(node, typeInteger)
       end
   else
     begin
@@ -155,7 +160,9 @@ begin
       begin
         analyzeExpression(childNode, sema, errorCount);
         childNode := childNode^.nextSibling
-      end
+      end;
+      if node^.kind = astCondition then
+        setNodeType(node, typeBoolean)
     end
   end
 end;
@@ -172,7 +179,8 @@ begin
   begin
     analyzeExpression(childNode, sema, errorCount);
     childNode := childNode^.nextSibling
-  end
+  end;
+  setNodeType(node, typeBoolean)
 end;
 
 procedure analyzeDeclaration(node: astNode; var sema: semanticContext; var errorCount: integer);
@@ -190,6 +198,7 @@ begin
                                       node^.declaredType);
         if declaredSymbol = 0 then
           reportCompilerError(ERR_SYMBOL_TABLE_OVERFLOW, nodeSourceContext(node), errorCount);
+        setNodeType(node, node^.declaredType);
         rememberResolvedSymbol(node, declaredSymbol)
       end;
     astVarDeclaration:
@@ -198,6 +207,7 @@ begin
                                       node^.declaredType);
         if declaredSymbol = 0 then
           reportCompilerError(ERR_SYMBOL_TABLE_OVERFLOW, nodeSourceContext(node), errorCount);
+        setNodeType(node, node^.declaredType);
         rememberResolvedSymbol(node, declaredSymbol)
       end;
     astProcedureDeclaration:
@@ -258,6 +268,7 @@ begin
           else
           begin
             rememberResolvedSymbol(targetNode, resolvedSymbol);
+            setNodeType(targetNode, getDeclarationType(resolvedSymbol));
             if getDeclarationKind(resolvedSymbol) <> variable then
               reportCompilerError(ERR_ASSIGNMENT_TO_CONSTANT_OR_PROCEDURE,
                                   nodeSourceContext(targetNode), errorCount)
@@ -277,6 +288,7 @@ begin
           else
           begin
             rememberResolvedSymbol(targetNode, resolvedSymbol);
+            setNodeType(targetNode, getDeclarationType(resolvedSymbol));
             if getDeclarationKind(resolvedSymbol) <> proc then
               reportCompilerError(ERR_CALL_OF_CONSTANT_OR_VARIABLE,
                                   nodeSourceContext(targetNode), errorCount)
