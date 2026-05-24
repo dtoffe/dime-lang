@@ -22,7 +22,7 @@ procedure writeProgramImage;
 implementation
 
 uses
-  SysUtils, diagnostics, semantics, symtable, tokens;
+  SysUtils, diagnostics, semantics, symboltable, tokens;
 
 const
   codeMaxIndex = 200;        {maximum code array index}

@@ -13,7 +13,7 @@ unit astree;
 interface
 
 uses
-  diagnostics, tokens, symtable;
+  diagnostics, tokens, symboltable;
 
 type
   { Minimal AST node kinds for the grammar currently parsed by parser.pas.

@@ -14,6 +14,7 @@ and this project is expected to follow [Semantic Versioning](https://semver.org/
 ### Changed
 
 - Replace grammar based parsing with an operator precedence climbing (Pratt) parser.
+- Rename symtable to symboltable.
 
 ### Fixed
 

@@ -17,7 +17,7 @@ unit semantics;
 interface
 
 uses
-  astree, symtable;
+  astree, symboltable;
 
 procedure analyzeAst(rootNode: astNode; var errorCount: integer);
 procedure clearSemanticInfo;

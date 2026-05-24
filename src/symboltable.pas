@@ -5,7 +5,7 @@
   Symbol table support for semantic analysis and code generation.  This unit owns symbol storage,
   scope save/restore, declaration insertion, identifier lookup, and accessors
   for declaration metadata used by later passes. }
-unit symtable;
+unit symboltable;
 
 interface
 
