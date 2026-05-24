@@ -10,13 +10,12 @@ unit symboltable;
 interface
 
 uses
-  diagnostics, tokens;
+  diagnostics, tokens, typetable;
 
 const
   symbolTableMax = 100;      {length of identifier table}
 
 type
-  typeValue = (typeInteger);
   declarationKind = (constant, variable, proc);
   symbolIndex = 0..symbolTableMax;
 

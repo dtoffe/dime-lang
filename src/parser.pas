@@ -27,7 +27,7 @@ procedure parseFile(const inputFileName: string);
 implementation
 
 uses
-  SysUtils, diagnostics, tokens, lexer, astree, semantics, codegen, symboltable;
+  SysUtils, diagnostics, tokens, lexer, astree, semantics, codegen, symboltable, typetable;
 
 const
   declarationStartTokens: symbolSet = [constsym, varsym, procsym];
