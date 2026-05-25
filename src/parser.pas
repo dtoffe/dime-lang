@@ -196,7 +196,8 @@ function compileBlock (currentLevel: integer; followTokens: symbolSet;
 
     {Parses one statement into AST form.}
     function compileStatement (followTokens: symbolSet): astNode;
-    var statementSource: sourceContext;
+    var statementSource, elsifSource: sourceContext;
+        elseBranchTarget: astNode;
 
         function compileStatementSequence(statementFollowTokens: symbolSet;
                                           closingTokens: symbolSet;
@@ -433,14 +434,37 @@ function compileBlock (currentLevel: integer; followTokens: symbolSet;
                         reportCompilerError(ERR_THEN_EXPECTED, lexerCurrentSourceContext, errorCount);
                     appendStatementNode(compileStatement,
                                         compileStatementSequence(followTokens,
-                                                                 [elsesym, endifsym],
+                                                                 [elsifsym, elsesym, endifsym],
                                                                  false,
-                                                                 ERR_SEMICOLON_EXPECTED_BEFORE_ELSE_OR_ENDIF,
+                                                                 ERR_SEMICOLON_EXPECTED_BEFORE_ELSIF_ELSE_OR_ENDIF,
                                                                  ERR_ENDIF_EXPECTED));
+                    elseBranchTarget := compileStatement;
+                    while lexerCurrentToken = elsifsym do
+                    begin
+                        elsifSource := lexerCurrentSourceContext;
+                        readNextToken(errorCount);
+                        appendStatementNode(elseBranchTarget,
+                                            newIfStatementNode(elsifSource));
+                        elseBranchTarget := elseBranchTarget^.firstChild;
+                        while elseBranchTarget^.nextSibling <> nil do
+                            elseBranchTarget := elseBranchTarget^.nextSibling;
+                        appendChild(elseBranchTarget,
+                                    compileExpression([thensym, dosym]+followTokens));
+                        if lexerCurrentToken = thensym then
+                            readNextToken(errorCount)
+                        else
+                            reportCompilerError(ERR_THEN_EXPECTED, lexerCurrentSourceContext, errorCount);
+                        appendStatementNode(elseBranchTarget,
+                                            compileStatementSequence(followTokens,
+                                                                     [elsifsym, elsesym, endifsym],
+                                                                     false,
+                                                                     ERR_SEMICOLON_EXPECTED_BEFORE_ELSIF_ELSE_OR_ENDIF,
+                                                                     ERR_ENDIF_EXPECTED))
+                    end;
                     if lexerCurrentToken = elsesym then
                     begin
                         readNextToken(errorCount);
-                        appendStatementNode(compileStatement,
+                        appendStatementNode(elseBranchTarget,
                                             compileStatementSequence(followTokens,
                                                                      [endifsym],
                                                                      false,

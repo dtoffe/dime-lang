@@ -291,6 +291,8 @@ separate source statements.
 ```pl0
 if expression then
 statementSequence
+elsif expression then
+statementSequence
 else
 statementSequence
 endif
@@ -303,12 +305,18 @@ Compiles to:
 JPC 0, elseOrAfter
 ... then statementSequence ...
 JMP 0, afterIf
-elseOrAfter:
+elsifOrElse1:
+... elsif condition ...
+JPC 0, elsifOrElse2
+... elsif statementSequence ...
+JMP 0, afterIf
+elsifOrElse2:
 ... else statementSequence ...
 afterIf:
 ```
 
-`JPC` consumes the boolean expression value.
+Each `elsif` compiles as a nested `if` inside the previous branch's false path. `JPC`
+consumes the boolean expression value.
 
 ### `while`
 

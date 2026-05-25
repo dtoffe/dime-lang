@@ -61,7 +61,7 @@ const
     ERR_CONSTANT_TYPE_MISMATCH = 42;
     ERR_ENDIF_EXPECTED = 43;
     ERR_SEMICOLON_EXPECTED_BEFORE_ENDIF = 44;
-    ERR_SEMICOLON_EXPECTED_BEFORE_ELSE_OR_ENDIF = 45;
+    ERR_SEMICOLON_EXPECTED_BEFORE_ELSIF_ELSE_OR_ENDIF = 45;
 
     ERROR_INTERPRETER_INVALID_L_VALUE = 'Error converting l-value';
     ERROR_INTERPRETER_INVALID_A_VALUE = 'Error converting a-value';
@@ -199,7 +199,7 @@ begin
         ERR_BOOLEAN_OPERATOR_REQUIRES_BOOLEAN_OPERANDS: compilerErrorMessage := 'Boolean operator requires boolean operands.';
         ERR_CONSTANT_TYPE_MISMATCH: compilerErrorMessage := 'Constant declaration type must match its literal value type.';
         ERR_SEMICOLON_EXPECTED_BEFORE_ENDIF: compilerErrorMessage := 'Semicolon expected before "endif". Possible reserved-word case error.';
-        ERR_SEMICOLON_EXPECTED_BEFORE_ELSE_OR_ENDIF: compilerErrorMessage := 'Semicolon expected before "else" or "endif". Possible reserved-word case error.';
+        ERR_SEMICOLON_EXPECTED_BEFORE_ELSIF_ELSE_OR_ENDIF: compilerErrorMessage := 'Semicolon expected before "elsif", "else" or "endif". Possible reserved-word case error.';
     else
         compilerErrorMessage := 'Unknown compiler error.'
     end

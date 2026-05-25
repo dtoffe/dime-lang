@@ -95,6 +95,7 @@ statement = [ ident ":=" expression
             | "call" ident 
             | "begin" statement { ";" statement } "end" 
             | "if" expression "then" statementSequence
+              { "elsif" expression "then" statementSequence }
               [ "else" statementSequence ] "endif"
             | "while" expression "do" statementSequence "endwhile" ] ;
 
