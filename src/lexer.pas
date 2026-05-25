@@ -25,7 +25,7 @@ implementation
 uses
   SysUtils;
 
-const reservedWordCount = 14;
+const reservedWordCount = 18;
     numberMaxDigits = 14;
 
 type sourceLineBuffer = array [1..81] of char;
@@ -48,6 +48,7 @@ var lexState: LexerState;
 
 const
   reservedWords: array [1..reservedWordCount] of identifier = (
+    'and       ',
     'begin     ',
     'boolean   ',
     'call      ',
@@ -57,13 +58,17 @@ const
     'false     ',
     'if        ',
     'integer   ',
+    'not       ',
+    'or        ',
     'procedure ',
     'then      ',
     'true      ',
     'var       ',
-    'while     '
+    'while     ',
+    'xor       '
   );
   reservedWordTokens: array [1..reservedWordCount] of symbol = (
+    andsym,
     beginsym,
     booleansym,
     callsym,
@@ -73,11 +78,14 @@ const
     falsesym,
     ifsym,
     integersym,
+    notsym,
+    orsym,
     procsym,
     thensym,
     truesym,
     varsym,
-    whilesym
+    whilesym,
+    xorsym
   );
 
 function identifierToString(const identifier: identifier): string;
@@ -333,34 +341,42 @@ begin
     Assign(lexState.sourceFile, lexState.sourceFileName);
     Reset(lexState.sourceFile);
 
-    reservedWords[ 1] := 'begin     ';
-    reservedWords[ 2] := 'boolean   ';
-    reservedWords[ 3] := 'call      ';
-    reservedWords[ 4] := 'const     ';
-    reservedWords[ 5] := 'do        ';
-    reservedWords[ 6] := 'end       ';
-    reservedWords[ 7] := 'false     ';
-    reservedWords[ 8] := 'if        ';
-    reservedWords[ 9] := 'integer   ';
-    reservedWords[10] := 'procedure ';
-    reservedWords[11] := 'then      ';
-    reservedWords[12] := 'true      ';
-    reservedWords[13] := 'var       ';
-    reservedWords[14] := 'while     ';
-    reservedWordTokens[ 1] := beginsym;
-    reservedWordTokens[ 2] := booleansym;
-    reservedWordTokens[ 3] := callsym;
-    reservedWordTokens[ 4] := constsym;
-    reservedWordTokens[ 5] := dosym;
-    reservedWordTokens[ 6] := endsym;
-    reservedWordTokens[ 7] := falsesym;
-    reservedWordTokens[ 8] := ifsym;
-    reservedWordTokens[ 9] := integersym;
-    reservedWordTokens[10] := procsym;
-    reservedWordTokens[11] := thensym;
-    reservedWordTokens[12] := truesym;
-    reservedWordTokens[13] := varsym;
-    reservedWordTokens[14] := whilesym;
+    reservedWords[ 1] := 'and       ';
+    reservedWords[ 2] := 'begin     ';
+    reservedWords[ 3] := 'boolean   ';
+    reservedWords[ 4] := 'call      ';
+    reservedWords[ 5] := 'const     ';
+    reservedWords[ 6] := 'do        ';
+    reservedWords[ 7] := 'end       ';
+    reservedWords[ 8] := 'false     ';
+    reservedWords[ 9] := 'if        ';
+    reservedWords[10] := 'integer   ';
+    reservedWords[11] := 'not       ';
+    reservedWords[12] := 'or        ';
+    reservedWords[13] := 'procedure ';
+    reservedWords[14] := 'then      ';
+    reservedWords[15] := 'true      ';
+    reservedWords[16] := 'var       ';
+    reservedWords[17] := 'while     ';
+    reservedWords[18] := 'xor       ';
+    reservedWordTokens[ 1] := andsym;
+    reservedWordTokens[ 2] := beginsym;
+    reservedWordTokens[ 3] := booleansym;
+    reservedWordTokens[ 4] := callsym;
+    reservedWordTokens[ 5] := constsym;
+    reservedWordTokens[ 6] := dosym;
+    reservedWordTokens[ 7] := endsym;
+    reservedWordTokens[ 8] := falsesym;
+    reservedWordTokens[ 9] := ifsym;
+    reservedWordTokens[10] := integersym;
+    reservedWordTokens[11] := notsym;
+    reservedWordTokens[12] := orsym;
+    reservedWordTokens[13] := procsym;
+    reservedWordTokens[14] := thensym;
+    reservedWordTokens[15] := truesym;
+    reservedWordTokens[16] := varsym;
+    reservedWordTokens[17] := whilesym;
+    reservedWordTokens[18] := xorsym;
     lexState.charIndex := 0;
     lexState.lineLength := 0;
     lexState.currentLineNumber := 0;

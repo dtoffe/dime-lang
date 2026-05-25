@@ -72,6 +72,10 @@ Boolean results are stored as `0` for false and `1` for true.
 | `11` | greater/equal | `x y -> ord(x >= y)` |
 | `12` | greater than | `x y -> ord(x > y)` |
 | `13` | less/equal | `x y -> ord(x <= y)` |
+| `14` | boolean not | `x -> ord(x = 0)` |
+| `15` | boolean and | `x y -> ord((x <> 0) and (y <> 0))` |
+| `16` | boolean or | `x y -> ord((x <> 0) or (y <> 0))` |
+| `17` | boolean xor | `x y -> ord((x <> 0) xor (y <> 0))` |
 
 ### `LOD lexicalLevel, address`
 
@@ -228,6 +232,9 @@ OPR 0,2    // add x
 ```
 
 Unary minus compiles the term and then emits `OPR 0,1`.
+Boolean `not` compiles its operand and then emits `OPR 0,14`. Boolean `and`,
+`or`, and `xor` compile both operands and then emit `OPR 0,15`, `OPR 0,16`,
+and `OPR 0,17`, respectively.
 
 ### Boolean Conditions
 

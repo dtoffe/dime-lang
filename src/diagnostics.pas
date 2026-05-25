@@ -56,6 +56,8 @@ const
     ERR_ARITHMETIC_OPERATOR_REQUIRES_INTEGER_OPERANDS = 38;
     ERR_RELATIONAL_OPERANDS_MUST_HAVE_MATCHING_TYPES = 39;
     ERR_ORDERING_OPERATOR_REQUIRES_INTEGER_OPERANDS = 40;
+    ERR_BOOLEAN_OPERATOR_REQUIRES_BOOLEAN_OPERANDS = 41;
+    ERR_CONSTANT_TYPE_MISMATCH = 42;
 
     ERROR_INTERPRETER_INVALID_L_VALUE = 'Error converting l-value';
     ERROR_INTERPRETER_INVALID_A_VALUE = 'Error converting a-value';
@@ -187,7 +189,9 @@ begin
         ERR_ASSIGNMENT_TYPE_MISMATCH: compilerErrorMessage := 'Assignment target type must match assigned value type.';
         ERR_ARITHMETIC_OPERATOR_REQUIRES_INTEGER_OPERANDS: compilerErrorMessage := 'Arithmetic operator requires integer operands.';
         ERR_RELATIONAL_OPERANDS_MUST_HAVE_MATCHING_TYPES: compilerErrorMessage := 'Relational operands must have matching operand types.';
-        ERR_ORDERING_OPERATOR_REQUIRES_INTEGER_OPERANDS: compilerErrorMessage := 'Ordering relational operators require integer operands.'
+        ERR_ORDERING_OPERATOR_REQUIRES_INTEGER_OPERANDS: compilerErrorMessage := 'Ordering relational operators require integer operands.';
+        ERR_BOOLEAN_OPERATOR_REQUIRES_BOOLEAN_OPERANDS: compilerErrorMessage := 'Boolean operator requires boolean operands.';
+        ERR_CONSTANT_TYPE_MISMATCH: compilerErrorMessage := 'Constant declaration type must match its literal value type.'
     else
         compilerErrorMessage := 'Unknown compiler error.'
     end

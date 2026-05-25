@@ -32,8 +32,10 @@ uses
 const
   declarationStartTokens: symbolSet = [constsym, varsym, procsym];
   statementStartTokens: symbolSet = [beginsym, callsym, ifsym, whilesym];
-  factorStartTokens: symbolSet = [ident, number, truesym, falsesym, lparen, plus, minus];
-  relationalOperatorTokens: symbolSet = [eql, neq, lss, leq, gtr, geq];
+  factorStartTokens: symbolSet = [ident, number, truesym, falsesym, lparen, plus, minus, notsym];
+  binaryOperatorTokens: symbolSet = [eql, neq, lss, leq, gtr, geq,
+                                     plus, minus, orsym, xorsym,
+                                     times, slash, andsym];
 
 type
   binaryOperatorPrecedenceEntry = record
@@ -43,7 +45,7 @@ type
   end;
 
 const
-  binaryOperatorPrecedenceTable: array [1..10] of binaryOperatorPrecedenceEntry = (
+  binaryOperatorPrecedenceTable: array [1..13] of binaryOperatorPrecedenceEntry = (
     (operatorToken: eql; precedence: 1; isNonAssociative: true),
     (operatorToken: neq; precedence: 1; isNonAssociative: true),
     (operatorToken: lss; precedence: 1; isNonAssociative: true),
@@ -52,8 +54,11 @@ const
     (operatorToken: geq; precedence: 1; isNonAssociative: true),
     (operatorToken: plus; precedence: 2; isNonAssociative: false),
     (operatorToken: minus; precedence: 2; isNonAssociative: false),
+    (operatorToken: orsym; precedence: 2; isNonAssociative: false),
+    (operatorToken: xorsym; precedence: 2; isNonAssociative: false),
     (operatorToken: times; precedence: 3; isNonAssociative: false),
-    (operatorToken: slash; precedence: 3; isNonAssociative: false)
+    (operatorToken: slash; precedence: 3; isNonAssociative: false),
+    (operatorToken: andsym; precedence: 3; isNonAssociative: false)
   );
 
 procedure dumpAstIfVerbose(rootNode: astNode);
@@ -137,6 +142,7 @@ function compileBlock (currentLevel: integer; followTokens: symbolSet;
                     parseConstantDeclaration := newConstDeclarationNode(declarationIdentifier,
                                                                         declarationValue,
                                                                         declarationType,
+                                                                        typeInteger,
                                                                         declarationSource);
                     readNextToken(errorCount)
                 end
@@ -145,6 +151,7 @@ function compileBlock (currentLevel: integer; followTokens: symbolSet;
                     parseConstantDeclaration := newConstDeclarationNode(declarationIdentifier,
                                                                         1,
                                                                         declarationType,
+                                                                        typeBoolean,
                                                                         declarationSource);
                     readNextToken(errorCount)
                 end
@@ -153,6 +160,7 @@ function compileBlock (currentLevel: integer; followTokens: symbolSet;
                     parseConstantDeclaration := newConstDeclarationNode(declarationIdentifier,
                                                                         0,
                                                                         declarationType,
+                                                                        typeBoolean,
                                                                         declarationSource);
                     readNextToken(errorCount)
                 end
@@ -232,7 +240,7 @@ function compileBlock (currentLevel: integer; followTokens: symbolSet;
                                          errorCount);
                 while lexerCurrentToken in factorStartTokens do
                 begin
-                    if lexerCurrentToken in [plus, minus] then
+                    if lexerCurrentToken in [plus, minus, notsym] then
                     begin
                         unaryOperator := lexerCurrentToken;
                         primarySource := lexerCurrentSourceContext;
@@ -299,7 +307,7 @@ function compileBlock (currentLevel: integer; followTokens: symbolSet;
                     leftNode, rightNode, binaryNode: astNode;
                     operatorSource: sourceContext;
             begin
-                leftNode := compilePrimary(followTokens+relationalOperatorTokens+[plus, minus, times, slash]);
+                leftNode := compilePrimary(followTokens+binaryOperatorTokens);
                 operatorPrecedence := binaryOperatorPrecedence(lexerCurrentToken);
                 while operatorPrecedence >= minPrecedence do
                 begin
@@ -307,7 +315,7 @@ function compileBlock (currentLevel: integer; followTokens: symbolSet;
                     operatorSource := lexerCurrentSourceContext;
                     readNextToken(errorCount);
                     rightNode := compileExpressionWithPrecedence(operatorPrecedence + 1,
-                                                                 followTokens+relationalOperatorTokens+[plus, minus, times, slash]);
+                                                                 followTokens+binaryOperatorTokens);
                     binaryNode := newBinaryExpressionNode(currentOperator, operatorSource);
                     appendExpressionChild(binaryNode, leftNode);
                     appendExpressionChild(binaryNode, rightNode);

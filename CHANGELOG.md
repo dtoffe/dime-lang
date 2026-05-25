@@ -9,11 +9,14 @@ and this project is expected to follow [Semantic Versioning](https://semver.org/
 
 ### Added
 
+- Add boolean operators `and`, `or`, `not`, and `xor` across lexing, parsing, semantic checks, codegen, and interpretation.
 - Add relational operators to the precedence table, make them non-associative in the precedence parser while keeping them at the lowest binary precedence.
 - Add support for `boolean` datatype, `true` and `false` literals in declarations.
 
 ### Changed
 
+- Reject invalid boolean operator operand types with a dedicated semantic diagnostic.
+- Reject constant declarations whose declared type and literal value type do not match.
 - Make relational operators produce boolean expression values instead of using a separate condition-only parse path.
 - Reject assignments whose target type and value type do not match, with a dedicated semantic diagnostic.
 - Reject invalid arithmetic and relational operator operand types with dedicated semantic diagnostics.

@@ -108,16 +108,20 @@ typeName = "integer" | "boolean" ;
 
 literal = number | "true" | "false" ;
 
+// The literal in a constant declaration must match the declared type:
+// `integer` constants use numeric literals, and `boolean` constants use
+// `true` or `false`.
+
 // Relational operators have the lowest precedence among binary operators and
 // are non-associative, so chaining like `a < b < c` is not part of the grammar.
 
 expression = simpleExpression [ relationalOperator simpleExpression ] ;
 
-simpleExpression = [ "+" | "-" ] term { ( "+" | "-" ) term } ;
+simpleExpression = term { ( "+" | "-" | "or" | "xor" ) term } ;
 
-term = factor { ( "*" | "/" ) factor } ;
+term = factor { ( "*" | "/" | "and" ) factor } ;
 
-factor = ident | number | "true" | "false" | "(" expression ")" ;
+factor = ident | number | "true" | "false" | ( "+" | "-" | "not" ) factor | "(" expression ")" ;
 
 relationalOperator = "=" | "<>" | "<" | "<=" | ">" | ">=" ;
 

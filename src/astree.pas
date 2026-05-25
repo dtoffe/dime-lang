@@ -57,6 +57,7 @@ type
     identifierText: identifier;
     numberValue: integer;
     declaredType: typeValue;
+    valueType: typeValue;
     hasResolvedType: boolean;
     resolvedType: typeValue;
     operatorSymbol: symbol;
@@ -71,6 +72,7 @@ function newBlockNode(const source: sourceContext): astNode;
 function newConstDeclarationNode(const declarationIdentifier: identifier;
                                  declarationValue: integer;
                                  declaredType: typeValue;
+                                 valueType: typeValue;
                                  const source: sourceContext): astNode;
 function newVarDeclarationNode(const declarationIdentifier: identifier;
                                declaredType: typeValue;
@@ -180,6 +182,7 @@ begin
   FillChar(newAstNode^.identifierText, SizeOf(newAstNode^.identifierText), ' ');
   newAstNode^.numberValue := 0;
   newAstNode^.declaredType := typeInteger;
+  newAstNode^.valueType := typeInteger;
   newAstNode^.hasResolvedType := false;
   newAstNode^.resolvedType := typeInteger;
   newAstNode^.operatorSymbol := nul;
@@ -201,12 +204,14 @@ end;
 function newConstDeclarationNode(const declarationIdentifier: identifier;
                                  declarationValue: integer;
                                  declaredType: typeValue;
+                                 valueType: typeValue;
                                  const source: sourceContext): astNode;
 begin
   newConstDeclarationNode := newAstNode(astConstDeclaration, source);
   newConstDeclarationNode^.identifierText := declarationIdentifier;
   newConstDeclarationNode^.numberValue := declarationValue;
-  newConstDeclarationNode^.declaredType := declaredType
+  newConstDeclarationNode^.declaredType := declaredType;
+  newConstDeclarationNode^.valueType := valueType
 end;
 
 function newVarDeclarationNode(const declarationIdentifier: identifier;

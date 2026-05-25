@@ -60,7 +60,7 @@ This roadmap is intentionally conservative. The goal is to build the project in 
 - Make relational operators yield boolean values.
 - Rework conditions to use ordinary boolean expressions.
 - Prepare the parser and AST so conditions can later be represented as boolean expressions.
-- Add support for boolean operators `not`, `and`, `or`.
+- Add support for boolean operators `not`, `and`, `or`, `xor`.
 - Tighten type checking, diagnostics, examples, and codegen for boolean logic.
 
 For older releases, see [CHANGELOG.md](./CHANGELOG.md).

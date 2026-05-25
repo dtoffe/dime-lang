@@ -11,11 +11,9 @@
 10LOD    0    3
 11LIT    0   10
 12OPR    0   13
-13JPC    0   20
+13JPC    0   18
 14CAL    0    1
-15LOD    0    3
-16LIT    0    1
-17OPR    0    2
-18STO    0    3
-19JMP    0   10
-20OPR    0    0
+15LIT    0    1
+16STO    0    3
+17JMP    0   10
+18OPR    0    0

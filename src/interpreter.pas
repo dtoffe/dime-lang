@@ -228,6 +228,19 @@ begin
                 13: begin stackTop := stackTop-1;
                         runtimeStack[stackTop] := ord(runtimeStack[stackTop]<=runtimeStack[stackTop+1])
                     end ;
+                14: runtimeStack[stackTop] := ord(runtimeStack[stackTop] = 0);
+                15: begin stackTop := stackTop-1;
+                        runtimeStack[stackTop] := ord((runtimeStack[stackTop] <> 0) and
+                                                       (runtimeStack[stackTop+1] <> 0))
+                    end ;
+                16: begin stackTop := stackTop-1;
+                        runtimeStack[stackTop] := ord((runtimeStack[stackTop] <> 0) or
+                                                       (runtimeStack[stackTop+1] <> 0))
+                    end ;
+                17: begin stackTop := stackTop-1;
+                        runtimeStack[stackTop] := ord((runtimeStack[stackTop] <> 0) xor
+                                                       (runtimeStack[stackTop+1] <> 0))
+                    end ;
                 end ;
             lod: begin stackTop := stackTop+1;
                     runtimeStack[stackTop] := runtimeStack[findBase(lexicalLevel)+argument]

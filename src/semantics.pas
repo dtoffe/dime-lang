@@ -59,9 +59,19 @@ begin
   isArithmeticBinaryOperator := operatorSymbol in [plus, minus, times, slash]
 end;
 
+function isBooleanBinaryOperator(operatorSymbol: symbol): boolean;
+begin
+  isBooleanBinaryOperator := operatorSymbol in [andsym, orsym, xorsym]
+end;
+
 function isArithmeticUnaryOperator(operatorSymbol: symbol): boolean;
 begin
   isArithmeticUnaryOperator := operatorSymbol in [plus, minus]
+end;
+
+function isBooleanUnaryOperator(operatorSymbol: symbol): boolean;
+begin
+  isBooleanUnaryOperator := operatorSymbol = notsym
 end;
 
 function nodeSourceContext(node: astNode): sourceContext;
@@ -95,6 +105,16 @@ begin
 
   if (not hasNodeType(node)) or (getNodeType(node) <> typeInteger) then
     reportCompilerError(errorCode, nodeSourceContext(node), errorCount)
+end;
+
+procedure requireBooleanOperand(node: astNode; var errorCount: integer);
+begin
+  if node = nil then
+    exit;
+
+  if (not hasNodeType(node)) or (getNodeType(node) <> typeBoolean) then
+    reportCompilerError(ERR_BOOLEAN_OPERATOR_REQUIRES_BOOLEAN_OPERANDS,
+                        nodeSourceContext(node), errorCount)
 end;
 
 function findSemanticBinding(node: astNode): semanticBinding;
@@ -203,10 +223,17 @@ begin
           childNode := childNode^.nextSibling
         end;
         if isArithmeticUnaryOperator(node^.operatorSymbol) then
+        begin
           requireIntegerExpression(node^.firstChild,
                                    ERR_ARITHMETIC_OPERATOR_REQUIRES_INTEGER_OPERANDS,
                                    errorCount);
-        setNodeType(node, typeInteger)
+          setNodeType(node, typeInteger)
+        end
+        else if isBooleanUnaryOperator(node^.operatorSymbol) then
+        begin
+          requireBooleanOperand(node^.firstChild, errorCount);
+          setNodeType(node, typeBoolean)
+        end
       end;
     astBinaryExpression:
       begin
@@ -243,8 +270,15 @@ begin
                                      errorCount);
             requireIntegerExpression(rightNode, ERR_ARITHMETIC_OPERATOR_REQUIRES_INTEGER_OPERANDS,
                                      errorCount)
+          end
+          else if isBooleanBinaryOperator(node^.operatorSymbol) then
+          begin
+            requireBooleanOperand(leftNode, errorCount);
+            requireBooleanOperand(rightNode, errorCount);
+            setNodeType(node, typeBoolean)
           end;
-          setNodeType(node, typeInteger)
+          if isArithmeticBinaryOperator(node^.operatorSymbol) then
+            setNodeType(node, typeInteger)
         end
       end
   else
@@ -270,6 +304,8 @@ begin
   case node^.kind of
     astConstDeclaration:
       begin
+        if node^.declaredType <> node^.valueType then
+          reportCompilerError(ERR_CONSTANT_TYPE_MISMATCH, nodeSourceContext(node), errorCount);
         declaredSymbol := addConstant(node^.identifierText, node^.numberValue,
                                       node^.declaredType);
         if declaredSymbol = 0 then

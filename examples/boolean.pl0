@@ -2,7 +2,8 @@ const truth: boolean = true;
 var flag: boolean;
 
 begin
-  flag := 1 < 2;
+  flag := truth and not false;
+  flag := flag xor false or false;
   if flag then
-    flag := truth = false
+    flag := (1 < 2) and not (truth = false)
 end.

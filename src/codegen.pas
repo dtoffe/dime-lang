@@ -245,6 +245,8 @@ begin
         generateExpression(operandNode, context, errorCount);
         if node^.operatorSymbol = minus then
           emitUnaryOp(1)
+        else if node^.operatorSymbol = notsym then
+          emitUnaryOp(14)
       end;
     astBinaryExpression:
       begin
@@ -265,6 +267,9 @@ begin
           geq: emitBinaryOp(11);
           gtr: emitBinaryOp(12);
           leq: emitBinaryOp(13);
+          andsym: emitBinaryOp(15);
+          orsym: emitBinaryOp(16);
+          xorsym: emitBinaryOp(17);
         end
       end
   end
