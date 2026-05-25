@@ -51,6 +51,11 @@ const
     ERR_SYMBOL_TABLE_OVERFLOW = 33;
     ERR_TYPE_NAME_EXPECTED = 34;
     ERR_TYPE_ANNOTATION_EXPECTED = 35;
+    ERR_BOOLEAN_CONDITION_REQUIRED = 36;
+    ERR_ASSIGNMENT_TYPE_MISMATCH = 37;
+    ERR_ARITHMETIC_OPERATOR_REQUIRES_INTEGER_OPERANDS = 38;
+    ERR_RELATIONAL_OPERANDS_MUST_HAVE_MATCHING_TYPES = 39;
+    ERR_ORDERING_OPERATOR_REQUIRES_INTEGER_OPERANDS = 40;
 
     ERROR_INTERPRETER_INVALID_L_VALUE = 'Error converting l-value';
     ERROR_INTERPRETER_INVALID_A_VALUE = 'Error converting a-value';
@@ -177,7 +182,12 @@ begin
         ERR_PROCEDURES_GLOBAL_SCOPE_ONLY: compilerErrorMessage := 'Procedures may only be declared at global scope.';
         ERR_SYMBOL_TABLE_OVERFLOW: compilerErrorMessage := 'Symbol table capacity exceeded.';
         ERR_TYPE_NAME_EXPECTED: compilerErrorMessage := 'Type name expected after ":".';
-        ERR_TYPE_ANNOTATION_EXPECTED: compilerErrorMessage := 'Declaration must include a type annotation.'
+        ERR_TYPE_ANNOTATION_EXPECTED: compilerErrorMessage := 'Declaration must include a type annotation.';
+        ERR_BOOLEAN_CONDITION_REQUIRED: compilerErrorMessage := 'Condition expression must resolve to boolean.';
+        ERR_ASSIGNMENT_TYPE_MISMATCH: compilerErrorMessage := 'Assignment target type must match assigned value type.';
+        ERR_ARITHMETIC_OPERATOR_REQUIRES_INTEGER_OPERANDS: compilerErrorMessage := 'Arithmetic operator requires integer operands.';
+        ERR_RELATIONAL_OPERANDS_MUST_HAVE_MATCHING_TYPES: compilerErrorMessage := 'Relational operands must have matching operand types.';
+        ERR_ORDERING_OPERATOR_REQUIRES_INTEGER_OPERANDS: compilerErrorMessage := 'Ordering relational operators require integer operands.'
     else
         compilerErrorMessage := 'Unknown compiler error.'
     end

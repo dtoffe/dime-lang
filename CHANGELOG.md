@@ -9,13 +9,16 @@ and this project is expected to follow [Semantic Versioning](https://semver.org/
 
 ### Added
 
+- Add relational operators to the precedence table, make them non-associative in the precedence parser while keeping them at the lowest binary precedence.
 - Add support for `boolean` datatype, `true` and `false` literals in declarations.
 
 ### Changed
 
-- Update grammar and p-code documentation so `if`/`while` use `expression` syntactically, with semantic analysis requiring a boolean result.
 - Make relational operators produce boolean expression values instead of using a separate condition-only parse path.
-- Make relational operators non-associative in the precedence parser while keeping them at the lowest binary precedence.
+- Reject assignments whose target type and value type do not match, with a dedicated semantic diagnostic.
+- Reject invalid arithmetic and relational operator operand types with dedicated semantic diagnostics.
+- Reject non-boolean `if` and `while` conditions with a dedicated semantic diagnostic.
+- Update grammar and p-code documentation so `if`/`while` use `expression` syntactically, with semantic analysis requiring a boolean result.
 
 ### Removed
 

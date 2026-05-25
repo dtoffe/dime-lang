@@ -49,9 +49,52 @@ begin
   isRelationalOperator := operatorSymbol in [eql, neq, lss, leq, gtr, geq]
 end;
 
+function isOrderingRelationalOperator(operatorSymbol: symbol): boolean;
+begin
+  isOrderingRelationalOperator := operatorSymbol in [lss, leq, gtr, geq]
+end;
+
+function isArithmeticBinaryOperator(operatorSymbol: symbol): boolean;
+begin
+  isArithmeticBinaryOperator := operatorSymbol in [plus, minus, times, slash]
+end;
+
+function isArithmeticUnaryOperator(operatorSymbol: symbol): boolean;
+begin
+  isArithmeticUnaryOperator := operatorSymbol in [plus, minus]
+end;
+
 function nodeSourceContext(node: astNode): sourceContext;
 begin
   nodeSourceContext := node^.source
+end;
+
+procedure requireBooleanExpression(node: astNode; var errorCount: integer);
+begin
+  if node = nil then
+    exit;
+
+  if (not hasNodeType(node)) or (getNodeType(node) <> typeBoolean) then
+    reportCompilerError(ERR_BOOLEAN_CONDITION_REQUIRED, nodeSourceContext(node), errorCount)
+end;
+
+procedure requireMatchingAssignmentTypes(targetNode, valueNode: astNode; var errorCount: integer);
+begin
+  if (targetNode = nil) or (valueNode = nil) then
+    exit;
+
+  if hasNodeType(targetNode) and hasNodeType(valueNode) and
+     (getNodeType(targetNode) <> getNodeType(valueNode)) then
+    reportCompilerError(ERR_ASSIGNMENT_TYPE_MISMATCH, nodeSourceContext(valueNode), errorCount)
+end;
+
+procedure requireIntegerExpression(node: astNode; errorCode: integer; var errorCount: integer);
+begin
+  if node = nil then
+    exit;
+
+  if (not hasNodeType(node)) or (getNodeType(node) <> typeInteger) then
+    reportCompilerError(errorCode, nodeSourceContext(node), errorCount)
 end;
 
 function findSemanticBinding(node: astNode): semanticBinding;
@@ -133,7 +176,7 @@ end;
 
 procedure analyzeExpression(node: astNode; var sema: semanticContext; var errorCount: integer);
 var
-  childNode: astNode;
+  childNode, leftNode, rightNode: astNode;
 begin
   if node = nil then
     exit;
@@ -159,6 +202,10 @@ begin
           analyzeExpression(childNode, sema, errorCount);
           childNode := childNode^.nextSibling
         end;
+        if isArithmeticUnaryOperator(node^.operatorSymbol) then
+          requireIntegerExpression(node^.firstChild,
+                                   ERR_ARITHMETIC_OPERATOR_REQUIRES_INTEGER_OPERANDS,
+                                   errorCount);
         setNodeType(node, typeInteger)
       end;
     astBinaryExpression:
@@ -169,10 +216,36 @@ begin
           analyzeExpression(childNode, sema, errorCount);
           childNode := childNode^.nextSibling
         end;
+        leftNode := node^.firstChild;
+        rightNode := nil;
+        if leftNode <> nil then
+          rightNode := leftNode^.nextSibling;
         if isRelationalOperator(node^.operatorSymbol) then
+        begin
+          if hasNodeType(leftNode) and hasNodeType(rightNode) and
+             (getNodeType(leftNode) <> getNodeType(rightNode)) then
+            reportCompilerError(ERR_RELATIONAL_OPERANDS_MUST_HAVE_MATCHING_TYPES,
+                                nodeSourceContext(node), errorCount);
+          if isOrderingRelationalOperator(node^.operatorSymbol) then
+          begin
+            requireIntegerExpression(leftNode, ERR_ORDERING_OPERATOR_REQUIRES_INTEGER_OPERANDS,
+                                     errorCount);
+            requireIntegerExpression(rightNode, ERR_ORDERING_OPERATOR_REQUIRES_INTEGER_OPERANDS,
+                                     errorCount)
+          end;
           setNodeType(node, typeBoolean)
+        end
         else
+        begin
+          if isArithmeticBinaryOperator(node^.operatorSymbol) then
+          begin
+            requireIntegerExpression(leftNode, ERR_ARITHMETIC_OPERATOR_REQUIRES_INTEGER_OPERANDS,
+                                     errorCount);
+            requireIntegerExpression(rightNode, ERR_ARITHMETIC_OPERATOR_REQUIRES_INTEGER_OPERANDS,
+                                     errorCount)
+          end;
           setNodeType(node, typeInteger)
+        end
       end
   else
     begin
@@ -278,7 +351,8 @@ begin
           end
         end;
 
-        analyzeExpression(valueNode, sema, errorCount)
+        analyzeExpression(valueNode, sema, errorCount);
+        requireMatchingAssignmentTypes(targetNode, valueNode, errorCount)
       end;
     astCallStatement:
       begin
@@ -305,6 +379,7 @@ begin
         if conditionNode <> nil then
           thenOrBodyNode := conditionNode^.nextSibling;
         analyzeExpression(conditionNode, sema, errorCount);
+        requireBooleanExpression(conditionNode, errorCount);
         analyzeStatement(thenOrBodyNode, sema, errorCount)
       end;
     astWhileStatement:
@@ -314,6 +389,7 @@ begin
         if conditionNode <> nil then
           thenOrBodyNode := conditionNode^.nextSibling;
         analyzeExpression(conditionNode, sema, errorCount);
+        requireBooleanExpression(conditionNode, errorCount);
         analyzeStatement(thenOrBodyNode, sema, errorCount)
       end
   else
