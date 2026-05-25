@@ -31,7 +31,7 @@ uses
 
 const
   declarationStartTokens: symbolSet = [constsym, varsym, procsym];
-  statementStartTokens: symbolSet = [beginsym, callsym, ifsym, whilesym];
+  statementStartTokens: symbolSet = [callsym, ifsym, whilesym];
   factorStartTokens: symbolSet = [ident, number, truesym, falsesym, lparen, plus, minus, notsym];
   binaryOperatorTokens: symbolSet = [eql, neq, lss, leq, gtr, geq,
                                      plus, minus, orsym, xorsym,
@@ -85,6 +85,7 @@ end {recoverIfUnexpectedToken} ;
 function compileBlock (currentLevel: integer; followTokens: symbolSet;
                        allowProcedureDeclarations: boolean;
                        var errorCount: integer): astNode;
+    const blockBodyStartTokens: symbolSet = [beginsym];
     var declarationNode: astNode;         {AST node produced for one declaration}
         blockNode: astNode;      {AST node for the current block}
         activeDeclarationStartTokens: symbolSet;
@@ -194,6 +195,8 @@ function compileBlock (currentLevel: integer; followTokens: symbolSet;
             reportCompilerError(ERR_DECLARATION_IDENTIFIER_EXPECTED, lexerCurrentSourceContext, errorCount)
     end {parseVariableDeclaration} ;
 
+    function compileStatement (followTokens: symbolSet): astNode; forward;
+
     {Parses one statement into AST form.}
     function compileStatement (followTokens: symbolSet): astNode;
     var statementSource, elsifSource: sourceContext;
@@ -201,7 +204,6 @@ function compileBlock (currentLevel: integer; followTokens: symbolSet;
 
         function compileStatementSequence(statementFollowTokens: symbolSet;
                                           closingTokens: symbolSet;
-                                          allowClosingWithoutSemicolon: boolean;
                                           missingDelimiterErrorCode: integer;
                                           missingClosingErrorCode: integer): astNode;
         const whileBodyBoundaryTokens: symbolSet = [endsym, period, nul];
@@ -232,10 +234,6 @@ function compileBlock (currentLevel: integer; followTokens: symbolSet;
                     readNextToken(errorCount)
                 else
                 begin
-                    if (lexerCurrentToken in closingTokens) and allowClosingWithoutSemicolon then
-                    begin
-                        break
-                    end;
                     reportCompilerError(missingDelimiterErrorCode, lexerCurrentSourceContext, errorCount);
                     if not (lexerCurrentToken in statementStartTokens+[ident]) then
                         recoverIfUnexpectedToken([semicolon]+closingTokens+statementStartTokens+[ident],
@@ -435,7 +433,6 @@ function compileBlock (currentLevel: integer; followTokens: symbolSet;
                     appendStatementNode(compileStatement,
                                         compileStatementSequence(followTokens,
                                                                  [elsifsym, elsesym, endifsym],
-                                                                 false,
                                                                  ERR_SEMICOLON_EXPECTED_BEFORE_ELSIF_ELSE_OR_ENDIF,
                                                                  ERR_ENDIF_EXPECTED));
                     elseBranchTarget := compileStatement;
@@ -457,7 +454,6 @@ function compileBlock (currentLevel: integer; followTokens: symbolSet;
                         appendStatementNode(elseBranchTarget,
                                             compileStatementSequence(followTokens,
                                                                      [elsifsym, elsesym, endifsym],
-                                                                     false,
                                                                      ERR_SEMICOLON_EXPECTED_BEFORE_ELSIF_ELSE_OR_ENDIF,
                                                                      ERR_ENDIF_EXPECTED))
                     end;
@@ -467,7 +463,6 @@ function compileBlock (currentLevel: integer; followTokens: symbolSet;
                         appendStatementNode(elseBranchTarget,
                                             compileStatementSequence(followTokens,
                                                                      [endifsym],
-                                                                     false,
                                                                      ERR_SEMICOLON_EXPECTED_BEFORE_ENDIF,
                                                                      ERR_ENDIF_EXPECTED))
                     end;
@@ -477,52 +472,72 @@ function compileBlock (currentLevel: integer; followTokens: symbolSet;
                         reportCompilerError(ERR_ENDIF_EXPECTED, lexerCurrentSourceContext, errorCount)
                 end
                 else
-                    if lexerCurrentToken = beginsym then
+                    if lexerCurrentToken = whilesym then
                     begin
                         statementSource := lexerCurrentSourceContext;
-                        compileStatement := newCompoundStatementNode(statementSource);
+                        compileStatement := newWhileStatementNode(statementSource);
                         readNextToken(errorCount);
-                        recoverIfUnexpectedToken(statementStartTokens+[ident],
-                                                 [semicolon, endsym]+followTokens, ERR_STATEMENT_EXPECTED,
-                                                 errorCount);
-                        appendStatementNode(compileStatement,
-                                            compileStatement([semicolon, endsym]+followTokens));
-                        while lexerCurrentToken in [semicolon]+statementStartTokens do
-                        begin
-                            if lexerCurrentToken = semicolon then
-                                readNextToken(errorCount)
-                            else
-                                reportCompilerError(ERR_MISSING_SEMICOLON_BETWEEN_STATEMENTS, lexerCurrentSourceContext, errorCount);
-                            appendStatementNode(compileStatement,
-                                                compileStatement([semicolon, endsym]+followTokens))
-                        end ;
-                        if lexerCurrentToken = endsym then
+                        appendChild(compileStatement, compileExpression([dosym]+followTokens));
+                        if lexerCurrentToken = dosym then
                             readNextToken(errorCount)
                         else
-                            reportCompilerError(ERR_SEMICOLON_OR_END_EXPECTED, lexerCurrentSourceContext, errorCount)
-                    end
-                    else
-                        if lexerCurrentToken = whilesym then
-                        begin
-                            statementSource := lexerCurrentSourceContext;
-                            compileStatement := newWhileStatementNode(statementSource);
-                            readNextToken(errorCount);
-                            appendChild(compileStatement, compileExpression([dosym]+followTokens));
-                            if lexerCurrentToken = dosym then
-                                readNextToken(errorCount)
-                            else
-                                reportCompilerError(ERR_DO_EXPECTED, lexerCurrentSourceContext, errorCount);
-                            appendStatementNode(compileStatement,
-                                                compileStatementSequence(followTokens,
-                                                                         [endwhilesym],
-                                                                         true,
-                                                                         ERR_SEMICOLON_OR_ENDWHILE_EXPECTED,
-                                                                         ERR_SEMICOLON_OR_ENDWHILE_EXPECTED));
-                            if lexerCurrentToken = endwhilesym then
-                                readNextToken(errorCount)
-                        end ;
+                            reportCompilerError(ERR_DO_EXPECTED, lexerCurrentSourceContext, errorCount);
+                        appendStatementNode(compileStatement,
+                                            compileStatementSequence(followTokens,
+                                                                     [endwhilesym],
+                                                                     ERR_SEMICOLON_OR_ENDWHILE_EXPECTED,
+                                                                     ERR_SEMICOLON_OR_ENDWHILE_EXPECTED));
+                        if lexerCurrentToken = endwhilesym then
+                            readNextToken(errorCount)
+                    end ;
         recoverIfUnexpectedToken(followTokens, [ ], ERR_INCORRECT_SYMBOL_FOLLOWING_STATEMENT, errorCount)
      end {compileStatement} ;
+
+    function compileBlockBody(statementFollowTokens: symbolSet): astNode;
+    var
+      bodyNode: astNode;
+      bodySource: sourceContext;
+    begin
+        bodySource := lexerCurrentSourceContext;
+        bodyNode := newCompoundStatementNode(bodySource);
+        if lexerCurrentToken = beginsym then
+            readNextToken(errorCount)
+        else
+            reportCompilerError(ERR_BLOCK_BEGIN_EXPECTED, lexerCurrentSourceContext, errorCount);
+        recoverIfUnexpectedToken(statementStartTokens+[ident],
+                                 [semicolon, endsym]+statementFollowTokens, ERR_STATEMENT_EXPECTED,
+                                 errorCount);
+        while lexerCurrentToken <> endsym do
+        begin
+            appendStatementNode(bodyNode,
+                                compileStatement([semicolon, endsym]+statementFollowTokens));
+            if lexerCurrentToken = semicolon then
+                readNextToken(errorCount)
+            else
+            begin
+                reportCompilerError(ERR_SEMICOLON_OR_END_EXPECTED,
+                                    lexerCurrentSourceContext, errorCount);
+                if not (lexerCurrentToken in statementStartTokens+[ident]) then
+                    recoverIfUnexpectedToken([semicolon, endsym]+statementStartTokens+[ident],
+                                             [period, nul]+statementFollowTokens,
+                                             ERR_SEMICOLON_OR_END_EXPECTED, errorCount);
+                if lexerCurrentToken = semicolon then
+                    readNextToken(errorCount)
+                else if lexerCurrentToken = endsym then
+                    break
+                else if lexerCurrentToken in [period, nul]+statementFollowTokens then
+                begin
+                    reportCompilerError(ERR_BLOCK_END_EXPECTED, lexerCurrentSourceContext, errorCount);
+                    break
+                end
+            end
+        end;
+        if lexerCurrentToken = endsym then
+            readNextToken(errorCount)
+        else
+            reportCompilerError(ERR_BLOCK_END_EXPECTED, lexerCurrentSourceContext, errorCount);
+        compileBlockBody := bodyNode
+    end;
 
 begin {compileBlock}
     blockNode := newBlockNode(lexerCurrentSourceContext);
@@ -573,10 +588,10 @@ begin {compileBlock}
                 reportCompilerError(ERR_NESTED_PROCEDURES_NOT_SUPPORTED, lexerCurrentSourceContext, errorCount);
                 readNextToken(errorCount);
                 recoverIfUnexpectedToken([ident], [semicolon] + followTokens +
-                                         statementStartTokens + activeDeclarationStartTokens,
+                                         blockBodyStartTokens + activeDeclarationStartTokens,
                                          ERR_DECLARATION_IDENTIFIER_EXPECTED, errorCount);
                 while not (lexerCurrentToken in [semicolon] + followTokens +
-                                        statementStartTokens + activeDeclarationStartTokens) do
+                                        blockBodyStartTokens + activeDeclarationStartTokens) do
                     readNextToken(errorCount);
                 continue
             end;
@@ -598,9 +613,10 @@ begin {compileBlock}
             if lexerCurrentToken = semicolon then
             begin
                 readNextToken(errorCount);
-                recoverIfUnexpectedToken(statementStartTokens+[ident] +
-                                         activeDeclarationStartTokens, followTokens,
-                                         ERR_INVALID_TOKEN_AFTER_PROCEDURE_DECLARATION, errorCount)
+                recoverIfUnexpectedToken(blockBodyStartTokens +
+                                         activeDeclarationStartTokens,
+                                         followTokens + statementStartTokens + [ident],
+                                         ERR_BLOCK_BEGIN_EXPECTED, errorCount)
             end
             else
                 reportCompilerError(ERR_SEMICOLON_OR_COMMA_MISSING, lexerCurrentSourceContext, errorCount)
@@ -610,16 +626,16 @@ begin {compileBlock}
             reportCompilerError(ERR_NESTED_PROCEDURES_NOT_SUPPORTED, lexerCurrentSourceContext, errorCount);
             readNextToken(errorCount);
             recoverIfUnexpectedToken([ident], [semicolon] + followTokens +
-                                     statementStartTokens + activeDeclarationStartTokens,
+                                     blockBodyStartTokens + activeDeclarationStartTokens,
                                      ERR_DECLARATION_IDENTIFIER_EXPECTED, errorCount);
             while not (lexerCurrentToken in [semicolon] + followTokens +
-                                    statementStartTokens + activeDeclarationStartTokens) do
+                                    blockBodyStartTokens + activeDeclarationStartTokens) do
                 readNextToken(errorCount);
         end;
-        recoverIfUnexpectedToken(statementStartTokens+[ident], activeDeclarationStartTokens,
+        recoverIfUnexpectedToken(blockBodyStartTokens, activeDeclarationStartTokens,
                                  ERR_STATEMENT_EXPECTED, errorCount)
     until not(lexerCurrentToken in activeDeclarationStartTokens);
-    appendStatementNode(blockNode, compileStatement([semicolon, endsym]+followTokens));
+    appendStatementNode(blockNode, compileBlockBody(followTokens));
     recoverIfUnexpectedToken(followTokens, [ ], ERR_INVALID_TOKEN_AFTER_STATEMENT_PART_IN_BLOCK, errorCount);
     compileBlock := blockNode
 end {compileBlock} ;

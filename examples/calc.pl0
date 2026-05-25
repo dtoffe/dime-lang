@@ -4,18 +4,18 @@ var op: integer, x: integer, y: integer, done: integer;
 
 procedure add;
 begin
-    x := x + y
+    x := x + y;
 end;
 
 procedure sub;
 begin
-    x := x - y
+    x := x - y;
 end;
 
 procedure mult;
 var c: integer;
 begin
-    x := x * y
+    x := x * y;
 end;
 
 procedure div;
@@ -25,7 +25,7 @@ begin
     endif;
     if y = 0 then
         done := 1;
-    endif
+    endif;
 end;
 
 procedure calculate;
@@ -41,14 +41,13 @@ begin
     endif;
     if op = divop then
         call div;
-    endif
+    endif;
 end;
 
 begin
     done := 0;
     x := 20;
     while done = 0 do
-    begin
         op := 1;
         if op < 1 then
             done := 1;
@@ -57,10 +56,8 @@ begin
             done := 1;
         endif;
         if done = 0 then
-        begin
             y := 4;
-            call calculate
-        end;
-        endif
-    end
+            call calculate;
+        endif;
+    endwhile;
 end.

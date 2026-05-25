@@ -24,10 +24,10 @@ type
       astAssignmentStatement   target identifier, value expression
       astCallStatement         callee identifier
       astIfStatement           condition, then-body statement sequence, optional else-body (including nested elsif as if-nodes)
-      astWhileStatement        condition, body statement
+      astWhileStatement        condition, body statement sequence
       astBinaryExpression      left operand, right operand, including relational operators
       astUnaryExpression       operand
-      astCompoundStatement     statement children in source order }
+      astCompoundStatement     block body or control-structure statement sequence children in source order }
   astNodeKind = (
     astProgram,
     astBlock,

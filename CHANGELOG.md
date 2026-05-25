@@ -9,6 +9,7 @@ and this project is expected to follow [Semantic Versioning](https://semver.org/
 
 ### Changed
 
+- The `begin ... end` pair is no longer a statement form, it is now required only around the main program body and each procedure body.
 - Change `if` syntax to `if expression then statementSequence {elsif expression then statementSequence} [else statementSequence] endif`, sharing the same required statement sequence form used by `while` and allowing optional `elsif` and `else` branches.
 - Change `while` syntax to `while expression do statementSequence endwhile`, requiring `endwhile`, requiring at least one body statement, and treating `;` inside the loop body as a statement terminator.
 

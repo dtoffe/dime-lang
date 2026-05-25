@@ -50,8 +50,9 @@
 //
 // Note 5:
 // =======
-// `begin` ... `end` requires at least one inner statement. Empty compound
-// statements such as `begin end` are rejected by the current parser.
+// `begin` ... `end` is not a general statement form. It is reserved for the
+// main program body and procedure bodies, and it still requires at least one
+// inner statement. Empty bodies such as `begin end` are rejected.
 //
 // Note 6:
 // =======
@@ -81,11 +82,11 @@ program = globalBlock "." ;
 globalBlock = [ "const" constantDeclaration { "," constantDeclaration } ";" ]
               [ "var" variableDeclaration { "," variableDeclaration } ";" ]
               { "procedure" ident ";" procedureBlock ";" }
-              statement ;
+              "begin" statementSequence "end" ;
 
 procedureBlock = [ "const" constantDeclaration { "," constantDeclaration } ";" ]
                  [ "var" variableDeclaration { "," variableDeclaration } ";" ]
-                 statement ;
+                 "begin" statementSequence "end" ;
 
 constantDeclaration = ident ":" typeName "=" literal ;
 
@@ -93,7 +94,6 @@ variableDeclaration = ident ":" typeName ;
 
 statement = [ ident ":=" expression
             | "call" ident 
-            | "begin" statement { ";" statement } "end" 
             | "if" expression "then" statementSequence
               { "elsif" expression "then" statementSequence }
               [ "else" statementSequence ] "endif"
@@ -102,8 +102,9 @@ statement = [ ident ":=" expression
 statementSequence = statement ";" { statement ";" } ;
 
 // The outer brackets mean a statement position may be empty in some contexts.
-// This matches the current recursive-descent parser. However, once `begin` is
-// seen, at least one inner statement is required before the matching `end`.
+// This matches the current recursive-descent parser. `begin` ... `end` is not
+// part of `statement`; it is mandatory only for the main program body and for
+// procedure bodies, and each such body requires at least one inner statement.
 
 // `while` now requires `endwhile`, and its body also requires at least one
 // inner statement. Inside that body, `;` is a statement terminator, so the

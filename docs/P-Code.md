@@ -4,6 +4,10 @@ This compiler emits a small stack-machine instruction set, usually called
 p-code. The interpreter loads the generated `.pcode` file into an instruction
 array and executes it with three registers:
 
+In the intended surface syntax documented here, `begin ... end` is not a
+statement form. It is required only to delimit the main program body and each
+procedure body.
+
 - `programCounter`: index of the next instruction.
 - `basePointer`: base address of the current activation record.
 - `stackTop`: top occupied slot in the runtime stack.
@@ -151,7 +155,8 @@ stackTop := stackTop - 1
 Only the global block starts with a placeholder jump over its top-level
 procedure bodies. Procedure blocks no longer need this jump because nested
 procedure declarations are not part of the language. After global declarations
-are parsed, the compiler patches that jump to the main block body.
+are parsed, the compiler patches that jump to the mandatory `begin ... end`
+main block body.
 
 ```text
 JMP 0, body
@@ -162,7 +167,8 @@ INT 0, frameSize
 OPR 0, 0
 ```
 
-For a procedure block, code generation begins directly at:
+For a procedure block, code generation begins directly at its mandatory
+`begin ... end` body:
 
 ```text
 INT 0, frameSize
@@ -281,10 +287,11 @@ Compiles to:
 CAL levelDifference, pAddress
 ```
 
-### `begin ... end`
+### Block Bodies
 
-Statements are compiled in order. Semicolons do not emit p-code; they only
-separate source statements.
+The mandatory `begin ... end` bodies of the main program and procedures compile
+their contained statements in order. Semicolons do not emit p-code; they only
+terminate source statements inside those bodies.
 
 ### `if`
 

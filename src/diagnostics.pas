@@ -62,6 +62,8 @@ const
     ERR_ENDIF_EXPECTED = 43;
     ERR_SEMICOLON_EXPECTED_BEFORE_ENDIF = 44;
     ERR_SEMICOLON_EXPECTED_BEFORE_ELSIF_ELSE_OR_ENDIF = 45;
+    ERR_BLOCK_BEGIN_EXPECTED = 46;
+    ERR_BLOCK_END_EXPECTED = 47;
 
     ERROR_INTERPRETER_INVALID_L_VALUE = 'Error converting l-value';
     ERROR_INTERPRETER_INVALID_A_VALUE = 'Error converting a-value';
@@ -200,6 +202,8 @@ begin
         ERR_CONSTANT_TYPE_MISMATCH: compilerErrorMessage := 'Constant declaration type must match its literal value type.';
         ERR_SEMICOLON_EXPECTED_BEFORE_ENDIF: compilerErrorMessage := 'Semicolon expected before "endif". Possible reserved-word case error.';
         ERR_SEMICOLON_EXPECTED_BEFORE_ELSIF_ELSE_OR_ENDIF: compilerErrorMessage := 'Semicolon expected before "elsif", "else" or "endif". Possible reserved-word case error.';
+        ERR_BLOCK_BEGIN_EXPECTED: compilerErrorMessage := '"begin" expected to start block body. Possible reserved-word case error.';
+        ERR_BLOCK_END_EXPECTED: compilerErrorMessage := '"end" expected to close block body. Possible reserved-word case error.';
     else
         compilerErrorMessage := 'Unknown compiler error.'
     end
