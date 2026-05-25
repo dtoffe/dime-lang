@@ -291,6 +291,8 @@ separate source statements.
 ```pl0
 if expression then
 statementSequence
+else
+statementSequence
 endif
 ```
 
@@ -298,9 +300,12 @@ Compiles to:
 
 ```text
 ... expression leaves 0 or 1 on stack ...
-JPC 0, afterThen
-... statementSequence ...
-afterThen:
+JPC 0, elseOrAfter
+... then statementSequence ...
+JMP 0, afterIf
+elseOrAfter:
+... else statementSequence ...
+afterIf:
 ```
 
 `JPC` consumes the boolean expression value.

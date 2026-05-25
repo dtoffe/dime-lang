@@ -25,7 +25,7 @@ implementation
 uses
   SysUtils;
 
-const reservedWordCount = 20;
+const reservedWordCount = 21;
     numberMaxDigits = 14;
 
 type sourceLineBuffer = array [1..81] of char;
@@ -54,6 +54,7 @@ const
     'call      ',
     'const     ',
     'do        ',
+    'else      ',
     'end       ',
     'endif     ',
     'endwhile  ',
@@ -76,6 +77,7 @@ const
     callsym,
     constsym,
     dosym,
+    elsesym,
     endsym,
     endifsym,
     endwhilesym,
@@ -351,40 +353,42 @@ begin
     reservedWords[ 4] := 'call      ';
     reservedWords[ 5] := 'const     ';
     reservedWords[ 6] := 'do        ';
-    reservedWords[ 7] := 'end       ';
-    reservedWords[ 8] := 'endif     ';
-    reservedWords[ 9] := 'endwhile  ';
-    reservedWords[10] := 'false     ';
-    reservedWords[11] := 'if        ';
-    reservedWords[12] := 'integer   ';
-    reservedWords[13] := 'not       ';
-    reservedWords[14] := 'or        ';
-    reservedWords[15] := 'procedure ';
-    reservedWords[16] := 'then      ';
-    reservedWords[17] := 'true      ';
-    reservedWords[18] := 'var       ';
-    reservedWords[19] := 'while     ';
-    reservedWords[20] := 'xor       ';
+    reservedWords[ 7] := 'else      ';
+    reservedWords[ 8] := 'end       ';
+    reservedWords[ 9] := 'endif     ';
+    reservedWords[10] := 'endwhile  ';
+    reservedWords[11] := 'false     ';
+    reservedWords[12] := 'if        ';
+    reservedWords[13] := 'integer   ';
+    reservedWords[14] := 'not       ';
+    reservedWords[15] := 'or        ';
+    reservedWords[16] := 'procedure ';
+    reservedWords[17] := 'then      ';
+    reservedWords[18] := 'true      ';
+    reservedWords[19] := 'var       ';
+    reservedWords[20] := 'while     ';
+    reservedWords[21] := 'xor       ';
     reservedWordTokens[ 1] := andsym;
     reservedWordTokens[ 2] := beginsym;
     reservedWordTokens[ 3] := booleansym;
     reservedWordTokens[ 4] := callsym;
     reservedWordTokens[ 5] := constsym;
     reservedWordTokens[ 6] := dosym;
-    reservedWordTokens[ 7] := endsym;
-    reservedWordTokens[ 8] := endifsym;
-    reservedWordTokens[ 9] := endwhilesym;
-    reservedWordTokens[10] := falsesym;
-    reservedWordTokens[11] := ifsym;
-    reservedWordTokens[12] := integersym;
-    reservedWordTokens[13] := notsym;
-    reservedWordTokens[14] := orsym;
-    reservedWordTokens[15] := procsym;
-    reservedWordTokens[16] := thensym;
-    reservedWordTokens[17] := truesym;
-    reservedWordTokens[18] := varsym;
-    reservedWordTokens[19] := whilesym;
-    reservedWordTokens[20] := xorsym;
+    reservedWordTokens[ 7] := elsesym;
+    reservedWordTokens[ 8] := endsym;
+    reservedWordTokens[ 9] := endifsym;
+    reservedWordTokens[10] := endwhilesym;
+    reservedWordTokens[11] := falsesym;
+    reservedWordTokens[12] := ifsym;
+    reservedWordTokens[13] := integersym;
+    reservedWordTokens[14] := notsym;
+    reservedWordTokens[15] := orsym;
+    reservedWordTokens[16] := procsym;
+    reservedWordTokens[17] := thensym;
+    reservedWordTokens[18] := truesym;
+    reservedWordTokens[19] := varsym;
+    reservedWordTokens[20] := whilesym;
+    reservedWordTokens[21] := xorsym;
     lexState.charIndex := 0;
     lexState.lineLength := 0;
     lexState.currentLineNumber := 0;

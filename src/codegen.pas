@@ -279,7 +279,7 @@ procedure generateStatement(node: astNode; var context: codegenContext; var erro
 var
   firstChildNode, secondChildNode, childNode: astNode;
   resolvedSymbol: symbolIndex;
-  conditionalJumpIndex, loopStartAddress, loopExitJumpIndex: integer;
+  conditionalJumpIndex, loopStartAddress, loopExitJumpIndex, elseSkipJumpIndex: integer;
 begin
   if node = nil then
     exit;
@@ -328,12 +328,23 @@ begin
       begin
         firstChildNode := node^.firstChild;
         secondChildNode := nil;
+        childNode := nil;
         if firstChildNode <> nil then
           secondChildNode := firstChildNode^.nextSibling;
+        if secondChildNode <> nil then
+          childNode := secondChildNode^.nextSibling;
         generateExpression(firstChildNode, context, errorCount);
         conditionalJumpIndex := emitConditionalJump;
         generateStatement(secondChildNode, context, errorCount);
-        patchJumpToCurrent(conditionalJumpIndex)
+        if childNode <> nil then
+        begin
+          elseSkipJumpIndex := reserveJump(jmp);
+          patchJumpToCurrent(conditionalJumpIndex);
+          generateStatement(childNode, context, errorCount);
+          patchJumpToCurrent(elseSkipJumpIndex)
+        end
+        else
+          patchJumpToCurrent(conditionalJumpIndex)
       end;
     astWhileStatement:
       begin

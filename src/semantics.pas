@@ -349,7 +349,7 @@ end;
 
 procedure analyzeStatement(node: astNode; var sema: semanticContext; var errorCount: integer);
 var
-  targetNode, valueNode, conditionNode, thenOrBodyNode, childNode: astNode;
+  targetNode, valueNode, conditionNode, thenOrBodyNode, elseNode, childNode: astNode;
   resolvedSymbol: symbolIndex;
 begin
   if node = nil then
@@ -412,11 +412,15 @@ begin
       begin
         conditionNode := node^.firstChild;
         thenOrBodyNode := nil;
+        elseNode := nil;
         if conditionNode <> nil then
           thenOrBodyNode := conditionNode^.nextSibling;
+        if thenOrBodyNode <> nil then
+          elseNode := thenOrBodyNode^.nextSibling;
         analyzeExpression(conditionNode, sema, errorCount);
         requireBooleanExpression(conditionNode, errorCount);
-        analyzeStatement(thenOrBodyNode, sema, errorCount)
+        analyzeStatement(thenOrBodyNode, sema, errorCount);
+        analyzeStatement(elseNode, sema, errorCount)
       end;
     astWhileStatement:
       begin
