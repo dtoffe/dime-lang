@@ -6,4 +6,5 @@ begin
   flag := flag xor false or false;
   if flag then
     flag := (1 < 2) and not (truth = false)
+  endif
 end.

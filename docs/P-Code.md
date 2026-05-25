@@ -289,7 +289,7 @@ separate source statements.
 ### `if`
 
 ```pl0
-if expression then statement
+if expression then statement endif
 ```
 
 Compiles to:

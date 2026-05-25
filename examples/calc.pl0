@@ -21,21 +21,27 @@ end;
 procedure div;
 begin
     if y <> 0 then
-        x := x / y;
+        x := x / y
+    endif;
     if y = 0 then
         done := 1
+    endif
 end;
 
 procedure calculate;
 begin
     if op = addop then
-        call add;
+        call add
+    endif;
     if op = subop then
-        call sub;
+        call sub
+    endif;
     if op = multop then
-        call mult;
+        call mult
+    endif;
     if op = divop then
         call div
+    endif
 end;
 
 begin
@@ -45,13 +51,16 @@ begin
     begin
         op := 1;
         if op < 1 then
-            done := 1;
+            done := 1
+        endif;
         if op > 4 then
-            done := 1;
+            done := 1
+        endif;
         if done = 0 then
         begin
             y := 4;
             call calculate
         end
+        endif
     end
 end.

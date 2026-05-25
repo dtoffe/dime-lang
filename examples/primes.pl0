@@ -13,6 +13,7 @@ begin
             ret := 0;
             i := arg
         end;
+        endif;
         i := i + 1
     end
 end;

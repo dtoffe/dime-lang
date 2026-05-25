@@ -425,7 +425,12 @@ function compileBlock (currentLevel: integer; followTokens: symbolSet;
                         readNextToken(errorCount)
                     else
                         reportCompilerError(ERR_THEN_EXPECTED, lexerCurrentSourceContext, errorCount);
-                    appendStatementNode(compileStatement, compileStatement(followTokens))
+                    appendStatementNode(compileStatement,
+                                        compileStatement([endifsym]+followTokens));
+                    if lexerCurrentToken = endifsym then
+                        readNextToken(errorCount)
+                    else
+                        reportCompilerError(ERR_ENDIF_EXPECTED, lexerCurrentSourceContext, errorCount)
                 end
                 else
                     if lexerCurrentToken = beginsym then

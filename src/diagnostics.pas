@@ -59,6 +59,7 @@ const
     ERR_ORDERING_OPERATOR_REQUIRES_INTEGER_OPERANDS = 40;
     ERR_BOOLEAN_OPERATOR_REQUIRES_BOOLEAN_OPERANDS = 41;
     ERR_CONSTANT_TYPE_MISMATCH = 42;
+    ERR_ENDIF_EXPECTED = 43;
 
     ERROR_INTERPRETER_INVALID_L_VALUE = 'Error converting l-value';
     ERROR_INTERPRETER_INVALID_A_VALUE = 'Error converting a-value';
@@ -173,6 +174,7 @@ begin
         ERR_CALL_MUST_BE_FOLLOWED_BY_IDENTIFIER: compilerErrorMessage := '"call" must be followed by an identifier. Possible reserved-word case error.';
         ERR_CALL_OF_CONSTANT_OR_VARIABLE: compilerErrorMessage := 'Call of a constant or a variable is meaningless.';
         ERR_THEN_EXPECTED: compilerErrorMessage := '"then" expected. Possible reserved-word case error.';
+        ERR_ENDIF_EXPECTED: compilerErrorMessage := '"endif" expected. Possible reserved-word case error.';
         ERR_SEMICOLON_OR_END_EXPECTED: compilerErrorMessage := 'Semicolon or "end" expected. Possible reserved-word case error.';
         ERR_DO_EXPECTED: compilerErrorMessage := '"do" expected. Possible reserved-word case error.';
         ERR_INCORRECT_SYMBOL_FOLLOWING_STATEMENT: compilerErrorMessage := 'Incorrect symbol following statement.';

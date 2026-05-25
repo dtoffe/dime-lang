@@ -94,7 +94,7 @@ variableDeclaration = ident ":" typeName ;
 statement = [ ident ":=" expression
             | "call" ident 
             | "begin" statement { ";" statement } "end" 
-            | "if" expression "then" statement 
+            | "if" expression "then" statement "endif"
             | "while" expression "do" statementSequence "endwhile" ] ;
 
 statementSequence = statement ";" { statement ";" } ;
