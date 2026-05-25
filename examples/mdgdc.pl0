@@ -53,7 +53,7 @@ begin
 end;
 
 begin
-    x := m; y := n; call multiply;
-    x := 25; y := 3; call divide;
-    x := 84; y := 36; call gcd;
+    x := m; y := n; multiply();
+    x := 25; y := 3; divide();
+    x := 84; y := 36; gcd();
 end.

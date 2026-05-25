@@ -31,16 +31,16 @@ end;
 procedure calculate;
 begin
     if op = addop then
-        call add;
+        add();
     endif;
     if op = subop then
-        call sub;
+        sub();
     endif;
     if op = multop then
-        call mult;
+        mult();
     endif;
     if op = divop then
-        call div;
+        div();
     endif;
 end;
 
@@ -57,7 +57,7 @@ begin
         endif;
         if done = 0 then
             y := 4;
-            call calculate;
+            calculate();
         endif;
     endwhile;
 end.

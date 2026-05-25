@@ -92,8 +92,11 @@ constantDeclaration = ident ":" typeName "=" literal ;
 
 variableDeclaration = ident ":" typeName ;
 
-statement = [ ident ":=" expression
-            | "call" ident 
+// semantic disambiguation:
+// - if ident denotes a variable (lvalue), this is assignment
+// - if ident denotes a procedure, this is invocation (and parentheses are mandatory)
+
+statement = [ ident ( ":=" expression | "(" ")" )
             | "if" expression "then" statementSequence
               { "elsif" expression "then" statementSequence }
               [ "else" statementSequence ] "endif"

@@ -275,10 +275,10 @@ Compiles to:
 STO levelDifference, xAddress
 ```
 
-### `call`
+### Procedure Call
 
 ```pl0
-call p
+p()
 ```
 
 Compiles to:

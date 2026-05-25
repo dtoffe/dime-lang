@@ -35,7 +35,7 @@ const
     ERR_UNDECLARED_IDENTIFIER = 11;
     ERR_ASSIGNMENT_TO_CONSTANT_OR_PROCEDURE = 12;
     ERR_ASSIGNMENT_OPERATOR_EXPECTED = 13;
-    ERR_CALL_MUST_BE_FOLLOWED_BY_IDENTIFIER = 14;
+    ERR_IDENTIFIER_STATEMENT_MUST_BE_ASSIGNMENT_OR_CALL = 14;
     ERR_CALL_OF_CONSTANT_OR_VARIABLE = 15;
     ERR_THEN_EXPECTED = 16;
     ERR_SEMICOLON_OR_END_EXPECTED = 17;
@@ -175,7 +175,7 @@ begin
         ERR_UNDECLARED_IDENTIFIER: compilerErrorMessage := 'Undeclared identifier.';
         ERR_ASSIGNMENT_TO_CONSTANT_OR_PROCEDURE: compilerErrorMessage := 'Assignment to constant or procedure is not allowed.';
         ERR_ASSIGNMENT_OPERATOR_EXPECTED: compilerErrorMessage := 'Assignment operator := expected.';
-        ERR_CALL_MUST_BE_FOLLOWED_BY_IDENTIFIER: compilerErrorMessage := '"call" must be followed by an identifier. Possible reserved-word case error.';
+        ERR_IDENTIFIER_STATEMENT_MUST_BE_ASSIGNMENT_OR_CALL: compilerErrorMessage := 'Statement starting with an identifier must be an assignment or a procedure call written as ident().';
         ERR_CALL_OF_CONSTANT_OR_VARIABLE: compilerErrorMessage := 'Call of a constant or a variable is meaningless.';
         ERR_THEN_EXPECTED: compilerErrorMessage := '"then" expected. Possible reserved-word case error.';
         ERR_ENDIF_EXPECTED: compilerErrorMessage := '"endif" expected. Possible reserved-word case error.';

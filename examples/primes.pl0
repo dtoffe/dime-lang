@@ -19,11 +19,11 @@ procedure primes;
 begin
     arg := 2;
     while arg < max do
-        call isprime;
+        isprime();
         arg := arg + 1;
     endwhile;
 end;
 
 begin
-    call primes;
+    primes();
 end.

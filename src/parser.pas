@@ -31,7 +31,7 @@ uses
 
 const
   declarationStartTokens: symbolSet = [constsym, varsym, procsym];
-  statementStartTokens: symbolSet = [callsym, ifsym, whilesym];
+  statementStartTokens: symbolSet = [ifsym, whilesym];
   factorStartTokens: symbolSet = [ident, number, truesym, falsesym, lparen, plus, minus, notsym];
   binaryOperatorTokens: symbolSet = [eql, neq, lss, leq, gtr, geq,
                                      plus, minus, orsym, xorsym,
@@ -201,6 +201,7 @@ function compileBlock (currentLevel: integer; followTokens: symbolSet;
     function compileStatement (followTokens: symbolSet): astNode;
     var statementSource, elsifSource: sourceContext;
         elseBranchTarget: astNode;
+        statementIdentifier: identifier;
 
         function compileStatementSequence(statementFollowTokens: symbolSet;
                                           closingTokens: symbolSet;
@@ -394,33 +395,43 @@ function compileBlock (currentLevel: integer; followTokens: symbolSet;
         if lexerCurrentToken = ident then
         begin
             statementSource := lexerCurrentSourceContext;
-            compileStatement := newAssignmentStatementNode(statementSource);
-            appendExpressionChild(compileStatement,
-                                  newIdentifierReferenceNode(lexerCurrentIdentifier, statementSource));
+            statementIdentifier := lexerCurrentIdentifier;
             readNextToken(errorCount);
             if lexerCurrentToken = becomes then
-                readNextToken(errorCount)
-            else
-                reportCompilerError(ERR_ASSIGNMENT_OPERATOR_EXPECTED, lexerCurrentSourceContext, errorCount);
-            appendExpressionChild(compileStatement, compileExpression(followTokens))
-        end
-        else
-            if lexerCurrentToken = callsym then
             begin
-                statementSource := lexerCurrentSourceContext;
-                compileStatement := newCallStatementNode(statementSource);
+                compileStatement := newAssignmentStatementNode(statementSource);
+                appendExpressionChild(compileStatement,
+                                      newIdentifierReferenceNode(statementIdentifier, statementSource));
                 readNextToken(errorCount);
-                if lexerCurrentToken <> ident then
-                    reportCompilerError(ERR_CALL_MUST_BE_FOLLOWED_BY_IDENTIFIER, lexerCurrentSourceContext, errorCount)
+                appendExpressionChild(compileStatement, compileExpression(followTokens))
+            end
+            else if lexerCurrentToken = lparen then
+            begin
+                compileStatement := newCallStatementNode(statementSource);
+                appendArgumentNode(compileStatement,
+                                   newIdentifierReferenceNode(statementIdentifier, statementSource));
+                readNextToken(errorCount);
+                if lexerCurrentToken = rparen then
+                    readNextToken(errorCount)
                 else
                 begin
-                    appendArgumentNode(compileStatement,
-                                       newIdentifierReferenceNode(lexerCurrentIdentifier, lexerCurrentSourceContext));
-                    readNextToken(errorCount)
+                    reportCompilerError(ERR_RIGHT_PARENTHESIS_MISSING, lexerCurrentSourceContext, errorCount);
+                    recoverIfUnexpectedToken([rparen], followTokens, ERR_RIGHT_PARENTHESIS_MISSING, errorCount);
+                    if lexerCurrentToken = rparen then
+                        readNextToken(errorCount)
                 end
             end
             else
-                if lexerCurrentToken = ifsym then
+            begin
+                compileStatement := newAssignmentStatementNode(statementSource);
+                appendExpressionChild(compileStatement,
+                                      newIdentifierReferenceNode(statementIdentifier, statementSource));
+                reportCompilerError(ERR_IDENTIFIER_STATEMENT_MUST_BE_ASSIGNMENT_OR_CALL,
+                                    lexerCurrentSourceContext, errorCount)
+            end
+        end
+        else
+            if lexerCurrentToken = ifsym then
                 begin
                     statementSource := lexerCurrentSourceContext;
                     compileStatement := newIfStatementNode(statementSource);

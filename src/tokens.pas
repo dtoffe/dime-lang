@@ -32,7 +32,7 @@ type
         period, colon, becomes, andsym, beginsym, booleansym, elsesym, elsifsym,
         endsym, endifsym, endwhilesym, falsesym, ifsym,
         notsym, orsym, thensym, truesym, whilesym, xorsym, dosym,
-        callsym, constsym, varsym, procsym, integersym);
+        constsym, varsym, procsym, integersym);
     symbolSet = set of symbol;
 
     identifier = packed array [1 .. maxIdentLength] of char;
