@@ -7,6 +7,10 @@ and this project is expected to follow [Semantic Versioning](https://semver.org/
 
 ## [Unreleased]
 
+### Changed
+
+- Change `while` syntax to `while expression do statements endwhile`, requiring `endwhile`, requiring at least one body statement, and treating `;` inside the loop body as a statement terminator.
+
 ## [v0.0.5] - 2026-05-25
 
 ### Added

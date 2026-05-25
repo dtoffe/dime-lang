@@ -41,6 +41,7 @@ const
     ERR_SEMICOLON_OR_END_EXPECTED = 17;
     ERR_DO_EXPECTED = 18;
     ERR_INCORRECT_SYMBOL_FOLLOWING_STATEMENT = 19;
+    ERR_SEMICOLON_OR_ENDWHILE_EXPECTED = 20;
     ERR_PROCEDURE_IDENTIFIER_IN_EXPRESSION = 21;
     ERR_RIGHT_PARENTHESIS_MISSING = 22;
     ERR_INVALID_TOKEN_AFTER_FACTOR = 23;
@@ -175,6 +176,7 @@ begin
         ERR_SEMICOLON_OR_END_EXPECTED: compilerErrorMessage := 'Semicolon or "end" expected. Possible reserved-word case error.';
         ERR_DO_EXPECTED: compilerErrorMessage := '"do" expected. Possible reserved-word case error.';
         ERR_INCORRECT_SYMBOL_FOLLOWING_STATEMENT: compilerErrorMessage := 'Incorrect symbol following statement.';
+        ERR_SEMICOLON_OR_ENDWHILE_EXPECTED: compilerErrorMessage := 'Semicolon or "endwhile" expected. Possible reserved-word case error.';
         ERR_PROCEDURE_IDENTIFIER_IN_EXPRESSION: compilerErrorMessage := 'Expression must not contain a procedure identifier.';
         ERR_RIGHT_PARENTHESIS_MISSING: compilerErrorMessage := 'Right parenthesis missing.';
         ERR_INVALID_TOKEN_AFTER_FACTOR: compilerErrorMessage := 'The preceding compileFactor cannot be followed by this symbol.';

@@ -196,7 +196,58 @@ function compileBlock (currentLevel: integer; followTokens: symbolSet;
 
     {Parses one statement into AST form.}
     function compileStatement (followTokens: symbolSet): astNode;
-        var statementSource: sourceContext;
+    var statementSource: sourceContext;
+
+        function compileStatementSequence(statementFollowTokens: symbolSet): astNode;
+        const whileBodyBoundaryTokens: symbolSet = [endsym, period, nul];
+        var sequenceNode: astNode;
+        begin
+            sequenceNode := newCompoundStatementNode(statementSource);
+            recoverIfUnexpectedToken(statementStartTokens+[ident],
+                                     [endwhilesym]+whileBodyBoundaryTokens, ERR_STATEMENT_EXPECTED,
+                                     errorCount);
+            if lexerCurrentToken in whileBodyBoundaryTokens then
+            begin
+                reportCompilerError(ERR_SEMICOLON_OR_ENDWHILE_EXPECTED,
+                                    lexerCurrentSourceContext, errorCount);
+                compileStatementSequence := sequenceNode;
+                exit
+            end;
+            while lexerCurrentToken <> endwhilesym do
+            begin
+                if lexerCurrentToken in whileBodyBoundaryTokens then
+                begin
+                    reportCompilerError(ERR_SEMICOLON_OR_ENDWHILE_EXPECTED,
+                                        lexerCurrentSourceContext, errorCount);
+                    break
+                end;
+                appendStatementNode(sequenceNode,
+                                    compileStatement([semicolon, endwhilesym]+statementFollowTokens));
+                if lexerCurrentToken = semicolon then
+                    readNextToken(errorCount)
+                else
+                begin
+                    reportCompilerError(ERR_SEMICOLON_OR_ENDWHILE_EXPECTED,
+                                        lexerCurrentSourceContext, errorCount);
+                    if not (lexerCurrentToken in statementStartTokens+[ident]) then
+                        recoverIfUnexpectedToken([semicolon, endwhilesym]+statementStartTokens+[ident],
+                                                 whileBodyBoundaryTokens,
+                                             ERR_SEMICOLON_OR_ENDWHILE_EXPECTED, errorCount);
+                    if lexerCurrentToken = semicolon then
+                        readNextToken(errorCount)
+                    else if lexerCurrentToken = endwhilesym then
+                    begin
+                        readNextToken(errorCount);
+                        break
+                    end
+                    else if lexerCurrentToken in whileBodyBoundaryTokens then
+                        break
+                end
+            end;
+            if lexerCurrentToken = endwhilesym then
+                readNextToken(errorCount);
+            compileStatementSequence := sequenceNode
+        end;
 
         {Parses an expression, including leading signs and additive operators.}
         function compileExpression(followTokens: symbolSet): astNode;
@@ -412,7 +463,8 @@ function compileBlock (currentLevel: integer; followTokens: symbolSet;
                                 readNextToken(errorCount)
                             else
                                 reportCompilerError(ERR_DO_EXPECTED, lexerCurrentSourceContext, errorCount);
-                            appendStatementNode(compileStatement, compileStatement(followTokens))
+                            appendStatementNode(compileStatement,
+                                                compileStatementSequence(followTokens))
                         end ;
         recoverIfUnexpectedToken(followTokens, [ ], ERR_INCORRECT_SYMBOL_FOLLOWING_STATEMENT, errorCount)
      end {compileStatement} ;

@@ -306,7 +306,10 @@ afterThen:
 ### `while`
 
 ```pl0
-while expression do statement
+while expression do
+statement;
+{ statement; }
+endwhile
 ```
 
 Compiles to:
