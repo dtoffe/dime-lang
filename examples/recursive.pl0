@@ -6,10 +6,10 @@ begin
     ans1 := n;
     n := n - 1;
     if n = 0 then
-        f := 1
+        f := 1;
     endif;
     if n > 0 then
-        call fact
+        call fact;
     endif;
     f := f * ans1
 end;
@@ -17,12 +17,12 @@ end;
 begin
     n := 7;
     if n < 0 then
-        f := -1
+        f := -1;
     endif;
     if n = 0 then
-        f := 1
+        f := 1;
     endif;
     if n > 0 then
-        call fact
+        call fact;
     endif
 end.

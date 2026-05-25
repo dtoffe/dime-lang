@@ -23,7 +23,7 @@ type
       astProcedureDeclaration  nested block as child
       astAssignmentStatement   target identifier, value expression
       astCallStatement         callee identifier
-      astIfStatement           condition, then-statement
+      astIfStatement           condition, then-body statement sequence
       astWhileStatement        condition, body statement
       astBinaryExpression      left operand, right operand, including relational operators
       astUnaryExpression       operand

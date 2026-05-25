@@ -11,7 +11,7 @@ begin
     while b > 0 do
     begin
         if b / 2 * 2 <> b then
-            z := z + a
+            z := z + a;
         endif;
         a := 2 * a;
         b := b / 2;
@@ -34,7 +34,7 @@ begin
         begin
             r := r - w;
             q := q + 1
-        end
+        end;
         endif
     end
 end;
@@ -47,10 +47,10 @@ begin
     while f <> g do
     begin
         if f < g then
-            g := g - f
+            g := g - f;
         endif;
         if g < f then
-            f := f - g
+            f := f - g;
         endif;
     end;
     z := f

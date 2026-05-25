@@ -289,7 +289,9 @@ separate source statements.
 ### `if`
 
 ```pl0
-if expression then statement endif
+if expression then
+statementSequence
+endif
 ```
 
 Compiles to:
@@ -297,7 +299,7 @@ Compiles to:
 ```text
 ... expression leaves 0 or 1 on stack ...
 JPC 0, afterThen
-... statement ...
+... statementSequence ...
 afterThen:
 ```
 
@@ -307,8 +309,7 @@ afterThen:
 
 ```pl0
 while expression do
-statement;
-{ statement; }
+statementSequence
 endwhile
 ```
 

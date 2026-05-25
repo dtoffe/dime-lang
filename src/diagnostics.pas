@@ -60,6 +60,7 @@ const
     ERR_BOOLEAN_OPERATOR_REQUIRES_BOOLEAN_OPERANDS = 41;
     ERR_CONSTANT_TYPE_MISMATCH = 42;
     ERR_ENDIF_EXPECTED = 43;
+    ERR_SEMICOLON_EXPECTED_BEFORE_ENDIF = 44;
 
     ERROR_INTERPRETER_INVALID_L_VALUE = 'Error converting l-value';
     ERROR_INTERPRETER_INVALID_A_VALUE = 'Error converting a-value';
@@ -195,7 +196,8 @@ begin
         ERR_RELATIONAL_OPERANDS_MUST_HAVE_MATCHING_TYPES: compilerErrorMessage := 'Relational operands must have matching operand types.';
         ERR_ORDERING_OPERATOR_REQUIRES_INTEGER_OPERANDS: compilerErrorMessage := 'Ordering relational operators require integer operands.';
         ERR_BOOLEAN_OPERATOR_REQUIRES_BOOLEAN_OPERANDS: compilerErrorMessage := 'Boolean operator requires boolean operands.';
-        ERR_CONSTANT_TYPE_MISMATCH: compilerErrorMessage := 'Constant declaration type must match its literal value type.'
+        ERR_CONSTANT_TYPE_MISMATCH: compilerErrorMessage := 'Constant declaration type must match its literal value type.';
+        ERR_SEMICOLON_EXPECTED_BEFORE_ENDIF: compilerErrorMessage := 'Semicolon expected before "endif". Possible reserved-word case error.';
     else
         compilerErrorMessage := 'Unknown compiler error.'
     end

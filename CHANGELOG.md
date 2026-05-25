@@ -9,8 +9,8 @@ and this project is expected to follow [Semantic Versioning](https://semver.org/
 
 ### Changed
 
-- Change `if` syntax to `if expression then statement endif`, requiring `endif` while keeping the existing single-statement body shape.
-- Change `while` syntax to `while expression do statements endwhile`, requiring `endwhile`, requiring at least one body statement, and treating `;` inside the loop body as a statement terminator.
+- Change `if` syntax to `if expression then statementSequence endif`, sharing the same required statement sequence form used by `while`.
+- Change `while` syntax to `while expression do statementSequence endwhile`, requiring `endwhile`, requiring at least one body statement, and treating `;` inside the loop body as a statement terminator.
 
 ## [v0.0.5] - 2026-05-25
 
