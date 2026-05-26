@@ -27,14 +27,11 @@ const
     ERR_IDENTIFIER_MUST_BE_FOLLOWED_BY_EQUAL = 3;
     ERR_DECLARATION_IDENTIFIER_EXPECTED = 4;
     ERR_SEMICOLON_OR_COMMA_MISSING = 5;
-    ERR_INVALID_TOKEN_AFTER_PROCEDURE_DECLARATION = 6;
     ERR_STATEMENT_EXPECTED = 7;
     ERR_INVALID_TOKEN_AFTER_STATEMENT_PART_IN_BLOCK = 8;
     ERR_PERIOD_EXPECTED = 9;
-    ERR_MISSING_SEMICOLON_BETWEEN_STATEMENTS = 10;
     ERR_UNDECLARED_IDENTIFIER = 11;
     ERR_ASSIGNMENT_TO_CONSTANT_OR_PROCEDURE = 12;
-    ERR_ASSIGNMENT_OPERATOR_EXPECTED = 13;
     ERR_IDENTIFIER_STATEMENT_MUST_BE_ASSIGNMENT_OR_CALL = 14;
     ERR_CALL_OF_CONSTANT_OR_VARIABLE = 15;
     ERR_THEN_EXPECTED = 16;
@@ -167,14 +164,11 @@ begin
         ERR_IDENTIFIER_MUST_BE_FOLLOWED_BY_EQUAL: compilerErrorMessage := 'Identifier must be followed by =.';
         ERR_DECLARATION_IDENTIFIER_EXPECTED: compilerErrorMessage := '"const", "var", "procedure" must be followed by an identifier. Possible reserved-word case error.';
         ERR_SEMICOLON_OR_COMMA_MISSING: compilerErrorMessage := 'Semicolon or comma missing.';
-        ERR_INVALID_TOKEN_AFTER_PROCEDURE_DECLARATION: compilerErrorMessage := 'Incorrect symbol after procedure declaration.';
         ERR_STATEMENT_EXPECTED: compilerErrorMessage := 'Statement expected.';
         ERR_INVALID_TOKEN_AFTER_STATEMENT_PART_IN_BLOCK: compilerErrorMessage := 'Incorrect symbol after statement part in block.';
         ERR_PERIOD_EXPECTED: compilerErrorMessage := 'Period expected.';
-        ERR_MISSING_SEMICOLON_BETWEEN_STATEMENTS: compilerErrorMessage := 'Semicolon between statements is missing.';
         ERR_UNDECLARED_IDENTIFIER: compilerErrorMessage := 'Undeclared identifier.';
         ERR_ASSIGNMENT_TO_CONSTANT_OR_PROCEDURE: compilerErrorMessage := 'Assignment to constant or procedure is not allowed.';
-        ERR_ASSIGNMENT_OPERATOR_EXPECTED: compilerErrorMessage := 'Assignment operator := expected.';
         ERR_IDENTIFIER_STATEMENT_MUST_BE_ASSIGNMENT_OR_CALL: compilerErrorMessage := 'Statement starting with an identifier must be an assignment or a procedure call written as ident().';
         ERR_CALL_OF_CONSTANT_OR_VARIABLE: compilerErrorMessage := 'Call of a constant or a variable is meaningless.';
         ERR_THEN_EXPECTED: compilerErrorMessage := '"then" expected. Possible reserved-word case error.';
@@ -185,7 +179,7 @@ begin
         ERR_SEMICOLON_OR_ENDWHILE_EXPECTED: compilerErrorMessage := 'Semicolon or "endwhile" expected. Possible reserved-word case error.';
         ERR_PROCEDURE_IDENTIFIER_IN_EXPRESSION: compilerErrorMessage := 'Expression must not contain a procedure identifier.';
         ERR_RIGHT_PARENTHESIS_MISSING: compilerErrorMessage := 'Right parenthesis missing.';
-        ERR_INVALID_TOKEN_AFTER_FACTOR: compilerErrorMessage := 'The preceding compileFactor cannot be followed by this symbol.';
+        ERR_INVALID_TOKEN_AFTER_FACTOR: compilerErrorMessage := 'The preceding factor cannot be followed by this symbol.';
         ERR_INVALID_TOKEN_AT_EXPRESSION_START: compilerErrorMessage := 'An expression cannot begin with this symbol.';
         ERR_NUMBER_TOO_LARGE: compilerErrorMessage := 'This number is too large.';
         ERR_NESTED_PROCEDURES_NOT_SUPPORTED: compilerErrorMessage := 'Nested procedures are not supported.';
