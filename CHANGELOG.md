@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project is expected to follow [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+### Added
+
+- Add `char` datatype, single-character ASCII char literals such as `'a'` and char relational comparisons.
+
 ## [v0.0.6] - 2026-05-26
 
 ### Changed
@@ -77,7 +83,7 @@ and this project is expected to follow [Semantic Versioning](https://semver.org/
 ### Changed
 
 - Rename compiler unit to parser, small cleanups and adjustements in all other units.
-- Extract pcode generation from the compiler unit. 
+- Extract pcode generation from the compiler unit.
 - Extract some semantic checks into semantics unit.
 - Extract symbol table and symbol handling into its own unit.
 - Extract lexer state and routines into its own unit.

@@ -116,13 +116,14 @@ statementSequence = statement ";" { statement ";" } ;
 // Syntax accepts any expression in `if` and `while` condition position.
 // Semantic analysis must ensure that the expression resolves to a boolean value.
 
-typeName = "integer" | "boolean" ;
+typeName = "integer" | "boolean" | "char" ;
 
-literal = number | "true" | "false" ;
+literal = number | "true" | "false" | characterLiteral ;
 
 // The literal in a constant declaration must match the declared type:
 // `integer` constants use numeric literals, and `boolean` constants use
-// `true` or `false`.
+// `true` or `false`, and `char` constants use raw single-character ASCII
+// literals such as `'a'`.
 
 // Relational operators have the lowest precedence among binary operators and
 // are non-associative, so chaining like `a < b < c` is not part of the grammar.
@@ -133,7 +134,7 @@ simpleExpression = term { ( "+" | "-" | "or" | "xor" ) term } ;
 
 term = factor { ( "*" | "/" | "and" ) factor } ;
 
-factor = ident | number | "true" | "false" | ( "+" | "-" | "not" ) factor | "(" expression ")" ;
+factor = ident | number | "true" | "false" | characterLiteral | ( "+" | "-" | "not" ) factor | "(" expression ")" ;
 
 relationalOperator = "=" | "<>" | "<" | "<=" | ">" | ">=" ;
 
@@ -148,6 +149,10 @@ ident = letter { letter | digit } ;
 
 number = digit { digit } ;
 
+characterLiteral = "'" asciiCharacter "'" ;
+
 letter = "A" | "B" | ... | "Y" | "Z" | "a" | "b" | ... | "y" | "z" ;
 
 digit = "0" | "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9" ;
+
+asciiCharacter = any single ASCII character in the range $20..$7F except "'" ;

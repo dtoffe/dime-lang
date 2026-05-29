@@ -61,6 +61,10 @@ const
     ERR_SEMICOLON_EXPECTED_BEFORE_ELSIF_ELSE_OR_ENDIF = 45;
     ERR_BLOCK_BEGIN_EXPECTED = 46;
     ERR_BLOCK_END_EXPECTED = 47;
+    ERR_EMPTY_CHARACTER_LITERAL = 48;
+    ERR_CHARACTER_LITERAL_MUST_CONTAIN_EXACTLY_ONE_CHARACTER = 49;
+    ERR_CHARACTER_LITERAL_OUT_OF_RANGE = 50;
+    ERR_UNTERMINATED_CHARACTER_LITERAL = 51;
 
     ERROR_INTERPRETER_INVALID_L_VALUE = 'Error converting l-value';
     ERROR_INTERPRETER_INVALID_A_VALUE = 'Error converting a-value';
@@ -160,7 +164,7 @@ function compilerErrorMessage(errorCode: integer): string;
 begin
     case errorCode of
         ERR_USE_EQUAL_NOT_BECOMES: compilerErrorMessage := 'Use = instead of :=.';
-        ERR_NUMBER_EXPECTED_AFTER_EQUAL: compilerErrorMessage := '= must be followed by a literal value.';
+        ERR_NUMBER_EXPECTED_AFTER_EQUAL: compilerErrorMessage := 'Constant declaration = must be followed by a literal value.';
         ERR_IDENTIFIER_MUST_BE_FOLLOWED_BY_EQUAL: compilerErrorMessage := 'Identifier must be followed by =.';
         ERR_DECLARATION_IDENTIFIER_EXPECTED: compilerErrorMessage := '"const", "var", "procedure" must be followed by an identifier. Possible reserved-word case error.';
         ERR_SEMICOLON_OR_COMMA_MISSING: compilerErrorMessage := 'Semicolon or comma missing.';
@@ -191,13 +195,17 @@ begin
         ERR_ASSIGNMENT_TYPE_MISMATCH: compilerErrorMessage := 'Assignment target type must match assigned value type.';
         ERR_ARITHMETIC_OPERATOR_REQUIRES_INTEGER_OPERANDS: compilerErrorMessage := 'Arithmetic operator requires integer operands.';
         ERR_RELATIONAL_OPERANDS_MUST_HAVE_MATCHING_TYPES: compilerErrorMessage := 'Relational operands must have matching operand types.';
-        ERR_ORDERING_OPERATOR_REQUIRES_INTEGER_OPERANDS: compilerErrorMessage := 'Ordering relational operators require integer operands.';
+        ERR_ORDERING_OPERATOR_REQUIRES_INTEGER_OPERANDS: compilerErrorMessage := 'Ordering relational operators require integer or char operands.';
         ERR_BOOLEAN_OPERATOR_REQUIRES_BOOLEAN_OPERANDS: compilerErrorMessage := 'Boolean operator requires boolean operands.';
         ERR_CONSTANT_TYPE_MISMATCH: compilerErrorMessage := 'Constant declaration type must match its literal value type.';
         ERR_SEMICOLON_EXPECTED_BEFORE_ENDIF: compilerErrorMessage := 'Semicolon expected before "endif". Possible reserved-word case error.';
         ERR_SEMICOLON_EXPECTED_BEFORE_ELSIF_ELSE_OR_ENDIF: compilerErrorMessage := 'Semicolon expected before "elsif", "else" or "endif". Possible reserved-word case error.';
         ERR_BLOCK_BEGIN_EXPECTED: compilerErrorMessage := '"begin" expected to start block body. Possible reserved-word case error.';
         ERR_BLOCK_END_EXPECTED: compilerErrorMessage := '"end" expected to close block body. Possible reserved-word case error.';
+        ERR_EMPTY_CHARACTER_LITERAL: compilerErrorMessage := 'Character literal must not be empty.';
+        ERR_CHARACTER_LITERAL_MUST_CONTAIN_EXACTLY_ONE_CHARACTER: compilerErrorMessage := 'Character literal must contain exactly one character.';
+        ERR_CHARACTER_LITERAL_OUT_OF_RANGE: compilerErrorMessage := 'Character literal must use a raw ASCII character in the range $20..$7F.';
+        ERR_UNTERMINATED_CHARACTER_LITERAL: compilerErrorMessage := 'Character literal is missing its closing quote.';
     else
         compilerErrorMessage := 'Unknown compiler error.'
     end

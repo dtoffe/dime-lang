@@ -107,6 +107,16 @@ begin
     reportCompilerError(errorCode, nodeSourceContext(node), errorCount)
 end;
 
+procedure requireOrderedExpression(node: astNode; errorCode: integer; var errorCount: integer);
+begin
+  if node = nil then
+    exit;
+
+  if (not hasNodeType(node)) or
+     not (getNodeType(node) in [typeInteger, typeChar]) then
+    reportCompilerError(errorCode, nodeSourceContext(node), errorCount)
+end;
+
 procedure requireBooleanOperand(node: astNode; var errorCount: integer);
 begin
   if node = nil then
@@ -209,6 +219,11 @@ begin
         setNodeType(node, typeInteger);
         exit
       end;
+    astCharLiteral:
+      begin
+        setNodeType(node, typeChar);
+        exit
+      end;
     astBooleanLiteral:
       begin
         setNodeType(node, typeBoolean);
@@ -255,9 +270,9 @@ begin
                                 nodeSourceContext(node), errorCount);
           if isOrderingRelationalOperator(node^.operatorSymbol) then
           begin
-            requireIntegerExpression(leftNode, ERR_ORDERING_OPERATOR_REQUIRES_INTEGER_OPERANDS,
+            requireOrderedExpression(leftNode, ERR_ORDERING_OPERATOR_REQUIRES_INTEGER_OPERANDS,
                                      errorCount);
-            requireIntegerExpression(rightNode, ERR_ORDERING_OPERATOR_REQUIRES_INTEGER_OPERANDS,
+            requireOrderedExpression(rightNode, ERR_ORDERING_OPERATOR_REQUIRES_INTEGER_OPERANDS,
                                      errorCount)
           end;
           setNodeType(node, typeBoolean)

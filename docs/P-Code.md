@@ -21,7 +21,8 @@ OPCODE lexicalLevel argument
 `lexicalLevel` is used by variable access and procedure calls. It says how many
 static scopes outward the machine must walk from the current frame. `argument`
 is either a literal value, stack address, jump target, procedure entry point,
-or operation number, depending on the opcode.
+or operation number, depending on the opcode. `char` values use this same
+integer-valued representation, storing ASCII code points directly.
 
 ## Stack Frames
 
@@ -49,7 +50,8 @@ immediately enclosing block.
 
 ### `LIT 0, value`
 
-Pushes a literal integer.
+Pushes a literal integer. `char` literals such as `'a'` use the same opcode,
+with the ASCII code as `value`.
 
 ```text
 stackTop := stackTop + 1
@@ -187,7 +189,8 @@ Constants are compile-time symbol table entries. Referencing a constant emits:
 LIT 0, constantValue
 ```
 
-No stack-frame slot is allocated.
+No stack-frame slot is allocated. `char` constants use the same form, with the
+ASCII code as `constantValue`.
 
 ### Variables
 
@@ -205,7 +208,8 @@ Assigning a variable compiles the right-hand expression first, then stores it:
 STO levelDifference, address
 ```
 
-`levelDifference` is `currentLevel - declarationLevel`.
+`levelDifference` is `currentLevel - declarationLevel`. `char` variables use
+the same `LOD` and `STO` instructions as other scalar variables.
 
 ### Procedures
 
@@ -260,7 +264,8 @@ left > right   -> OPR 0,12
 left <= right  -> OPR 0,13
 ```
 
-The boolean result remains on the stack for `if` and `while`.
+The boolean result remains on the stack for `if` and `while`. Matching `char`
+operands use these same comparison opcodes, ordered by stored ASCII code.
 
 ### Assignment
 

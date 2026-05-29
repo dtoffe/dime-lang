@@ -27,9 +27,9 @@ type
       current compiler/grammar.  Future roadmap symbols should be added back
       only when the lexer and parser implement them. }
     symbol =
-        (nul, ident, number, plus, minus, times, slash,
+        (nul, ident, number, charlit, plus, minus, times, slash,
         eql, neq, lss, leq, gtr, geq, lparen, rparen, comma, semicolon,
-        period, colon, becomes, andsym, beginsym, booleansym, elsesym, elsifsym,
+        period, colon, becomes, andsym, beginsym, booleansym, charsym, elsesym, elsifsym,
         endsym, endifsym, endwhilesym, falsesym, ifsym,
         notsym, orsym, thensym, truesym, whilesym, xorsym, dosym,
         constsym, varsym, procsym, integersym);
@@ -41,12 +41,14 @@ type
       meaningful only for matching token kinds:
         identValue    ident
         numberValue   number
+        charValue     charlit
       line and column identify the start of the token for diagnostics and AST
       source locations. }
     token = record
                     kind: symbol;
                     identValue: identifier;
                     numberValue: integer;
+                    charValue: integer;
                     line: integer;
                     column: integer;
                 end;

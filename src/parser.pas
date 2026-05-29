@@ -32,7 +32,7 @@ uses
 const
   declarationStartTokens: symbolSet = [constsym, varsym, procsym];
   statementStartTokens: symbolSet = [ifsym, whilesym];
-  factorStartTokens: symbolSet = [ident, number, truesym, falsesym, lparen, plus, minus, notsym];
+  factorStartTokens: symbolSet = [ident, number, charlit, truesym, falsesym, lparen, plus, minus, notsym];
   binaryOperatorTokens: symbolSet = [eql, neq, lss, leq, gtr, geq,
                                      plus, minus, orsym, xorsym,
                                      times, slash, andsym];
@@ -102,6 +102,11 @@ function compileBlock (currentLevel: integer; followTokens: symbolSet;
                 parseDeclarationType := typeInteger;
                 readNextToken(errorCount)
             end
+            else if lexerCurrentToken = charsym then
+            begin
+                parseDeclarationType := typeChar;
+                readNextToken(errorCount)
+            end
             else if lexerCurrentToken = booleansym then
             begin
                 parseDeclarationType := typeBoolean;
@@ -147,6 +152,16 @@ function compileBlock (currentLevel: integer; followTokens: symbolSet;
                                                                         declarationSource);
                     readNextToken(errorCount)
                 end
+                else if lexerCurrentToken = charlit then
+                begin
+                    declarationValue := lexerCurrentCharValue;
+                    parseConstantDeclaration := newConstDeclarationNode(declarationIdentifier,
+                                                                        declarationValue,
+                                                                        declarationType,
+                                                                        typeChar,
+                                                                        declarationSource);
+                    readNextToken(errorCount)
+                end
                 else if lexerCurrentToken = truesym then
                 begin
                     parseConstantDeclaration := newConstDeclarationNode(declarationIdentifier,
@@ -166,7 +181,14 @@ function compileBlock (currentLevel: integer; followTokens: symbolSet;
                     readNextToken(errorCount)
                 end
                 else
-                    reportCompilerError(ERR_NUMBER_EXPECTED_AFTER_EQUAL, lexerCurrentSourceContext, errorCount)
+                begin
+                    reportCompilerError(ERR_NUMBER_EXPECTED_AFTER_EQUAL, lexerCurrentSourceContext, errorCount);
+                    if lexerCurrentToken = nul then
+                        readNextToken(errorCount);
+                    while (lexerCurrentToken <> nul) and
+                          not (lexerCurrentToken in [comma, semicolon, period]) do
+                        readNextToken(errorCount)
+                end
             end
             else
                 reportCompilerError(ERR_IDENTIFIER_MUST_BE_FOLLOWED_BY_EQUAL, lexerCurrentSourceContext, errorCount)
@@ -320,6 +342,14 @@ function compileBlock (currentLevel: integer; followTokens: symbolSet;
                             compilePrimary := primaryNode;
                             readNextToken(errorCount)
                         end
+                        else
+                            if lexerCurrentToken = charlit then
+                            begin
+                                primarySource := lexerCurrentSourceContext;
+                                primaryNode := newCharLiteralNode(lexerCurrentCharValue, primarySource);
+                                compilePrimary := primaryNode;
+                                readNextToken(errorCount)
+                            end
                         else
                             if lexerCurrentToken = truesym then
                             begin

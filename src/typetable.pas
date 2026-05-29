@@ -12,7 +12,7 @@ unit typetable;
 interface
 
 type
-  typeValue = (typeInteger, typeBoolean);
+  typeValue = (typeInteger, typeBoolean, typeChar);
 
 implementation
 

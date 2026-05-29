@@ -237,6 +237,7 @@ begin
         end
       end;
     astNumberLiteral,
+    astCharLiteral,
     astBooleanLiteral:
       emitLoadConst(node^.numberValue);
     astUnaryExpression:

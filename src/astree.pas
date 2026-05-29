@@ -43,6 +43,7 @@ type
     astUnaryExpression,
     astIdentifierReference,
     astNumberLiteral,
+    astCharLiteral,
     astBooleanLiteral
   );
 
@@ -94,6 +95,8 @@ function newIdentifierNode(const identifierName: identifier;
                            const source: sourceContext): astNode; deprecated 'Use newIdentifierReferenceNode';
 function newNumberLiteralNode(literalValue: integer;
                               const source: sourceContext): astNode;
+function newCharLiteralNode(literalValue: integer;
+                            const source: sourceContext): astNode;
 function newBooleanLiteralNode(literalValue: boolean;
                                const source: sourceContext): astNode;
 procedure setNodeType(node: astNode; resolvedType: typeValue);
@@ -141,6 +144,7 @@ begin
     astUnaryExpression: astNodeKindToString := 'UnaryExpr';
     astIdentifierReference: astNodeKindToString := 'IdentifierRef';
     astNumberLiteral: astNodeKindToString := 'NumberLiteral';
+    astCharLiteral: astNodeKindToString := 'CharLiteral';
     astBooleanLiteral: astNodeKindToString := 'BooleanLiteral'
   end
 end;
@@ -152,6 +156,8 @@ begin
     astConstDeclaration, astVarDeclaration, astProcedureDeclaration, astIdentifierReference:
       astNodeSummary := astNodeSummary + ' ' + identifierToString(node^.identifierText);
     astNumberLiteral:
+      astNodeSummary := astNodeSummary + ' ' + IntToStr(node^.numberValue);
+    astCharLiteral:
       astNodeSummary := astNodeSummary + ' ' + IntToStr(node^.numberValue);
     astBooleanLiteral:
       if node^.numberValue = 0 then
@@ -166,7 +172,9 @@ begin
       typeInteger:
         astNodeSummary := astNodeSummary + ' :integer';
       typeBoolean:
-        astNodeSummary := astNodeSummary + ' :boolean'
+        astNodeSummary := astNodeSummary + ' :boolean';
+      typeChar:
+        astNodeSummary := astNodeSummary + ' :char'
     end;
   astNodeSummary := astNodeSummary +
                     Format(' @%d:%d', [node^.sourceLine, node^.sourceColumn])
@@ -287,6 +295,13 @@ function newNumberLiteralNode(literalValue: integer;
 begin
   newNumberLiteralNode := newAstNode(astNumberLiteral, source);
   newNumberLiteralNode^.numberValue := literalValue
+end;
+
+function newCharLiteralNode(literalValue: integer;
+                            const source: sourceContext): astNode;
+begin
+  newCharLiteralNode := newAstNode(astCharLiteral, source);
+  newCharLiteralNode^.numberValue := literalValue
 end;
 
 function newBooleanLiteralNode(literalValue: boolean;

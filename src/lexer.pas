@@ -18,6 +18,7 @@ procedure readNextToken(var errorCount: integer);
 function lexerCurrentToken: symbol;
 function lexerCurrentIdentifier: identifier;
 function lexerCurrentNumber: integer;
+function lexerCurrentCharValue: integer;
 function lexerCurrentSourceContext: sourceContext;
 
 implementation
@@ -25,7 +26,7 @@ implementation
 uses
   SysUtils;
 
-const reservedWordCount = 21;
+const reservedWordCount = 22;
     numberMaxDigits = 14;
 
 type sourceLineBuffer = array [1..81] of char;
@@ -36,6 +37,7 @@ type sourceLineBuffer = array [1..81] of char;
                    currentToken: symbol;
                    currentIdentifier: identifier;
                    currentNumber: integer;
+                   currentCharValue: integer;
                    currentLineNumber: integer;
                    charIndex: integer;
                    lineLength: integer;
@@ -51,6 +53,7 @@ const
     'and       ',
     'begin     ',
     'boolean   ',
+    'char      ',
     'const     ',
     'do        ',
     'else      ',
@@ -74,6 +77,7 @@ const
     andsym,
     beginsym,
     booleansym,
+    charsym,
     constsym,
     dosym,
     elsesym,
@@ -118,6 +122,11 @@ begin
     lexerCurrentNumber := lexState.currentNumber
 end {lexerCurrentNumber} ;
 
+function lexerCurrentCharValue: integer;
+begin
+    lexerCurrentCharValue := lexState.currentCharValue
+end {lexerCurrentCharValue} ;
+
 function lexerCurrentSourceContext: sourceContext;
 var
   sourceText: string;
@@ -149,6 +158,8 @@ begin
         tokenText := identifierToString(lexState.currentIdentifier)
     else if lexState.currentToken = number then
         tokenText := IntToStr(lexState.currentNumber)
+    else if lexState.currentToken = charlit then
+        tokenText := IntToStr(lexState.currentCharValue)
     else
         tokenText := '';
     emitDiagnostic(debug, '[LEX ] ' + IntToStr(ord(lexState.currentToken)) + ' ' + tokenText)
@@ -162,6 +173,8 @@ end {cleanupLexer} ;
 procedure readNextToken(var errorCount: integer);
     var reservedWordLow, reservedWordHigh, reservedWordIndex: integer;
         identifierCharCount, digitCount: integer;
+        literalStartContext: sourceContext;
+        literalCharacter: char;
 
     procedure readNextChar;
     begin
@@ -191,6 +204,8 @@ procedure readNextToken(var errorCount: integer);
      end {readNextChar} ;
 
 begin {readNextToken}
+    lexState.currentNumber := 0;
+    lexState.currentCharValue := 0;
     while (lexState.currentChar = ' ') or (lexState.currentChar = chr(10)) or
           (lexState.currentChar = chr(13)) do
         readNextChar;
@@ -226,6 +241,61 @@ begin {readNextToken}
             lexState.currentToken := reservedWordTokens[reservedWordIndex]
         else
             lexState.currentToken := ident
+    end
+    else
+    if lexState.currentChar = '''' then
+    begin
+        literalStartContext := lexerCurrentSourceContext;
+        readNextChar;
+        if lexState.currentLineNumber <> literalStartContext.line then
+        begin
+            lexState.currentToken := nul;
+            reportCompilerError(ERR_UNTERMINATED_CHARACTER_LITERAL, literalStartContext, errorCount)
+        end
+        else if lexState.currentChar = '''' then
+        begin
+            lexState.currentToken := nul;
+            reportCompilerError(ERR_EMPTY_CHARACTER_LITERAL, literalStartContext, errorCount);
+            readNextChar
+        end
+        else if lexState.currentChar in [chr(10), chr(13)] then
+        begin
+            lexState.currentToken := nul;
+            reportCompilerError(ERR_UNTERMINATED_CHARACTER_LITERAL, literalStartContext, errorCount)
+        end
+        else
+        begin
+            literalCharacter := lexState.currentChar;
+            if (ord(literalCharacter) < $20) or (ord(literalCharacter) > $7F) then
+                reportCompilerError(ERR_CHARACTER_LITERAL_OUT_OF_RANGE, literalStartContext, errorCount);
+            readNextChar;
+            if lexState.currentLineNumber <> literalStartContext.line then
+            begin
+                lexState.currentToken := nul;
+                reportCompilerError(ERR_UNTERMINATED_CHARACTER_LITERAL, literalStartContext, errorCount)
+            end
+            else if lexState.currentChar = '''' then
+            begin
+                lexState.currentToken := charlit;
+                lexState.currentCharValue := ord(literalCharacter);
+                readNextChar
+            end
+            else if lexState.currentChar in [chr(10), chr(13)] then
+            begin
+                lexState.currentToken := nul;
+                reportCompilerError(ERR_UNTERMINATED_CHARACTER_LITERAL, literalStartContext, errorCount)
+            end
+            else
+            begin
+                lexState.currentToken := nul;
+                reportCompilerError(ERR_CHARACTER_LITERAL_MUST_CONTAIN_EXACTLY_ONE_CHARACTER,
+                                    literalStartContext, errorCount);
+                while not (lexState.currentChar in ['''', chr(10), chr(13)]) do
+                    readNextChar;
+                if lexState.currentChar = '''' then
+                    readNextChar
+            end
+        end
     end
     else
     if lexState.currentChar in ['0'..'9'] then
@@ -350,6 +420,8 @@ begin
     lexState.lineLength := 0;
     lexState.currentLineNumber := 0;
     lexState.currentChar := ' ';
+    lexState.currentNumber := 0;
+    lexState.currentCharValue := 0;
     lexState.identifierBufferLength := maxIdentLength;
     readNextToken(errorCount)
 end {initializeLexer} ;

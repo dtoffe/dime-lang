@@ -1,0 +1,9 @@
+const lowera: char = 'a', lowerz: char = 'z';
+var first: char, last: char, ordered: boolean;
+
+begin
+  first := lowera;
+  last := lowerz;
+  ordered := first < last;
+  ordered := (first = lowera) and (last > first);
+end.
