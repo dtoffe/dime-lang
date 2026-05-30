@@ -9,14 +9,15 @@ and this project is expected to follow [Semantic Versioning](https://semver.org/
 
 ### Added
 
-- Added a fizzbuzz example program.
+- Add readln() and writeln() as intrinsics procedures, only integer, char or boolean values.
+- Add a fizzbuzz example program.
 - Add mandatory main program header written as `program <name>;`.
 - Add read() and write() as intrinsics procedures, only integer, char or boolean values.
 - Add `char` datatype, single-character ASCII char literals such as `'a'` and char relational comparisons.
 
 ### Fixed
 
-- Added diagnostic verbosity level to the interpreter to prevent flooding the expected output with trace and debug info.
+- Add diagnostic verbosity level to the interpreter to prevent flooding the expected output with trace and debug info.
 - Fix additive expression parsing bug so binary `+` and `-` preserve their left operand instead of being misparsed as unary operators.
 
 ## [v0.0.6] - 2026-05-26

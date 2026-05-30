@@ -173,10 +173,23 @@ procedure executePCode;
         findBase := enclosingBasePointer
      end {findBase} ;
 
-    function readInputTokenOrHalt: string;
+    procedure consumeInputLineRemainder;
     var currentChar: char;
     begin
+        while not eof(input) do
+        begin
+            read(input, currentChar);
+            if (currentChar = #10) or (currentChar = #13) then
+                break
+        end
+    end;
+
+    function readInputTokenOrHalt(consumeLineRemainder: boolean): string;
+    var currentChar: char;
+        tokenTerminator: char;
+    begin
         readInputTokenOrHalt := '';
+        tokenTerminator := #0;
 
         while not eof(input) do
         begin
@@ -198,16 +211,24 @@ procedure executePCode;
         begin
             read(input, currentChar);
             if currentChar <= ' ' then
-              break;
+            begin
+              tokenTerminator := currentChar;
+              break
+            end;
             readInputTokenOrHalt := readInputTokenOrHalt + currentChar
-        end
+        end;
+
+        if consumeLineRemainder and
+           (tokenTerminator <> #10) and
+           (tokenTerminator <> #13) then
+            consumeInputLineRemainder
     end;
 
     function readIntegerValueOrHalt: integer;
     var inputToken: string;
         parsedValue, conversionStatus: integer;
     begin
-        inputToken := readInputTokenOrHalt;
+        inputToken := readInputTokenOrHalt(false);
         Val(inputToken, parsedValue, conversionStatus);
         if conversionStatus <> 0 then
         begin
@@ -217,10 +238,24 @@ procedure executePCode;
         readIntegerValueOrHalt := parsedValue
     end;
 
+    function readIntegerLineValueOrHalt: integer;
+    var inputToken: string;
+        parsedValue, conversionStatus: integer;
+    begin
+        inputToken := readInputTokenOrHalt(true);
+        Val(inputToken, parsedValue, conversionStatus);
+        if conversionStatus <> 0 then
+        begin
+            reportRuntimeError(ERROR_INTERPRETER_INVALID_INTEGER_INPUT);
+            halt(1)
+        end;
+        readIntegerLineValueOrHalt := parsedValue
+    end;
+
     function readCharacterValueOrHalt: integer;
     var inputToken: string;
     begin
-        inputToken := readInputTokenOrHalt;
+        inputToken := readInputTokenOrHalt(false);
         if length(inputToken) <> 1 then
         begin
             reportRuntimeError(ERROR_INTERPRETER_INVALID_CHARACTER_INPUT);
@@ -229,14 +264,41 @@ procedure executePCode;
         readCharacterValueOrHalt := ord(inputToken[1])
     end;
 
+    function readCharacterLineValueOrHalt: integer;
+    var inputToken: string;
+    begin
+        inputToken := readInputTokenOrHalt(true);
+        if length(inputToken) <> 1 then
+        begin
+            reportRuntimeError(ERROR_INTERPRETER_INVALID_CHARACTER_INPUT);
+            halt(1)
+        end;
+        readCharacterLineValueOrHalt := ord(inputToken[1])
+    end;
+
     function readBooleanValueOrHalt: integer;
     var inputToken: string;
     begin
-        inputToken := readInputTokenOrHalt;
+        inputToken := readInputTokenOrHalt(false);
         if inputToken = '0' then
             readBooleanValueOrHalt := 0
         else if inputToken = '1' then
             readBooleanValueOrHalt := 1
+        else
+        begin
+            reportRuntimeError(ERROR_INTERPRETER_INVALID_BOOLEAN_INPUT);
+            halt(1)
+        end
+    end;
+
+    function readBooleanLineValueOrHalt: integer;
+    var inputToken: string;
+    begin
+        inputToken := readInputTokenOrHalt(true);
+        if inputToken = '0' then
+            readBooleanLineValueOrHalt := 0
+        else if inputToken = '1' then
+            readBooleanLineValueOrHalt := 1
         else
         begin
             reportRuntimeError(ERROR_INTERPRETER_INVALID_BOOLEAN_INPUT);
@@ -332,6 +394,26 @@ begin
                 22: begin
                         stackTop := stackTop + 1;
                         runtimeStack[stackTop] := readBooleanValueOrHalt
+                    end ;
+                23: begin
+                        writeln(runtimeStack[stackTop]);
+                        stackTop := stackTop - 1
+                    end ;
+                24: begin
+                        writeln(chr(runtimeStack[stackTop]));
+                        stackTop := stackTop - 1
+                    end ;
+                25: begin
+                        stackTop := stackTop + 1;
+                        runtimeStack[stackTop] := readIntegerLineValueOrHalt
+                    end ;
+                26: begin
+                        stackTop := stackTop + 1;
+                        runtimeStack[stackTop] := readCharacterLineValueOrHalt
+                    end ;
+                27: begin
+                        stackTop := stackTop + 1;
+                        runtimeStack[stackTop] := readBooleanLineValueOrHalt
                     end ;
                 end ;
             lod: begin stackTop := stackTop+1;

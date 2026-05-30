@@ -452,7 +452,7 @@ begin
                                   nodeSourceContext(targetNode), errorCount)
           end
         end;
-        if (resolvedSymbol <> 0) and (builtinProc = builtinWrite) then
+        if (resolvedSymbol <> 0) and (builtinProc in [builtinWrite, builtinWriteLn]) then
         begin
           if argumentNode = nil then
             reportCompilerError(ERR_WRITE_REQUIRES_ARGUMENT,
@@ -463,7 +463,7 @@ begin
             requireWriteArgumentType(argumentNode, errorCount)
           end
         end
-        else if (resolvedSymbol <> 0) and (builtinProc = builtinRead) then
+        else if (resolvedSymbol <> 0) and (builtinProc in [builtinRead, builtinReadLn]) then
         begin
           if argumentNode = nil then
             reportCompilerError(ERR_READ_REQUIRES_ARGUMENT,

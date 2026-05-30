@@ -149,23 +149,42 @@ begin
   emitInstruction(opr, 0, operationCode)
 end;
 
-procedure emitWriteValue(argumentType: typeValue);
+procedure emitWriteValue(argumentType: typeValue; appendNewline: boolean);
 begin
   if argumentType = typeChar then
-    emitInstruction(opr, 0, 19)
+  begin
+    if appendNewline then
+      emitInstruction(opr, 0, 24)
+    else
+      emitInstruction(opr, 0, 19)
+  end
   else
-    emitInstruction(opr, 0, 18)
+  begin
+    if appendNewline then
+      emitInstruction(opr, 0, 23)
+    else
+      emitInstruction(opr, 0, 18)
+  end
 end;
 
-procedure emitReadValue(argumentType: typeValue);
+procedure emitReadValue(argumentType: typeValue; consumeLineRemainder: boolean);
 begin
   case argumentType of
     typeInteger:
-      emitInstruction(opr, 0, 20);
+      if consumeLineRemainder then
+        emitInstruction(opr, 0, 25)
+      else
+        emitInstruction(opr, 0, 20);
     typeChar:
-      emitInstruction(opr, 0, 21);
+      if consumeLineRemainder then
+        emitInstruction(opr, 0, 26)
+      else
+        emitInstruction(opr, 0, 21);
     typeBoolean:
-      emitInstruction(opr, 0, 22)
+      if consumeLineRemainder then
+        emitInstruction(opr, 0, 27)
+      else
+        emitInstruction(opr, 0, 22)
   end
 end;
 
@@ -359,17 +378,17 @@ begin
                                             getDeclarationLevel(resolvedSymbol),
                                             firstChildNode^.source, errorCount),
                        getAddress(resolvedSymbol))
-            else if procKind = builtinWrite then
+            else if procKind in [builtinWrite, builtinWriteLn] then
             begin
               generateExpression(secondChildNode, context, errorCount);
               if hasNodeType(secondChildNode) then
-                emitWriteValue(getNodeType(secondChildNode))
+                emitWriteValue(getNodeType(secondChildNode), procKind = builtinWriteLn)
             end
-            else if procKind = builtinRead then
+            else if procKind in [builtinRead, builtinReadLn] then
             begin
               if hasResolvedSymbol(secondChildNode) and hasNodeType(secondChildNode) then
               begin
-                emitReadValue(getNodeType(secondChildNode));
+                emitReadValue(getNodeType(secondChildNode), procKind = builtinReadLn);
                 resolvedSymbol := resolvedSymbolOf(secondChildNode);
                 emitStoreVar(lexicalLevelDistance(context.currentLevel,
                                                   getDeclarationLevel(resolvedSymbol),

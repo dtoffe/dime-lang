@@ -79,10 +79,10 @@ const
 
     ERROR_INTERPRETER_INVALID_L_VALUE = 'Error converting l-value';
     ERROR_INTERPRETER_INVALID_A_VALUE = 'Error converting a-value';
-    ERROR_INTERPRETER_INPUT_EXHAUSTED = 'Input exhausted while executing built-in read.';
-    ERROR_INTERPRETER_INVALID_INTEGER_INPUT = 'Built-in read expected an integer token.';
-    ERROR_INTERPRETER_INVALID_CHARACTER_INPUT = 'Built-in read expected a one-character token.';
-    ERROR_INTERPRETER_INVALID_BOOLEAN_INPUT = 'Built-in read expected 0 or 1.';
+    ERROR_INTERPRETER_INPUT_EXHAUSTED = 'Input exhausted while executing built-in read/readln.';
+    ERROR_INTERPRETER_INVALID_INTEGER_INPUT = 'Built-in read/readln expected an integer token.';
+    ERROR_INTERPRETER_INVALID_CHARACTER_INPUT = 'Built-in read/readln expected a one-character token.';
+    ERROR_INTERPRETER_INVALID_BOOLEAN_INPUT = 'Built-in read/readln expected 0 or 1.';
 
     STATUS_PROGRAM_INCOMPLETE = 'PROGRAM INCOMPLETE';
     STATUS_PROGRAM_TOO_LONG = 'PROGRAM TOO LONG';
@@ -224,11 +224,11 @@ begin
         ERR_PROCEDURE_ARGUMENTS_NOT_YET_SUPPORTED: compilerErrorMessage := 'Procedure call arguments parse into the AST, but argument passing is not implemented yet.';
         ERR_ONLY_ONE_CALL_ARGUMENT_SUPPORTED: compilerErrorMessage := 'Only one procedure-call argument is supported at this temporary stage.';
         ERR_BUILTIN_PROCEDURE_NOT_YET_IMPLEMENTED: compilerErrorMessage := 'Built-in procedure is recognized by the compiler, but code generation for it is not implemented yet.';
-        ERR_WRITE_REQUIRES_ARGUMENT: compilerErrorMessage := 'Built-in procedure "write" currently requires exactly one argument.';
-        ERR_WRITE_ARGUMENT_TYPE_UNSUPPORTED: compilerErrorMessage := 'Built-in procedure "write" requires an integer, char, or boolean argument.';
-        ERR_READ_REQUIRES_ARGUMENT: compilerErrorMessage := 'Built-in procedure "read" currently requires exactly one variable argument.';
-        ERR_READ_ARGUMENT_MUST_BE_VARIABLE: compilerErrorMessage := 'Built-in procedure "read" requires a writable variable argument.';
-        ERR_READ_ARGUMENT_TYPE_UNSUPPORTED: compilerErrorMessage := 'Built-in procedure "read" requires an integer, char, or boolean variable.';
+        ERR_WRITE_REQUIRES_ARGUMENT: compilerErrorMessage := 'Built-in procedures "write" and "writeln" currently require exactly one argument.';
+        ERR_WRITE_ARGUMENT_TYPE_UNSUPPORTED: compilerErrorMessage := 'Built-in procedures "write" and "writeln" require an integer, char, or boolean argument.';
+        ERR_READ_REQUIRES_ARGUMENT: compilerErrorMessage := 'Built-in procedures "read" and "readln" currently require exactly one variable argument.';
+        ERR_READ_ARGUMENT_MUST_BE_VARIABLE: compilerErrorMessage := 'Built-in procedures "read" and "readln" require a writable variable argument.';
+        ERR_READ_ARGUMENT_TYPE_UNSUPPORTED: compilerErrorMessage := 'Built-in procedures "read" and "readln" require an integer, char, or boolean variable.';
         ERR_PROGRAM_HEADER_EXPECTED: compilerErrorMessage := 'Program must start with "program <name>;". Possible reserved-word case error.';
         ERR_PROGRAM_NAME_EXPECTED: compilerErrorMessage := '"program" must be followed by an identifier.';
         ERR_PROGRAM_HEADER_SEMICOLON_EXPECTED: compilerErrorMessage := 'Semicolon expected after program header.';

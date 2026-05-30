@@ -17,7 +17,8 @@ const
 
 type
   declarationKind = (constant, variable, proc);
-  builtinProcedure = (builtinNone, builtinRead, builtinWrite);
+  builtinProcedure = (builtinNone, builtinRead, builtinReadLn,
+                      builtinWrite, builtinWriteLn);
   symbolIndex = 0..symbolTableMax;
 
 procedure initializeSymbolTable;
@@ -85,8 +86,12 @@ begin
     exit;
   if SameText(procedureName, 'read') then
     entryBuiltinProcedures[tableTop] := builtinRead
+  else if SameText(procedureName, 'readln') then
+    entryBuiltinProcedures[tableTop] := builtinReadLn
   else if SameText(procedureName, 'write') then
     entryBuiltinProcedures[tableTop] := builtinWrite
+  else if SameText(procedureName, 'writeln') then
+    entryBuiltinProcedures[tableTop] := builtinWriteLn
 end;
 
 function tryReserveEntry: boolean;
@@ -106,7 +111,9 @@ begin
   entryVisible[0] := false;
   entryBuiltinProcedures[0] := builtinNone;
   predeclareBuiltinProcedure('read');
-  predeclareBuiltinProcedure('write')
+  predeclareBuiltinProcedure('readln');
+  predeclareBuiltinProcedure('write');
+  predeclareBuiltinProcedure('writeln')
 end;
 
 function markScope: symbolIndex;
@@ -253,8 +260,12 @@ begin
   case procKind of
     builtinRead:
       builtinProcedureName := 'read';
+    builtinReadLn:
+      builtinProcedureName := 'readln';
     builtinWrite:
       builtinProcedureName := 'write';
+    builtinWriteLn:
+      builtinProcedureName := 'writeln';
   else
     builtinProcedureName := ''
   end
