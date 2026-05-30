@@ -1,0 +1,48 @@
+program fizzbuzz;
+
+const max: integer = 100, three: integer = 3, five: integer = 5,
+      cf: char = 'F', ci: char = 'i', cz: char = 'z',
+      cb: char = 'B', cu: char = 'u', sp: char = ' ';
+
+var n: integer, fizz: boolean, buzz: boolean;
+
+procedure printfizz;
+begin
+  write(cf);
+  write(ci);
+  write(cz);
+  write(cz);
+end;
+
+procedure printbuzz;
+begin
+  write(cb);
+  write(cu);
+  write(cz);
+  write(cz);
+end;
+
+procedure printitem;
+begin
+  fizz := n / three * three = n;
+  buzz := n / five * five = n;
+  if fizz and buzz then
+    printfizz();
+    printbuzz();
+  elsif fizz then
+    printfizz();
+  elsif buzz then
+    printbuzz();
+  else
+    write(n);
+  endif;
+  write(sp);
+end;
+
+begin
+  n := 1;
+  while n <= max do
+    printitem();
+    n := n + 1;
+  endwhile;
+end.

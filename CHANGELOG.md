@@ -9,6 +9,7 @@ and this project is expected to follow [Semantic Versioning](https://semver.org/
 
 ### Added
 
+- Added a fizzbuzz example program.
 - Add mandatory main program header written as `program <name>;`.
 - Add read() and write() as intrinsics procedures, only integer, char or boolean values.
 - Add `char` datatype, single-character ASCII char literals such as `'a'` and char relational comparisons.
