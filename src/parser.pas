@@ -224,6 +224,45 @@ function compileBlock (currentLevel: integer; followTokens: symbolSet;
     var statementSource, elsifSource: sourceContext;
         elseBranchTarget: astNode;
         statementIdentifier: identifier;
+        callNode: astNode;
+
+        function compileExpression(followTokens: symbolSet): astNode; forward;
+
+        procedure parseOptionalCallArgument(targetCallNode: astNode; argumentFollowTokens: symbolSet);
+        var
+          parsedArgument: astNode;
+        begin
+          { Temporary restriction: this syntax step allows either ident() or
+            ident(expr). Full argument-list parsing will come with the later
+            procedure/built-in call work. }
+          if lexerCurrentToken = rparen then
+          begin
+            readNextToken(errorCount);
+            exit
+          end;
+
+          parsedArgument := compileExpression([comma, rparen] + argumentFollowTokens);
+          appendCallArgumentNode(targetCallNode, parsedArgument);
+
+          if lexerCurrentToken = comma then
+          begin
+            reportCompilerError(ERR_ONLY_ONE_CALL_ARGUMENT_SUPPORTED, lexerCurrentSourceContext, errorCount);
+            while (lexerCurrentToken <> nul) and
+                  not (lexerCurrentToken in [rparen] + argumentFollowTokens) do
+              readNextToken(errorCount);
+            if lexerCurrentToken = rparen then
+              readNextToken(errorCount)
+          end
+          else if lexerCurrentToken = rparen then
+            readNextToken(errorCount)
+          else
+          begin
+            reportCompilerError(ERR_RIGHT_PARENTHESIS_MISSING, lexerCurrentSourceContext, errorCount);
+            recoverIfUnexpectedToken([rparen], argumentFollowTokens, ERR_RIGHT_PARENTHESIS_MISSING, errorCount);
+            if lexerCurrentToken = rparen then
+              readNextToken(errorCount)
+          end
+        end;
 
         function compileStatementSequence(statementFollowTokens: symbolSet;
                                           closingTokens: symbolSet;
@@ -433,19 +472,12 @@ function compileBlock (currentLevel: integer; followTokens: symbolSet;
             end
             else if lexerCurrentToken = lparen then
             begin
-                compileStatement := newCallStatementNode(statementSource);
-                appendCalleeNode(compileStatement,
+                callNode := newCallStatementNode(statementSource);
+                compileStatement := callNode;
+                appendCalleeNode(callNode,
                                  newIdentifierReferenceNode(statementIdentifier, statementSource));
                 readNextToken(errorCount);
-                if lexerCurrentToken = rparen then
-                    readNextToken(errorCount)
-                else
-                begin
-                    reportCompilerError(ERR_RIGHT_PARENTHESIS_MISSING, lexerCurrentSourceContext, errorCount);
-                    recoverIfUnexpectedToken([rparen], followTokens, ERR_RIGHT_PARENTHESIS_MISSING, errorCount);
-                    if lexerCurrentToken = rparen then
-                        readNextToken(errorCount)
-                end
+                parseOptionalCallArgument(callNode, followTokens)
             end
             else
             begin
@@ -700,6 +732,7 @@ begin
     if lexerCurrentToken <> period then
         reportCompilerError(ERR_PERIOD_EXPECTED, lexerCurrentSourceContext, errorCount);
     analyzeAst(programNode, errorCount);
+    dumpAstIfVerbose(programNode);
     if errorCount = 0 then
     begin
         initializeCodegen(ChangeFileExt(inputFileName, '.pcode'));
@@ -707,7 +740,6 @@ begin
         if errorCount = 0 then
         begin
             emitDiagnostic(status, STATUS_COMPILER_SUCCESS);
-            dumpAstIfVerbose(programNode);
             traceGeneratedCode(0);
             writeProgramImage
         end

@@ -22,7 +22,7 @@ procedure writeProgramImage;
 implementation
 
 uses
-  SysUtils, diagnostics, semantics, symboltable, tokens;
+  SysUtils, diagnostics, semantics, symboltable, tokens, typetable;
 
 const
   codeMaxIndex = 200;        {maximum code array index}
@@ -130,6 +130,15 @@ begin
   emitInstruction(cal, lexicalLevel, address)
 end;
 
+procedure emitBuiltinProcedureNotImplemented(procKind: builtinProcedure;
+                                             callSource: sourceContext;
+                                             var errorCount: integer);
+begin
+  emitDiagnostic(debug, '[EMIT] built-in procedure recognized: ' +
+                        builtinProcedureName(procKind));
+  reportCompilerError(ERR_BUILTIN_PROCEDURE_NOT_YET_IMPLEMENTED, callSource, errorCount)
+end;
+
 procedure emitBinaryOp(operationCode: integer);
 begin
   emitInstruction(opr, 0, operationCode)
@@ -138,6 +147,26 @@ end;
 procedure emitUnaryOp(operationCode: integer);
 begin
   emitInstruction(opr, 0, operationCode)
+end;
+
+procedure emitWriteValue(argumentType: typeValue);
+begin
+  if argumentType = typeChar then
+    emitInstruction(opr, 0, 19)
+  else
+    emitInstruction(opr, 0, 18)
+end;
+
+procedure emitReadValue(argumentType: typeValue);
+begin
+  case argumentType of
+    typeInteger:
+      emitInstruction(opr, 0, 20);
+    typeChar:
+      emitInstruction(opr, 0, 21);
+    typeBoolean:
+      emitInstruction(opr, 0, 22)
+  end
 end;
 
 function emitConditionalJump: integer;
@@ -280,6 +309,7 @@ procedure generateStatement(node: astNode; var context: codegenContext; var erro
 var
   firstChildNode, secondChildNode, childNode: astNode;
   resolvedSymbol: symbolIndex;
+  procKind: builtinProcedure;
   conditionalJumpIndex, loopStartAddress, loopExitJumpIndex, elseSkipJumpIndex: integer;
 begin
   if node = nil then
@@ -315,14 +345,41 @@ begin
     astCallStatement:
       begin
         firstChildNode := node^.firstChild;
+        secondChildNode := nil;
+        if firstChildNode <> nil then
+          secondChildNode := firstChildNode^.nextSibling;
         if hasResolvedSymbol(firstChildNode) then
         begin
           resolvedSymbol := resolvedSymbolOf(firstChildNode);
           if getDeclarationKind(resolvedSymbol) = proc then
-            emitCall(lexicalLevelDistance(context.currentLevel,
-                                          getDeclarationLevel(resolvedSymbol),
-                                          firstChildNode^.source, errorCount),
-                     getAddress(resolvedSymbol))
+          begin
+            procKind := getBuiltinProcedure(resolvedSymbol);
+            if procKind = builtinNone then
+              emitCall(lexicalLevelDistance(context.currentLevel,
+                                            getDeclarationLevel(resolvedSymbol),
+                                            firstChildNode^.source, errorCount),
+                       getAddress(resolvedSymbol))
+            else if procKind = builtinWrite then
+            begin
+              generateExpression(secondChildNode, context, errorCount);
+              if hasNodeType(secondChildNode) then
+                emitWriteValue(getNodeType(secondChildNode))
+            end
+            else if procKind = builtinRead then
+            begin
+              if hasResolvedSymbol(secondChildNode) and hasNodeType(secondChildNode) then
+              begin
+                emitReadValue(getNodeType(secondChildNode));
+                resolvedSymbol := resolvedSymbolOf(secondChildNode);
+                emitStoreVar(lexicalLevelDistance(context.currentLevel,
+                                                  getDeclarationLevel(resolvedSymbol),
+                                                  secondChildNode^.source, errorCount),
+                             getAddress(resolvedSymbol))
+              end
+            end
+            else
+              emitBuiltinProcedureNotImplemented(procKind, firstChildNode^.source, errorCount)
+          end
         end
       end;
     astIfStatement:

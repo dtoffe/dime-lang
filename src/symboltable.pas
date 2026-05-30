@@ -17,6 +17,7 @@ const
 
 type
   declarationKind = (constant, variable, proc);
+  builtinProcedure = (builtinNone, builtinRead, builtinWrite);
   symbolIndex = 0..symbolTableMax;
 
 procedure initializeSymbolTable;
@@ -41,6 +42,8 @@ function getDeclarationLevel(index: symbolIndex): integer;
 function getAddress(index: symbolIndex): integer;
 procedure setAddress(index: symbolIndex; newAddress: integer);
 function getConstantValue(index: symbolIndex): integer;
+function getBuiltinProcedure(index: symbolIndex): builtinProcedure;
+function builtinProcedureName(procKind: builtinProcedure): string;
 
 implementation
 
@@ -61,6 +64,30 @@ var
   tableEntries: array [symbolIndex] of symbolTableEntry;
   entryTypes: array [symbolIndex] of typeValue;
   entryVisible: array [symbolIndex] of boolean;
+  entryBuiltinProcedures: array [symbolIndex] of builtinProcedure;
+
+function identifierFromString(const text: string): identifier;
+var
+  characterIndex: integer;
+begin
+  FillChar(identifierFromString, SizeOf(identifierFromString), ' ');
+  for characterIndex := 1 to Length(text) do
+  begin
+    if characterIndex > maxIdentLength then
+      break;
+    identifierFromString[characterIndex] := text[characterIndex]
+  end
+end;
+
+procedure predeclareBuiltinProcedure(const procedureName: string);
+begin
+  if addProcedure(identifierFromString(procedureName), 0) = 0 then
+    exit;
+  if SameText(procedureName, 'read') then
+    entryBuiltinProcedures[tableTop] := builtinRead
+  else if SameText(procedureName, 'write') then
+    entryBuiltinProcedures[tableTop] := builtinWrite
+end;
 
 function tryReserveEntry: boolean;
 begin
@@ -76,7 +103,10 @@ end;
 procedure initializeSymbolTable;
 begin
   tableTop := 0;
-  entryVisible[0] := false
+  entryVisible[0] := false;
+  entryBuiltinProcedures[0] := builtinNone;
+  predeclareBuiltinProcedure('read');
+  predeclareBuiltinProcedure('write')
 end;
 
 function markScope: symbolIndex;
@@ -106,6 +136,7 @@ begin
     identifier := declarationIdentifier;
     entryTypes[tableTop] := declaredType;
     entryVisible[tableTop] := true;
+    entryBuiltinProcedures[tableTop] := builtinNone;
     declarationType := constant;
     constantValue := declarationValue
   end;
@@ -127,6 +158,7 @@ begin
     identifier := declarationIdentifier;
     entryTypes[tableTop] := declaredType;
     entryVisible[tableTop] := true;
+    entryBuiltinProcedures[tableTop] := builtinNone;
     declarationType := variable;
     declarationLevel := declarationLevelValue;
     address := nextAddress
@@ -148,6 +180,7 @@ begin
     identifier := declarationIdentifier;
     entryTypes[tableTop] := typeInteger;
     entryVisible[tableTop] := true;
+    entryBuiltinProcedures[tableTop] := builtinNone;
     declarationType := proc;
     declarationLevel := declarationLevelValue;
     address := 0
@@ -208,6 +241,23 @@ end;
 function getConstantValue(index: symbolIndex): integer;
 begin
   getConstantValue := tableEntries[index].constantValue
+end;
+
+function getBuiltinProcedure(index: symbolIndex): builtinProcedure;
+begin
+  getBuiltinProcedure := entryBuiltinProcedures[index]
+end;
+
+function builtinProcedureName(procKind: builtinProcedure): string;
+begin
+  case procKind of
+    builtinRead:
+      builtinProcedureName := 'read';
+    builtinWrite:
+      builtinProcedureName := 'write';
+  else
+    builtinProcedureName := ''
+  end
 end;
 
 end.

@@ -172,6 +172,77 @@ procedure executePCode;
         findBase := enclosingBasePointer
      end {findBase} ;
 
+    function readInputTokenOrHalt: string;
+    var currentChar: char;
+    begin
+        readInputTokenOrHalt := '';
+
+        while not eof(input) do
+        begin
+            read(input, currentChar);
+            if currentChar > ' ' then
+            begin
+                readInputTokenOrHalt := currentChar;
+                break
+            end
+        end;
+
+        if readInputTokenOrHalt = '' then
+        begin
+            reportRuntimeError(ERROR_INTERPRETER_INPUT_EXHAUSTED);
+            halt(1)
+        end;
+
+        while not eof(input) do
+        begin
+            read(input, currentChar);
+            if currentChar <= ' ' then
+              break;
+            readInputTokenOrHalt := readInputTokenOrHalt + currentChar
+        end
+    end;
+
+    function readIntegerValueOrHalt: integer;
+    var inputToken: string;
+        parsedValue, conversionStatus: integer;
+    begin
+        inputToken := readInputTokenOrHalt;
+        Val(inputToken, parsedValue, conversionStatus);
+        if conversionStatus <> 0 then
+        begin
+            reportRuntimeError(ERROR_INTERPRETER_INVALID_INTEGER_INPUT);
+            halt(1)
+        end;
+        readIntegerValueOrHalt := parsedValue
+    end;
+
+    function readCharacterValueOrHalt: integer;
+    var inputToken: string;
+    begin
+        inputToken := readInputTokenOrHalt;
+        if length(inputToken) <> 1 then
+        begin
+            reportRuntimeError(ERROR_INTERPRETER_INVALID_CHARACTER_INPUT);
+            halt(1)
+        end;
+        readCharacterValueOrHalt := ord(inputToken[1])
+    end;
+
+    function readBooleanValueOrHalt: integer;
+    var inputToken: string;
+    begin
+        inputToken := readInputTokenOrHalt;
+        if inputToken = '0' then
+            readBooleanValueOrHalt := 0
+        else if inputToken = '1' then
+            readBooleanValueOrHalt := 1
+        else
+        begin
+            reportRuntimeError(ERROR_INTERPRETER_INVALID_BOOLEAN_INPUT);
+            halt(1)
+        end
+    end;
+
 begin
     emitDiagnostic(status, STATUS_INTERPRETER_START);
     stackTop := 0; basePointer := 1; programCounter := 0;
@@ -240,6 +311,26 @@ begin
                 17: begin stackTop := stackTop-1;
                         runtimeStack[stackTop] := ord((runtimeStack[stackTop] <> 0) xor
                                                        (runtimeStack[stackTop+1] <> 0))
+                    end ;
+                18: begin
+                        write(runtimeStack[stackTop]);
+                        stackTop := stackTop - 1
+                    end ;
+                19: begin
+                        write(chr(runtimeStack[stackTop]));
+                        stackTop := stackTop - 1
+                    end ;
+                20: begin
+                        stackTop := stackTop + 1;
+                        runtimeStack[stackTop] := readIntegerValueOrHalt
+                    end ;
+                21: begin
+                        stackTop := stackTop + 1;
+                        runtimeStack[stackTop] := readCharacterValueOrHalt
+                    end ;
+                22: begin
+                        stackTop := stackTop + 1;
+                        runtimeStack[stackTop] := readBooleanValueOrHalt
                     end ;
                 end ;
             lod: begin stackTop := stackTop+1;

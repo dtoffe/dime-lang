@@ -65,9 +65,21 @@ const
     ERR_CHARACTER_LITERAL_MUST_CONTAIN_EXACTLY_ONE_CHARACTER = 49;
     ERR_CHARACTER_LITERAL_OUT_OF_RANGE = 50;
     ERR_UNTERMINATED_CHARACTER_LITERAL = 51;
+    ERR_PROCEDURE_ARGUMENTS_NOT_YET_SUPPORTED = 52;
+    ERR_ONLY_ONE_CALL_ARGUMENT_SUPPORTED = 53;
+    ERR_BUILTIN_PROCEDURE_NOT_YET_IMPLEMENTED = 54;
+    ERR_WRITE_REQUIRES_ARGUMENT = 55;
+    ERR_WRITE_ARGUMENT_TYPE_UNSUPPORTED = 56;
+    ERR_READ_REQUIRES_ARGUMENT = 57;
+    ERR_READ_ARGUMENT_MUST_BE_VARIABLE = 58;
+    ERR_READ_ARGUMENT_TYPE_UNSUPPORTED = 59;
 
     ERROR_INTERPRETER_INVALID_L_VALUE = 'Error converting l-value';
     ERROR_INTERPRETER_INVALID_A_VALUE = 'Error converting a-value';
+    ERROR_INTERPRETER_INPUT_EXHAUSTED = 'Input exhausted while executing built-in read.';
+    ERROR_INTERPRETER_INVALID_INTEGER_INPUT = 'Built-in read expected an integer token.';
+    ERROR_INTERPRETER_INVALID_CHARACTER_INPUT = 'Built-in read expected a one-character token.';
+    ERROR_INTERPRETER_INVALID_BOOLEAN_INPUT = 'Built-in read expected 0 or 1.';
 
     STATUS_PROGRAM_INCOMPLETE = 'PROGRAM INCOMPLETE';
     STATUS_PROGRAM_TOO_LONG = 'PROGRAM TOO LONG';
@@ -206,6 +218,14 @@ begin
         ERR_CHARACTER_LITERAL_MUST_CONTAIN_EXACTLY_ONE_CHARACTER: compilerErrorMessage := 'Character literal must contain exactly one character.';
         ERR_CHARACTER_LITERAL_OUT_OF_RANGE: compilerErrorMessage := 'Character literal must use a raw ASCII character in the range $20..$7F.';
         ERR_UNTERMINATED_CHARACTER_LITERAL: compilerErrorMessage := 'Character literal is missing its closing quote.';
+        ERR_PROCEDURE_ARGUMENTS_NOT_YET_SUPPORTED: compilerErrorMessage := 'Procedure call arguments parse into the AST, but argument passing is not implemented yet.';
+        ERR_ONLY_ONE_CALL_ARGUMENT_SUPPORTED: compilerErrorMessage := 'Only one procedure-call argument is supported at this temporary stage.';
+        ERR_BUILTIN_PROCEDURE_NOT_YET_IMPLEMENTED: compilerErrorMessage := 'Built-in procedure is recognized by the compiler, but code generation for it is not implemented yet.';
+        ERR_WRITE_REQUIRES_ARGUMENT: compilerErrorMessage := 'Built-in procedure "write" currently requires exactly one argument.';
+        ERR_WRITE_ARGUMENT_TYPE_UNSUPPORTED: compilerErrorMessage := 'Built-in procedure "write" requires an integer, char, or boolean argument.';
+        ERR_READ_REQUIRES_ARGUMENT: compilerErrorMessage := 'Built-in procedure "read" currently requires exactly one variable argument.';
+        ERR_READ_ARGUMENT_MUST_BE_VARIABLE: compilerErrorMessage := 'Built-in procedure "read" requires a writable variable argument.';
+        ERR_READ_ARGUMENT_TYPE_UNSUPPORTED: compilerErrorMessage := 'Built-in procedure "read" requires an integer, char, or boolean variable.';
     else
         compilerErrorMessage := 'Unknown compiler error.'
     end

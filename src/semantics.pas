@@ -127,6 +127,28 @@ begin
                         nodeSourceContext(node), errorCount)
 end;
 
+procedure requireWriteArgumentType(node: astNode; var errorCount: integer);
+begin
+  if node = nil then
+    exit;
+
+  if (not hasNodeType(node)) or
+     not (getNodeType(node) in [typeInteger, typeChar, typeBoolean]) then
+    reportCompilerError(ERR_WRITE_ARGUMENT_TYPE_UNSUPPORTED,
+                        nodeSourceContext(node), errorCount)
+end;
+
+procedure requireReadArgumentType(node: astNode; var errorCount: integer);
+begin
+  if node = nil then
+    exit;
+
+  if (not hasNodeType(node)) or
+     not (getNodeType(node) in [typeInteger, typeChar, typeBoolean]) then
+    reportCompilerError(ERR_READ_ARGUMENT_TYPE_UNSUPPORTED,
+                        nodeSourceContext(node), errorCount)
+end;
+
 function findSemanticBinding(node: astNode): semanticBinding;
 begin
   findSemanticBinding := semanticBindings;
@@ -364,8 +386,9 @@ end;
 
 procedure analyzeStatement(node: astNode; var sema: semanticContext; var errorCount: integer);
 var
-  targetNode, valueNode, conditionNode, thenOrBodyNode, elseNode, childNode: astNode;
+  targetNode, valueNode, conditionNode, thenOrBodyNode, elseNode, childNode, argumentNode: astNode;
   resolvedSymbol: symbolIndex;
+  builtinProc: builtinProcedure;
 begin
   if node = nil then
     exit;
@@ -408,18 +431,66 @@ begin
     astCallStatement:
       begin
         targetNode := node^.firstChild;
+        resolvedSymbol := 0;
+        builtinProc := builtinNone;
+        argumentNode := nil;
+        if targetNode <> nil then
+          argumentNode := targetNode^.nextSibling;
         if targetNode <> nil then
         begin
           resolvedSymbol := lookupSymbol(targetNode^.identifierText);
+          builtinProc := builtinNone;
           if resolvedSymbol = 0 then
             reportCompilerError(ERR_UNDECLARED_IDENTIFIER, nodeSourceContext(targetNode), errorCount)
           else
           begin
             rememberResolvedSymbol(targetNode, resolvedSymbol);
             setNodeType(targetNode, getDeclarationType(resolvedSymbol));
+            builtinProc := getBuiltinProcedure(resolvedSymbol);
             if getDeclarationKind(resolvedSymbol) <> proc then
               reportCompilerError(ERR_CALL_OF_CONSTANT_OR_VARIABLE,
                                   nodeSourceContext(targetNode), errorCount)
+          end
+        end;
+        if (resolvedSymbol <> 0) and (builtinProc = builtinWrite) then
+        begin
+          if argumentNode = nil then
+            reportCompilerError(ERR_WRITE_REQUIRES_ARGUMENT,
+                                nodeSourceContext(targetNode), errorCount)
+          else
+          begin
+            analyzeExpression(argumentNode, sema, errorCount);
+            requireWriteArgumentType(argumentNode, errorCount)
+          end
+        end
+        else if (resolvedSymbol <> 0) and (builtinProc = builtinRead) then
+        begin
+          if argumentNode = nil then
+            reportCompilerError(ERR_READ_REQUIRES_ARGUMENT,
+                                nodeSourceContext(targetNode), errorCount)
+          else
+          begin
+            analyzeExpression(argumentNode, sema, errorCount);
+            if argumentNode^.kind <> astIdentifierReference then
+              reportCompilerError(ERR_READ_ARGUMENT_MUST_BE_VARIABLE,
+                                  nodeSourceContext(argumentNode), errorCount)
+            else if (not hasResolvedSymbol(argumentNode)) or
+                    (getDeclarationKind(resolvedSymbolOf(argumentNode)) <> variable) then
+              reportCompilerError(ERR_READ_ARGUMENT_MUST_BE_VARIABLE,
+                                  nodeSourceContext(argumentNode), errorCount)
+            else
+              requireReadArgumentType(argumentNode, errorCount)
+          end
+        end
+        else
+        begin
+          if argumentNode <> nil then
+            reportCompilerError(ERR_PROCEDURE_ARGUMENTS_NOT_YET_SUPPORTED,
+                                nodeSourceContext(argumentNode), errorCount);
+          while argumentNode <> nil do
+          begin
+            analyzeExpression(argumentNode, sema, errorCount);
+            argumentNode := argumentNode^.nextSibling
           end
         end
       end;

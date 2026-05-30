@@ -22,7 +22,7 @@ type
       astBlock                 declarations/statements in source order
       astProcedureDeclaration  nested block as child
       astAssignmentStatement   target identifier, value expression
-      astCallStatement         callee identifier reference
+      astCallStatement         callee identifier reference, followed by an optional argument expression
       astIfStatement           condition, then-body statement sequence, optional else-body (including nested elsif as if-nodes)
       astWhileStatement        condition, body statement sequence
       astBinaryExpression      left operand, right operand, including relational operators
@@ -108,6 +108,7 @@ procedure appendDeclarationNode(listOwnerNode, declarationNode: astNode);
 procedure appendStatementNode(listOwnerNode, statementNode: astNode);
 procedure appendExpressionChild(parentExpressionNode, childExpressionNode: astNode);
 procedure appendCalleeNode(callNode, calleeNode: astNode);
+procedure appendCallArgumentNode(callNode, argumentNode: astNode);
 procedure freeAst(rootNode: astNode);
 procedure walkAstPreOrder(rootNode: astNode; visit: astVisitProc; context: pointer);
 procedure dumpAstPreOrder(rootNode: astNode);
@@ -372,6 +373,11 @@ end;
 procedure appendCalleeNode(callNode, calleeNode: astNode);
 begin
   appendChild(callNode, calleeNode)
+end;
+
+procedure appendCallArgumentNode(callNode, argumentNode: astNode);
+begin
+  appendChild(callNode, argumentNode)
 end;
 
 procedure freeAst(rootNode: astNode);

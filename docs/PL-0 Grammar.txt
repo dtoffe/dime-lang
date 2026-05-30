@@ -95,8 +95,14 @@ variableDeclaration = ident ":" typeName ;
 // semantic disambiguation:
 // - if ident denotes a variable (lvalue), this is assignment
 // - if ident denotes a procedure, this is invocation (and parentheses are mandatory)
+//
+// current staged call support:
+// - syntax accepts ident() and ident(expression)
+// - semantically, built-in write uses write(expression)
+// - semantically, built-in read uses read(variableIdentifier)
+// - user-defined procedures still accept only ident() at this stage
 
-statement = [ ident ( ":=" expression | "(" ")" )
+statement = [ ident ( ":=" expression | "(" [ expression ] ")" )
             | "if" expression "then" statementSequence
               { "elsif" expression "then" statementSequence }
               [ "else" statementSequence ] "endif"
@@ -115,6 +121,14 @@ statementSequence = statement ";" { statement ";" } ;
 
 // Syntax accepts any expression in `if` and `while` condition position.
 // Semantic analysis must ensure that the expression resolves to a boolean value.
+
+// The one-argument call form is intentionally transitional. The parser accepts
+// a single argument expression after `(`, but current semantic analysis
+// reserves that form for built-in procedures:
+//
+// - `write(expr)` where expr resolves to integer, boolean, or char
+// - `read(ident)` where ident denotes a writable variable of type integer,
+//   boolean, or char
 
 typeName = "integer" | "boolean" | "char" ;
 

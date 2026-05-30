@@ -8,6 +8,10 @@ In the intended surface syntax documented here, `begin ... end` is not a
 statement form. It is required only to delimit the main program body and each
 procedure body.
 
+At the current implementation stage, ordinary user-defined procedure calls are
+still `ident()`. The single-argument call form is reserved for the built-in
+procedures `write(expr)` and `read(varIdent)`.
+
 - `programCounter`: index of the next instruction.
 - `basePointer`: base address of the current activation record.
 - `stackTop`: top occupied slot in the runtime stack.
@@ -82,6 +86,11 @@ Boolean results are stored as `0` for false and `1` for true.
 | `15` | boolean and | `x y -> ord((x <> 0) and (y <> 0))` |
 | `16` | boolean or | `x y -> ord((x <> 0) or (y <> 0))` |
 | `17` | boolean xor | `x y -> ord((x <> 0) xor (y <> 0))` |
+| `18` | write scalar as integer | `x -> output decimal x` |
+| `19` | write char | `x -> output chr(x)` |
+| `20` | read integer | `-> push parsed integer token` |
+| `21` | read char | `-> push ord(single-character token)` |
+| `22` | read boolean | `-> push 0 or 1` |
 
 ### `LOD lexicalLevel, address`
 
@@ -223,6 +232,42 @@ CAL levelDifference, procedureAddress
 The static link created by `CAL` lets the procedure access variables from its
 lexically enclosing blocks.
 
+### Built-in `write`
+
+The compiler currently recognizes `write(expr)` as a built-in procedure call.
+It compiles the argument expression first, then emits an `OPR` sub-operation
+selected by the argument type:
+
+```text
+integer  -> OPR 0,18
+boolean  -> OPR 0,18
+char     -> OPR 0,19
+```
+
+Each operation prints the top stack value and then pops it. Booleans use their
+runtime scalar representation, so `false` prints as `0` and `true` prints as
+`1`. This keeps `write` aligned with the value representation expected by the
+later `read` implementation.
+
+### Built-in `read`
+
+The compiler currently recognizes `read(varIdent)` as a built-in procedure
+call. The argument must be exactly one writable variable of type `integer`,
+`char`, or `boolean`.
+
+The compiler emits an input operation selected by the variable type and then
+stores the pushed value into that variable:
+
+```text
+integer  -> OPR 0,20 ; STO level,address
+char     -> OPR 0,21 ; STO level,address
+boolean  -> OPR 0,22 ; STO level,address
+```
+
+Boolean input uses the same scalar representation as boolean values elsewhere
+in the VM, so `read` accepts `0` for `false` and `1` for `true`. Character
+input currently expects a one-character token.
+
 ### Expressions
 
 Expressions are evaluated left to right on the stack.
@@ -291,6 +336,10 @@ Compiles to:
 ```text
 CAL levelDifference, pAddress
 ```
+
+Calls of the form `p(expr)` are not yet part of the user-defined procedure
+calling convention. The parser accepts a single argument syntactically, but
+current semantic analysis reserves it for built-in `read` and `write` only.
 
 ### Block Bodies
 
