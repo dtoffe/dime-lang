@@ -9,6 +9,7 @@ and this project is expected to follow [Semantic Versioning](https://semver.org/
 
 ### Added
 
+- Improve README.md with a Motivation section.
 - Add fizzbuzz example to main README.md file.
 - Add readln() and writeln() as intrinsics procedures, only integer, char or boolean values.
 - Add a fizzbuzz example program.
