@@ -1,48 +1,45 @@
 program fizzbuzz;
 
 const max: integer = 100, three: integer = 3, five: integer = 5,
-      cf: char = 'F', ci: char = 'i', cz: char = 'z',
-      cb: char = 'B', cu: char = 'u', sp: char = ' ';
+      cf: char = 'F', cb: char = 'B', cn: char = 'N', cc: char = ':';
 
-var n: integer, fizz: boolean, buzz: boolean;
+var n: integer, fizz: boolean, buzz: boolean,
+    cnorm: integer, cfizz: integer, cbuzz: integer, cfb: integer,
+    sumcnt: integer;
 
-procedure printfizz;
+procedure printsummary;
 begin
-  write(cf);
-  write(ci);
-  write(cz);
-  write(cz);
-end;
-
-procedure printbuzz;
-begin
-  write(cb);
-  write(cu);
-  write(cz);
-  write(cz);
-end;
-
-procedure printitem;
-begin
-  fizz := n / three * three = n;
-  buzz := n / five * five = n;
-  if fizz and buzz then
-    printfizz();
-    printbuzz();
-  elsif fizz then
-    printfizz();
-  elsif buzz then
-    printbuzz();
-  else
-    write(n);
-  endif;
-  write(sp);
+    write(cn); write(cc); writeln(cnorm);
+    write(cf); write(cc); writeln(cfizz);
+    write(cb); write(cc); writeln(cbuzz);
+    write(cf); write(cb); write(cc); writeln(cfb);
 end;
 
 begin
-  n := 1;
-  while n <= max do
-    printitem();
-    n := n + 1;
-  endwhile;
+    n := 1;
+    cnorm := 0;
+    cfizz := 0;
+    cbuzz := 0;
+    cfb := 0;
+    sumcnt := 0;
+    while n <= max do
+        fizz := n / three * three = n;
+        buzz := n / five * five = n;
+        if fizz and buzz then
+            write(cf);
+            writeln(cb);
+            cfb := cfb + 1;
+        elsif fizz then
+            writeln(cf);
+            cfizz := cfizz + 1;
+        elsif buzz then
+            writeln(cb);
+            cbuzz := cbuzz + 1;
+        else
+            writeln(n);
+            cnorm := cnorm + 1;
+        endif;
+        n := n + 1;
+    endwhile;
+    printsummary();
 end.
