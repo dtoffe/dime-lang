@@ -352,74 +352,65 @@ function compileBlock (currentLevel: integer; followTokens: symbolSet;
                 compilePrimary := nil;
                 recoverIfUnexpectedToken(factorStartTokens, followTokens, ERR_INVALID_TOKEN_AT_EXPRESSION_START,
                                          errorCount);
-                while lexerCurrentToken in factorStartTokens do
+                if lexerCurrentToken in [plus, minus, notsym] then
                 begin
-                    if lexerCurrentToken in [plus, minus, notsym] then
-                    begin
-                        unaryOperator := lexerCurrentToken;
-                        primarySource := lexerCurrentSourceContext;
-                        readNextToken(errorCount);
-                        primaryNode := newUnaryExpressionNode(unaryOperator, primarySource);
-                        appendExpressionChild(primaryNode, compilePrimary(followTokens));
-                        compilePrimary := primaryNode
-                    end
-                    else
-                    if lexerCurrentToken = ident then
-                    begin
-                        primarySource := lexerCurrentSourceContext;
-                        primaryNode := newIdentifierReferenceNode(lexerCurrentIdentifier, primarySource);
-                        compilePrimary := primaryNode;
-                        readNextToken(errorCount)
-                    end
-                        else
-                            if lexerCurrentToken = number then
-                        begin
-                            primarySource := lexerCurrentSourceContext;
-                            primaryNode := newNumberLiteralNode(lexerCurrentNumber, primarySource);
-                            if lexerCurrentNumber > maxNumericValue then
-                                reportCompilerError(ERR_NUMBER_TOO_LARGE, lexerCurrentSourceContext, errorCount);
-                            compilePrimary := primaryNode;
-                            readNextToken(errorCount)
-                        end
-                        else
-                            if lexerCurrentToken = charlit then
-                            begin
-                                primarySource := lexerCurrentSourceContext;
-                                primaryNode := newCharLiteralNode(lexerCurrentCharValue, primarySource);
-                                compilePrimary := primaryNode;
-                                readNextToken(errorCount)
-                            end
-                        else
-                            if lexerCurrentToken = truesym then
-                            begin
-                                primarySource := lexerCurrentSourceContext;
-                                primaryNode := newBooleanLiteralNode(true, primarySource);
-                                compilePrimary := primaryNode;
-                                readNextToken(errorCount)
-                            end
-                            else
-                                if lexerCurrentToken = falsesym then
-                                begin
-                                    primarySource := lexerCurrentSourceContext;
-                                    primaryNode := newBooleanLiteralNode(false, primarySource);
-                                    compilePrimary := primaryNode;
-                                    readNextToken(errorCount)
-                                end
-                        else
-                            if lexerCurrentToken = lparen then
-                            begin
-                                primarySource := lexerCurrentSourceContext;
-                                readNextToken(errorCount);
-                                primaryNode := compileExpressionWithPrecedence(1, [rparen]+followTokens);
-                                if lexerCurrentToken = rparen then
-                                    readNextToken(errorCount)
-                                else
-                                    reportCompilerError(ERR_RIGHT_PARENTHESIS_MISSING, lexerCurrentSourceContext, errorCount);
-                                compilePrimary := primaryNode
-                            end;
-                    recoverIfUnexpectedToken (followTokens, [lparen], ERR_INVALID_TOKEN_AFTER_FACTOR,
-                                              errorCount)
+                    unaryOperator := lexerCurrentToken;
+                    primarySource := lexerCurrentSourceContext;
+                    readNextToken(errorCount);
+                    primaryNode := newUnaryExpressionNode(unaryOperator, primarySource);
+                    appendExpressionChild(primaryNode, compilePrimary(followTokens));
+                    compilePrimary := primaryNode
                 end
+                else if lexerCurrentToken = ident then
+                begin
+                    primarySource := lexerCurrentSourceContext;
+                    primaryNode := newIdentifierReferenceNode(lexerCurrentIdentifier, primarySource);
+                    compilePrimary := primaryNode;
+                    readNextToken(errorCount)
+                end
+                else if lexerCurrentToken = number then
+                begin
+                    primarySource := lexerCurrentSourceContext;
+                    primaryNode := newNumberLiteralNode(lexerCurrentNumber, primarySource);
+                    if lexerCurrentNumber > maxNumericValue then
+                        reportCompilerError(ERR_NUMBER_TOO_LARGE, lexerCurrentSourceContext, errorCount);
+                    compilePrimary := primaryNode;
+                    readNextToken(errorCount)
+                end
+                else if lexerCurrentToken = charlit then
+                begin
+                    primarySource := lexerCurrentSourceContext;
+                    primaryNode := newCharLiteralNode(lexerCurrentCharValue, primarySource);
+                    compilePrimary := primaryNode;
+                    readNextToken(errorCount)
+                end
+                else if lexerCurrentToken = truesym then
+                begin
+                    primarySource := lexerCurrentSourceContext;
+                    primaryNode := newBooleanLiteralNode(true, primarySource);
+                    compilePrimary := primaryNode;
+                    readNextToken(errorCount)
+                end
+                else if lexerCurrentToken = falsesym then
+                begin
+                    primarySource := lexerCurrentSourceContext;
+                    primaryNode := newBooleanLiteralNode(false, primarySource);
+                    compilePrimary := primaryNode;
+                    readNextToken(errorCount)
+                end
+                else if lexerCurrentToken = lparen then
+                begin
+                    primarySource := lexerCurrentSourceContext;
+                    readNextToken(errorCount);
+                    primaryNode := compileExpressionWithPrecedence(1, [rparen]+followTokens);
+                    if lexerCurrentToken = rparen then
+                        readNextToken(errorCount)
+                    else
+                        reportCompilerError(ERR_RIGHT_PARENTHESIS_MISSING, lexerCurrentSourceContext, errorCount);
+                    compilePrimary := primaryNode
+                end;
+                recoverIfUnexpectedToken (followTokens, [lparen], ERR_INVALID_TOKEN_AFTER_FACTOR,
+                                          errorCount)
             end {compilePrimary} ;
 
             function compileExpressionWithPrecedence(minPrecedence: integer;

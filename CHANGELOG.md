@@ -13,6 +13,10 @@ and this project is expected to follow [Semantic Versioning](https://semver.org/
 - Add read() and write() as intrinsics procedures, only integer, char or boolean values.
 - Add `char` datatype, single-character ASCII char literals such as `'a'` and char relational comparisons.
 
+### Fixed
+
+- Fix additive expression parsing bug so binary `+` and `-` preserve their left operand instead of being misparsed as unary operators.
+
 ## [v0.0.6] - 2026-05-26
 
 ### Changed
