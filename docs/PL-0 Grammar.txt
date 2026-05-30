@@ -77,7 +77,7 @@
 // Syntactical Rules:
 // ==================
 
-program = globalBlock "." ;
+program = "program" ident ";" globalBlock "." ;
 
 globalBlock = [ "const" constantDeclaration { "," constantDeclaration } ";" ]
               [ "var" variableDeclaration { "," variableDeclaration } ";" ]

@@ -18,7 +18,7 @@ uses
 type
   { Minimal AST node kinds for the grammar currently parsed by parser.pas.
     Expected child layouts are:
-      astProgram               block
+      astProgram               program name, block child
       astBlock                 declarations/statements in source order
       astProcedureDeclaration  nested block as child
       astAssignmentStatement   target identifier, value expression
@@ -68,7 +68,8 @@ type
   end;
 
 function newAstNode(kind: astNodeKind; const source: sourceContext): astNode;
-function newProgramNode(const source: sourceContext): astNode;
+function newProgramNode(const programIdentifier: identifier;
+                        const source: sourceContext): astNode;
 function newBlockNode(const source: sourceContext): astNode;
 function newConstDeclarationNode(const declarationIdentifier: identifier;
                                  declarationValue: integer;
@@ -154,7 +155,7 @@ function astNodeSummary(node: astNode): string;
 begin
   astNodeSummary := astNodeKindToString(node^.kind);
   case node^.kind of
-    astConstDeclaration, astVarDeclaration, astProcedureDeclaration, astIdentifierReference:
+    astProgram, astConstDeclaration, astVarDeclaration, astProcedureDeclaration, astIdentifierReference:
       astNodeSummary := astNodeSummary + ' ' + identifierToString(node^.identifierText);
     astNumberLiteral:
       astNodeSummary := astNodeSummary + ' ' + IntToStr(node^.numberValue);
@@ -200,9 +201,11 @@ begin
   newAstNode^.nextSibling := nil
 end;
 
-function newProgramNode(const source: sourceContext): astNode;
+function newProgramNode(const programIdentifier: identifier;
+                        const source: sourceContext): astNode;
 begin
-  newProgramNode := newAstNode(astProgram, source)
+  newProgramNode := newAstNode(astProgram, source);
+  newProgramNode^.identifierText := programIdentifier
 end;
 
 function newBlockNode(const source: sourceContext): astNode;

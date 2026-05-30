@@ -1,3 +1,5 @@
+program mdgdc;
+
 const m: integer = 7, n: integer = 85;
 
 var x: integer, y: integer, z: integer, q: integer, r: integer;

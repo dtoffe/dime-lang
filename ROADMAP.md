@@ -48,15 +48,8 @@ This roadmap is intentionally conservative. The goal is to build the project in 
 
 - Add read() and write() as intrinsics procedures, not statements as traditional PL/0.
 - Add `char` datatype, single-character ASCII literals like `'a'` and char comparisons.
+- Add main `program` header.
 - Rework examples, separate in programs and tests.
 - Enhance main README.md, maybe add small example program.
-
-### v0.0.6 - Statement Shape Refactor
-
-- Refactor the shape of `if` and `while` statements to Modula style.
-- Remove `begin`...`end` as statement, allow it in program and procedure block syntax.
-- Replace `call` statement with proper procedure calls with mandatory parens even when without parameters.
-- Align statement syntax and AST representation.
-- Tighten diagnostics and examples around the new statement forms.
 
 For older releases, see [CHANGELOG.md](./CHANGELOG.md).

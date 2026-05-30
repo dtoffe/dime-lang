@@ -73,6 +73,9 @@ const
     ERR_READ_REQUIRES_ARGUMENT = 57;
     ERR_READ_ARGUMENT_MUST_BE_VARIABLE = 58;
     ERR_READ_ARGUMENT_TYPE_UNSUPPORTED = 59;
+    ERR_PROGRAM_HEADER_EXPECTED = 60;
+    ERR_PROGRAM_NAME_EXPECTED = 61;
+    ERR_PROGRAM_HEADER_SEMICOLON_EXPECTED = 62;
 
     ERROR_INTERPRETER_INVALID_L_VALUE = 'Error converting l-value';
     ERROR_INTERPRETER_INVALID_A_VALUE = 'Error converting a-value';
@@ -226,6 +229,9 @@ begin
         ERR_READ_REQUIRES_ARGUMENT: compilerErrorMessage := 'Built-in procedure "read" currently requires exactly one variable argument.';
         ERR_READ_ARGUMENT_MUST_BE_VARIABLE: compilerErrorMessage := 'Built-in procedure "read" requires a writable variable argument.';
         ERR_READ_ARGUMENT_TYPE_UNSUPPORTED: compilerErrorMessage := 'Built-in procedure "read" requires an integer, char, or boolean variable.';
+        ERR_PROGRAM_HEADER_EXPECTED: compilerErrorMessage := 'Program must start with "program <name>;". Possible reserved-word case error.';
+        ERR_PROGRAM_NAME_EXPECTED: compilerErrorMessage := '"program" must be followed by an identifier.';
+        ERR_PROGRAM_HEADER_SEMICOLON_EXPECTED: compilerErrorMessage := 'Semicolon expected after program header.';
     else
         compilerErrorMessage := 'Unknown compiler error.'
     end

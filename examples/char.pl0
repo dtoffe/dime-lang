@@ -1,3 +1,5 @@
+program chardemo;
+
 const lowera: char = 'a', lowerz: char = 'z';
 var first: char, last: char, ordered: boolean;
 

@@ -1,3 +1,5 @@
+program calc;
+
 const addop:integer=1, subop:integer=2, multop:integer=3, divop:integer=4;
 
 var op: integer, x: integer, y: integer, done: integer;

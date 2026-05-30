@@ -26,7 +26,7 @@ implementation
 uses
   SysUtils;
 
-const reservedWordCount = 22;
+const reservedWordCount = 23;
     numberMaxDigits = 14;
 
 type sourceLineBuffer = array [1..81] of char;
@@ -67,6 +67,7 @@ const
     'not       ',
     'or        ',
     'procedure ',
+    'program   ',
     'then      ',
     'true      ',
     'var       ',
@@ -91,6 +92,7 @@ const
     notsym,
     orsym,
     procsym,
+    programsym,
     thensym,
     truesym,
     varsym,

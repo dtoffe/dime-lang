@@ -1,3 +1,5 @@
+program booldemo;
+
 const truth: boolean = true;
 var flag: boolean;
 

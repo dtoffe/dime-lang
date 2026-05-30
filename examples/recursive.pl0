@@ -1,3 +1,5 @@
+program recursive;
+
 var f: integer, n: integer;
 
 procedure fact;

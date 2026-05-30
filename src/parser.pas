@@ -722,11 +722,38 @@ end {compileBlock} ;
 procedure parseFile(const inputFileName: string);
     var programNode: astNode;
         errorCount: integer;
+
+    function parseProgramHeader: astNode;
+        var programIdentifier: identifier;
+            programSource: sourceContext;
+    begin
+        FillChar(programIdentifier, SizeOf(programIdentifier), ' ');
+        programSource := lexerCurrentSourceContext;
+        if lexerCurrentToken = programsym then
+        begin
+            readNextToken(errorCount);
+            if lexerCurrentToken = ident then
+            begin
+                programIdentifier := lexerCurrentIdentifier;
+                readNextToken(errorCount)
+            end
+            else
+                reportCompilerError(ERR_PROGRAM_NAME_EXPECTED, lexerCurrentSourceContext, errorCount);
+            if lexerCurrentToken = semicolon then
+                readNextToken(errorCount)
+            else
+                reportCompilerError(ERR_PROGRAM_HEADER_SEMICOLON_EXPECTED,
+                                    lexerCurrentSourceContext, errorCount)
+        end
+        else
+            reportCompilerError(ERR_PROGRAM_HEADER_EXPECTED, lexerCurrentSourceContext, errorCount);
+        parseProgramHeader := newProgramNode(programIdentifier, programSource)
+    end;
 begin
     errorCount := 0;
     initializeLexer(inputFileName, errorCount);
     emitDiagnostic(status, STATUS_COMPILER_PROCESSING_FILE + inputFileName);
-    programNode := newProgramNode(lexerCurrentSourceContext);
+    programNode := parseProgramHeader;
     appendChild(programNode,
                 compileBlock(0, [period]+declarationStartTokens+statementStartTokens, true, errorCount));
     if lexerCurrentToken <> period then

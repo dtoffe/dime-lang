@@ -1,3 +1,5 @@
+program square;
+
 var x: integer, squ: integer;
 
 procedure square;

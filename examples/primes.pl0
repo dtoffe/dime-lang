@@ -1,3 +1,5 @@
+program primes;
+
 const max: integer = 100;
 var arg: integer, ret: integer;
 
