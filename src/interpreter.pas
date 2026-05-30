@@ -48,6 +48,7 @@ var
 
     pCodeFile: Text;
     pCodeFileName: string;
+    verbosity: diagnosticVerbosity;
 
 {Converts an opcode enum into the mnemonic used by compiler listings.}
 function opcodeToString(instructionOpcode: opcode): string;
@@ -365,7 +366,23 @@ begin
 end {executePCode} ;
 
 begin {main program}
-    setDiagnosticVerbosity(all);
+    if ParamCount < 1 then
+    begin
+        writeln('Usage: interpreter <pcode-file> [quiet|all]');
+        halt(1)
+    end;
+
+    if ParamCount >= 2 then
+    begin
+        if not tryParseDiagnosticVerbosity(ParamStr(2), verbosity) then
+        begin
+            writeln('Invalid diagnostic verbosity: ', ParamStr(2));
+            writeln('Valid verbosity values: quiet, all');
+            halt(1)
+        end;
+        setDiagnosticVerbosity(verbosity)
+    end;
+
     pCodeFileName := ParamStr(1);
     Assign(pCodeFile, pCodeFileName);
     Reset(pCodeFile);

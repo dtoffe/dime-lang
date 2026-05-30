@@ -15,6 +15,7 @@ and this project is expected to follow [Semantic Versioning](https://semver.org/
 
 ### Fixed
 
+- Added diagnostic verbosity level to the interpreter to prevent flooding the expected output with trace and debug info.
 - Fix additive expression parsing bug so binary `+` and `-` preserve their left operand instead of being misparsed as unary operators.
 
 ## [v0.0.6] - 2026-05-26
