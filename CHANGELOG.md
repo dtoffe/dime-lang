@@ -9,7 +9,8 @@ and this project is expected to follow [Semantic Versioning](https://semver.org/
 
 ### Added
 
-- Added a new builder unit to drive the build control flow.
+- Add initial flat three-address-code IR data structures and low-level build/dump state management in a new `tacir` unit.
+- Add a new builder unit to drive the build control flow.
 
 ### Changed
 
