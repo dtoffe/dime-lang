@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project is expected to follow [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+### Added
+
+- Added a new builder unit to drive the build control flow.
+
+### Changed
+
+- Extract compiler pipeline orchestration into a new builder unit, leaving the parser responsible only for producing an AST and parse errors.
+
 ## [v0.0.7] - 2026-05-30
 
 ### Added

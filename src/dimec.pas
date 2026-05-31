@@ -9,7 +9,7 @@ program dimec;
 
 uses
     SysUtils,
-    parser,
+    builder,
     diagnostics;
 
 var
@@ -33,5 +33,5 @@ begin
         setDiagnosticVerbosity(verbosity)
     end;
 
-    parseFile(ParamStr(1))
+    buildFile(ParamStr(1))
 end.

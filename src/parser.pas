@@ -18,16 +18,19 @@ This file contains the parser front end.
 }
 
 unit parser;
-{PL/0 parser front end: parse, analyze, then invoke code generation}
+{PL/0 parser front end: parse source text into an AST}
 
 interface
 
-procedure parseFile(const inputFileName: string);
+uses
+  astree;
+
+procedure parseFile(const inputFileName: string; var programNode: astNode; var errorCount: integer);
 
 implementation
 
 uses
-  SysUtils, diagnostics, tokens, lexer, astree, semantics, codegen, symboltable, typetable;
+  diagnostics, tokens, lexer, typetable;
 
 const
   declarationStartTokens: symbolSet = [constsym, varsym, procsym];
@@ -710,9 +713,7 @@ begin {compileBlock}
     compileBlock := blockNode
 end {compileBlock} ;
 
-procedure parseFile(const inputFileName: string);
-    var programNode: astNode;
-        errorCount: integer;
+procedure parseFile(const inputFileName: string; var programNode: astNode; var errorCount: integer);
 
     function parseProgramHeader: astNode;
         var programIdentifier: identifier;
@@ -741,34 +742,13 @@ procedure parseFile(const inputFileName: string);
         parseProgramHeader := newProgramNode(programIdentifier, programSource)
     end;
 begin
-    errorCount := 0;
     initializeLexer(inputFileName, errorCount);
-    emitDiagnostic(status, STATUS_COMPILER_PROCESSING_FILE + inputFileName);
     programNode := parseProgramHeader;
     appendChild(programNode,
                 compileBlock(0, [period]+declarationStartTokens+statementStartTokens, true, errorCount));
     if lexerCurrentToken <> period then
         reportCompilerError(ERR_PERIOD_EXPECTED, lexerCurrentSourceContext, errorCount);
-    analyzeAst(programNode, errorCount);
-    dumpAstIfVerbose(programNode);
-    if errorCount = 0 then
-    begin
-        initializeCodegen(ChangeFileExt(inputFileName, '.pcode'));
-        generateProgram(programNode, errorCount);
-        if errorCount = 0 then
-        begin
-            emitDiagnostic(status, STATUS_COMPILER_SUCCESS);
-            traceGeneratedCode(0);
-            writeProgramImage
-        end
-        else
-            emitDiagnostic(status, STATUS_COMPILER_ERRORS);
-        cleanupCodegen
-    end
-    else
-        emitDiagnostic(status, STATUS_COMPILER_ERRORS);
-    cleanupLexer;
-    freeAst(programNode);
+    cleanupLexer
 end {parseFile} ;
 
 end.

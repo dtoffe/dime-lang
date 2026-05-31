@@ -44,12 +44,4 @@ This roadmap is intentionally conservative. The goal is to build the project in 
 - Add another interpreter for the new mid-level IR
 - Keep pcode and the stack machine in paralell for some time
 
-### v0.0.7 - Char datatype, read and write
-
-- Add read() and write() as intrinsics procedures, not statements as traditional PL/0.
-- Add `char` datatype, single-character ASCII literals like `'a'` and char comparisons.
-- Add main `program` header.
-- Rework examples, separate in programs and tests.
-- Enhance main README.md, maybe add small example program.
-
 For older releases, see [CHANGELOG.md](./CHANGELOG.md).
