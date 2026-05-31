@@ -2,22 +2,22 @@
   License: MIT. See LICENSE in the project root.
   Date: 2026-05-22
 
-  P-code generation support for the parser pipeline.  This unit owns instruction
+  P-code generation support for the compiler pipeline.  This unit owns instruction
   types, opcode mnemonics, the generated program image, emit/patch helpers,
   trace listing, and final program-image output.  It does not parse source
   text or perform semantic checks. }
-unit codegen;
+unit pcode;
 
 interface
 
 uses
   astree;
 
-procedure initializeCodegen(const outputFileName: string);
-procedure cleanupCodegen;
-procedure generateProgram(rootNode: astNode; var errorCount: integer);
-procedure traceGeneratedCode(blockStartIndex: integer);
-procedure writeProgramImage;
+procedure initializePCode(const outputFileName: string);
+procedure cleanupPCode;
+procedure generatePCodeProgram(rootNode: astNode; var errorCount: integer);
+procedure traceGeneratedPCode(blockStartIndex: integer);
+procedure writePCodeImage;
 
 implementation
 
@@ -37,14 +37,14 @@ type
 
 var
   codeIndex: integer;       {index of the next instruction to emit}
-  pCode: array [0..codeMaxIndex] of pCodeInstruction; {generated program image}
+  pCodeImage: array [0..codeMaxIndex] of pCodeInstruction; {generated program image}
   opcodeMnemonics: array [opcode] of packed array [1 .. 5] of char;
   pCodeFile: Text;
   pCodeFileName: string;
   outputInstructionIndex: integer;
 
 type
-  codegenContext = record
+  pCodeContext = record
     currentLevel: integer;
   end;
 
@@ -66,14 +66,14 @@ begin
   emitDiagnostic(debug, '[EMIT] ' + messageText)
 end;
 
-procedure closeCodegenFileAndHalt;
+procedure closePCodeFileAndHalt;
 begin
   writeln;
   close(pCodeFile);
   halt
 end;
 
-procedure initializeCodegen(const outputFileName: string);
+procedure initializePCode(const outputFileName: string);
 begin
   pCodeFileName := outputFileName;
   Assign(pCodeFile, pCodeFileName);
@@ -89,7 +89,7 @@ begin
   codeIndex := 0
 end;
 
-procedure cleanupCodegen;
+procedure cleanupPCode;
 begin
   close(pCodeFile)
 end;
@@ -99,9 +99,9 @@ begin
   if codeIndex > codeMaxIndex then
   begin
     emitDiagnostic(error, STATUS_PROGRAM_TOO_LONG);
-    closeCodegenFileAndHalt()
+    closePCodeFileAndHalt()
   end;
-  with pCode[codeIndex] do
+  with pCodeImage[codeIndex] do
   begin
     operation := instructionOpcode;
     lexicalLevel := instructionLevel;
@@ -216,7 +216,7 @@ end;
 
 procedure patchInstructionArgument(instructionIndex, newArgument: integer);
 begin
-  pCode[instructionIndex].argument := newArgument
+  pCodeImage[instructionIndex].argument := newArgument
 end;
 
 procedure patchJumpToCurrent(instructionIndex: integer);
@@ -251,14 +251,14 @@ begin
   end
 end;
 
-procedure generateBlockBody(blockNode: astNode; var context: codegenContext; var errorCount: integer); forward;
-procedure generateProcedureDeclaration(node: astNode; var context: codegenContext; var errorCount: integer); forward;
+procedure generateBlockBody(blockNode: astNode; var context: pCodeContext; var errorCount: integer); forward;
+procedure generateProcedureDeclaration(node: astNode; var context: pCodeContext; var errorCount: integer); forward;
 
-procedure generateExpression(node: astNode; var context: codegenContext; var errorCount: integer); forward;
-procedure generateStatement(node: astNode; var context: codegenContext; var errorCount: integer); forward;
-procedure generateBlock(node: astNode; var context: codegenContext; var errorCount: integer); forward;
+procedure generateExpression(node: astNode; var context: pCodeContext; var errorCount: integer); forward;
+procedure generateStatement(node: astNode; var context: pCodeContext; var errorCount: integer); forward;
+procedure generateBlock(node: astNode; var context: pCodeContext; var errorCount: integer); forward;
 
-procedure generateExpression(node: astNode; var context: codegenContext; var errorCount: integer);
+procedure generateExpression(node: astNode; var context: pCodeContext; var errorCount: integer);
 var
   leftNode, rightNode, operandNode: astNode;
   resolvedSymbol: symbolIndex;
@@ -324,7 +324,7 @@ begin
   end
 end;
 
-procedure generateStatement(node: astNode; var context: codegenContext; var errorCount: integer);
+procedure generateStatement(node: astNode; var context: pCodeContext; var errorCount: integer);
 var
   firstChildNode, secondChildNode, childNode: astNode;
   resolvedSymbol: symbolIndex;
@@ -439,9 +439,9 @@ begin
   end
 end;
 
-procedure generateProcedureDeclaration(node: astNode; var context: codegenContext; var errorCount: integer);
+procedure generateProcedureDeclaration(node: astNode; var context: pCodeContext; var errorCount: integer);
 var
-  nestedContext: codegenContext;
+  nestedContext: pCodeContext;
   procedureSymbol: symbolIndex;
 begin
   if (node = nil) or (node^.firstChild = nil) then
@@ -456,7 +456,7 @@ begin
   generateBlock(node^.firstChild, nestedContext, errorCount)
 end;
 
-procedure generateBlockBody(blockNode: astNode; var context: codegenContext; var errorCount: integer);
+procedure generateBlockBody(blockNode: astNode; var context: pCodeContext; var errorCount: integer);
 var
   childNode: astNode;
 begin
@@ -477,7 +477,7 @@ begin
   emitReturn
 end;
 
-procedure generateBlock(node: astNode; var context: codegenContext; var errorCount: integer);
+procedure generateBlock(node: astNode; var context: pCodeContext; var errorCount: integer);
 var
   childNode: astNode;
   procedureSkipJumpIndex: integer;
@@ -504,9 +504,9 @@ begin
   generateBlockBody(node, context, errorCount)
 end;
 
-procedure generateProgram(rootNode: astNode; var errorCount: integer);
+procedure generatePCodeProgram(rootNode: astNode; var errorCount: integer);
 var
-  context: codegenContext;
+  context: pCodeContext;
 begin
   if rootNode = nil then
     exit;
@@ -518,12 +518,12 @@ begin
     generateBlock(rootNode, context, errorCount)
 end;
 
-procedure traceGeneratedCode(blockStartIndex: integer);
+procedure traceGeneratedPCode(blockStartIndex: integer);
 var
   instructionIndex: integer;
 begin
   for instructionIndex := blockStartIndex to codeIndex-1 do
-    with pCode[instructionIndex] do
+    with pCodeImage[instructionIndex] do
       traceInstruction(Format('%4d %-5s %3d %5d',
                               [instructionIndex,
                                opcodeMnemonicToString(operation),
@@ -531,10 +531,10 @@ begin
                                argument]))
 end;
 
-procedure writeProgramImage;
+procedure writePCodeImage;
 begin
   for outputInstructionIndex := 0 to codeIndex - 1 do
-    with pCode[outputInstructionIndex] do
+    with pCodeImage[outputInstructionIndex] do
       writeln(pCodeFile, outputInstructionIndex,
               opcodeMnemonics[operation]:5, lexicalLevel:3, argument:5)
 end;

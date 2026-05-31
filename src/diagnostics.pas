@@ -13,7 +13,7 @@ type
     diagnosticLevel = (debug, info, warn, error, status);
     diagnosticVerbosity = (quiet, all);
     {Source context travels with diagnostics and is typically produced by the
-     lexer, then carried forward into AST, semantic, and codegen reporting.}
+     lexer, then carried forward into AST, semantic, and p-code reporting.}
     sourceContext = record
         sourceName: string;
         line: integer;
@@ -223,7 +223,7 @@ begin
         ERR_UNTERMINATED_CHARACTER_LITERAL: compilerErrorMessage := 'Character literal is missing its closing quote.';
         ERR_PROCEDURE_ARGUMENTS_NOT_YET_SUPPORTED: compilerErrorMessage := 'Procedure call arguments parse into the AST, but argument passing is not implemented yet.';
         ERR_ONLY_ONE_CALL_ARGUMENT_SUPPORTED: compilerErrorMessage := 'Only one procedure-call argument is supported at this temporary stage.';
-        ERR_BUILTIN_PROCEDURE_NOT_YET_IMPLEMENTED: compilerErrorMessage := 'Built-in procedure is recognized by the compiler, but code generation for it is not implemented yet.';
+        ERR_BUILTIN_PROCEDURE_NOT_YET_IMPLEMENTED: compilerErrorMessage := 'Built-in procedure is recognized by the compiler, but p-code generation for it is not implemented yet.';
         ERR_WRITE_REQUIRES_ARGUMENT: compilerErrorMessage := 'Built-in procedures "write" and "writeln" currently require exactly one argument.';
         ERR_WRITE_ARGUMENT_TYPE_UNSUPPORTED: compilerErrorMessage := 'Built-in procedures "write" and "writeln" require an integer, char, or boolean argument.';
         ERR_READ_REQUIRES_ARGUMENT: compilerErrorMessage := 'Built-in procedures "read" and "readln" currently require exactly one variable argument.';

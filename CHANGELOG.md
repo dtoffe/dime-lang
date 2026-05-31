@@ -13,6 +13,7 @@ and this project is expected to follow [Semantic Versioning](https://semver.org/
 
 ### Changed
 
+- Rename the p-code generation unit from `codegen` to `pcode` and align its public procedure names around p-code generation.
 - Extract compiler pipeline orchestration into a new builder unit, leaving the parser responsible only for producing an AST and parse errors.
 
 ## [v0.0.7] - 2026-05-30

@@ -4,7 +4,7 @@
 
   Build pipeline orchestration for the command-line compiler.  This unit owns
   the flow from source file to generated p-code image while keeping parsing,
-  semantic analysis, and code generation in their own units. }
+  semantic analysis, and p-code generation in their own units. }
 unit builder;
 
 interface
@@ -14,7 +14,7 @@ procedure buildFile(const inputFileName: string);
 implementation
 
 uses
-  SysUtils, diagnostics, astree, parser, semantics, codegen;
+  SysUtils, diagnostics, astree, parser, semantics, pcode;
 
 procedure dumpAstIfVerbose(rootNode: astNode);
 begin
@@ -41,17 +41,17 @@ begin
 
   if errorCount = 0 then
   begin
-    initializeCodegen(ChangeFileExt(inputFileName, '.pcode'));
-    generateProgram(programNode, errorCount);
+    initializePCode(ChangeFileExt(inputFileName, '.pcode'));
+    generatePCodeProgram(programNode, errorCount);
     if errorCount = 0 then
     begin
       emitDiagnostic(status, STATUS_COMPILER_SUCCESS);
-      traceGeneratedCode(0);
-      writeProgramImage
+      traceGeneratedPCode(0);
+      writePCodeImage
     end
     else
       emitDiagnostic(status, STATUS_COMPILER_ERRORS);
-    cleanupCodegen
+    cleanupPCode
   end
   else
     emitDiagnostic(status, STATUS_COMPILER_ERRORS);
