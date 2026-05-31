@@ -3,8 +3,9 @@
   Date: 2026-05-31
 
   Build pipeline orchestration for the command-line compiler.  This unit owns
-  the flow from source file to generated p-code image while keeping parsing,
-  semantic analysis, and p-code generation in their own units. }
+  the flow from source file to generated intermediate and p-code images while
+  keeping parsing, semantic analysis, TAC lowering, and p-code generation in
+  their own units. }
 unit builder;
 
 interface
@@ -14,7 +15,7 @@ procedure buildFile(const inputFileName: string);
 implementation
 
 uses
-  SysUtils, diagnostics, astree, parser, semantics, pcode;
+  SysUtils, diagnostics, astree, parser, semantics, tacir, tacircgen, pcode;
 
 procedure dumpAstIfVerbose(rootNode: astNode);
 begin
@@ -41,6 +42,17 @@ begin
 
   if errorCount = 0 then
   begin
+    generateTacIrProgram(programNode, errorCount);
+    if errorCount = 0 then
+      dumpTacIr(ChangeFileExt(inputFileName, '.tac'));
+
+    if errorCount <> 0 then
+    begin
+      emitDiagnostic(status, STATUS_COMPILER_ERRORS);
+      freeAst(programNode);
+      exit
+    end;
+
     initializePCode(ChangeFileExt(inputFileName, '.pcode'));
     generatePCodeProgram(programNode, errorCount);
     if errorCount = 0 then

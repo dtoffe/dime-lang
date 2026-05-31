@@ -9,13 +9,16 @@ and this project is expected to follow [Semantic Versioning](https://semver.org/
 
 ### Added
 
-- Add initial flat three-address-code IR data structures and low-level build/dump state management in a new `tacir` unit.
-- Add a new builder unit to drive the build control flow.
+- Dump the IR image into a `.tac` file during compiler builds alongside `.pcode`.
+- Add a new unit `tacircgen` with an AST-to-TAC lowering walker.
+- Add a new `tacir` unit with flat three-address-code IR data structures and low-level build/dump state management.
+- Add a new `builder` unit to drive the build control flow.
 
 ### Changed
 
+- Wire the generation of the three-address-code IR into the builder.
 - Rename the p-code generation unit from `codegen` to `pcode` and align its public procedure names around p-code generation.
-- Extract compiler pipeline orchestration into a new builder unit, leaving the parser responsible only for producing an AST and parse errors.
+- Extract compiler pipeline orchestration into a new `builder` unit, leaving the parser responsible only for producing an AST and parse errors.
 
 ## [v0.0.7] - 2026-05-30
 
