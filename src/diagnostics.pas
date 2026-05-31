@@ -2,7 +2,7 @@
   License: MIT. See LICENSE in the project root.
   Date: 2026-05-21
 
-  Centralized diagnostic reporting for the compiler and interpreter.  This unit
+  Centralized diagnostic reporting for the compiler and interpreters.  This unit
   owns diagnostic levels, verbosity handling, source-location context, and the
   shared compiler/runtime error reporting helpers. }
 unit diagnostics;
@@ -77,18 +77,18 @@ const
     ERR_PROGRAM_NAME_EXPECTED = 61;
     ERR_PROGRAM_HEADER_SEMICOLON_EXPECTED = 62;
 
-    ERROR_INTERPRETER_INVALID_L_VALUE = 'Error converting l-value';
-    ERROR_INTERPRETER_INVALID_A_VALUE = 'Error converting a-value';
-    ERROR_INTERPRETER_INPUT_EXHAUSTED = 'Input exhausted while executing built-in read/readln.';
-    ERROR_INTERPRETER_INVALID_INTEGER_INPUT = 'Built-in read/readln expected an integer token.';
-    ERROR_INTERPRETER_INVALID_CHARACTER_INPUT = 'Built-in read/readln expected a one-character token.';
-    ERROR_INTERPRETER_INVALID_BOOLEAN_INPUT = 'Built-in read/readln expected 0 or 1.';
+    ERROR_PCODEINT_INVALID_L_VALUE = 'Error converting l-value';
+    ERROR_PCODEINT_INVALID_A_VALUE = 'Error converting a-value';
+    ERROR_PCODEINT_INPUT_EXHAUSTED = 'Input exhausted while executing built-in read/readln.';
+    ERROR_PCODEINT_INVALID_INTEGER_INPUT = 'Built-in read/readln expected an integer token.';
+    ERROR_PCODEINT_INVALID_CHARACTER_INPUT = 'Built-in read/readln expected a one-character token.';
+    ERROR_PCODEINT_INVALID_BOOLEAN_INPUT = 'Built-in read/readln expected 0 or 1.';
 
     STATUS_PROGRAM_INCOMPLETE = 'PROGRAM INCOMPLETE';
     STATUS_PROGRAM_TOO_LONG = 'PROGRAM TOO LONG';
     STATUS_PCODE_READING_COMPLETE = 'Reading complete. Records loaded: ';
-    STATUS_INTERPRETER_START = 'START PROGRAM';
-    STATUS_INTERPRETER_END = 'END PROGRAM';
+    STATUS_PCODEINT_START = 'START PROGRAM';
+    STATUS_PCODEINT_END = 'END PROGRAM';
     STATUS_COMPILER_PROCESSING_FILE = 'Processing file: ';
     STATUS_COMPILER_SUCCESS = 'PROGRAM COMPILED SUCCESSFULLY';
     STATUS_COMPILER_ERRORS = 'ERRORS IN PROGRAM';

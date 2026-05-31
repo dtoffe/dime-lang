@@ -12,8 +12,8 @@ Formatted with PTop (https://wiki.freepascal.org/PTop)
 
 NOTE: This is a modified version of the original Program 5.6, changing
 the code generation so that the code is emitted directly to a file, and
-moving the interpreter to a separate program that reads the p-code from
-the file and executes it.
+moving p-code interpretation to a separate program that reads the p-code
+from the file and executes it.
 This file contains the parser front end.
 }
 

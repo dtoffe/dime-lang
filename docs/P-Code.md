@@ -1,8 +1,8 @@
 # PL/0 P-Code
 
 This compiler emits a small stack-machine instruction set, usually called
-p-code. The interpreter loads the generated `.pcode` file into an instruction
-array and executes it with three registers:
+p-code. The p-code interpreter loads the generated `.pcode` file into an
+instruction array and executes it with three registers:
 
 In the intended surface syntax documented here, `begin ... end` is not a
 statement form. It is required only to delimit the main program body and each
@@ -46,7 +46,7 @@ The main program starts with `basePointer = 1`, `programCounter = 0`, and
 `stackTop = 0`. Its first `INT` instruction reserves the linkage slots and any
 variables in the main block.
 
-To access a non-local variable, the interpreter follows the static link
+To access a non-local variable, the p-code interpreter follows the static link
 `lexicalLevel` times. For example, `LOD 1,4` loads address `4` from the
 immediately enclosing block.
 
@@ -112,7 +112,7 @@ stack[findBase(lexicalLevel) + address] := stack[stackTop]
 stackTop := stackTop - 1
 ```
 
-This interpreter also prints the stored value as a side effect.
+This p-code interpreter also prints the stored value as a side effect.
 
 ### `CAL lexicalLevel, address`
 

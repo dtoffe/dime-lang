@@ -12,12 +12,12 @@ Formatted with PTop (https://wiki.freepascal.org/PTop)
 
 NOTE: This is a modified version of the original Program 5.6, changing
 the code generation so that the code is emitted directly to a file, and
-moving the interpreter to a separate program that reads the p-code from
-the file and executes it.
-This file contains the interpreter.
+moving p-code interpretation to a separate program that reads the p-code
+from the file and executes it.
+This file contains the p-code interpreter.
 }
 
-program interpreter;
+program pcodeint;
 
 uses
     SysUtils, diagnostics;
@@ -133,11 +133,11 @@ begin
 
         Val(lexicalLevelText, pCode[instructionIndex].lexicalLevel, conversionStatus);
         if conversionStatus <> 0 then
-            reportRuntimeError(ERROR_INTERPRETER_INVALID_L_VALUE);
+            reportRuntimeError(ERROR_PCODEINT_INVALID_L_VALUE);
 
         Val(argumentText, pCode[instructionIndex].argument, conversionStatus);
         if conversionStatus <> 0 then
-            reportRuntimeError(ERROR_INTERPRETER_INVALID_A_VALUE);
+            reportRuntimeError(ERROR_PCODEINT_INVALID_A_VALUE);
 
         {Advance to the next instruction slot.}
         instructionIndex := instructionIndex + 1;
@@ -203,7 +203,7 @@ procedure executePCode;
 
         if readInputTokenOrHalt = '' then
         begin
-            reportRuntimeError(ERROR_INTERPRETER_INPUT_EXHAUSTED);
+            reportRuntimeError(ERROR_PCODEINT_INPUT_EXHAUSTED);
             halt(1)
         end;
 
@@ -232,7 +232,7 @@ procedure executePCode;
         Val(inputToken, parsedValue, conversionStatus);
         if conversionStatus <> 0 then
         begin
-            reportRuntimeError(ERROR_INTERPRETER_INVALID_INTEGER_INPUT);
+            reportRuntimeError(ERROR_PCODEINT_INVALID_INTEGER_INPUT);
             halt(1)
         end;
         readIntegerValueOrHalt := parsedValue
@@ -246,7 +246,7 @@ procedure executePCode;
         Val(inputToken, parsedValue, conversionStatus);
         if conversionStatus <> 0 then
         begin
-            reportRuntimeError(ERROR_INTERPRETER_INVALID_INTEGER_INPUT);
+            reportRuntimeError(ERROR_PCODEINT_INVALID_INTEGER_INPUT);
             halt(1)
         end;
         readIntegerLineValueOrHalt := parsedValue
@@ -258,7 +258,7 @@ procedure executePCode;
         inputToken := readInputTokenOrHalt(false);
         if length(inputToken) <> 1 then
         begin
-            reportRuntimeError(ERROR_INTERPRETER_INVALID_CHARACTER_INPUT);
+            reportRuntimeError(ERROR_PCODEINT_INVALID_CHARACTER_INPUT);
             halt(1)
         end;
         readCharacterValueOrHalt := ord(inputToken[1])
@@ -270,7 +270,7 @@ procedure executePCode;
         inputToken := readInputTokenOrHalt(true);
         if length(inputToken) <> 1 then
         begin
-            reportRuntimeError(ERROR_INTERPRETER_INVALID_CHARACTER_INPUT);
+            reportRuntimeError(ERROR_PCODEINT_INVALID_CHARACTER_INPUT);
             halt(1)
         end;
         readCharacterLineValueOrHalt := ord(inputToken[1])
@@ -286,7 +286,7 @@ procedure executePCode;
             readBooleanValueOrHalt := 1
         else
         begin
-            reportRuntimeError(ERROR_INTERPRETER_INVALID_BOOLEAN_INPUT);
+            reportRuntimeError(ERROR_PCODEINT_INVALID_BOOLEAN_INPUT);
             halt(1)
         end
     end;
@@ -301,13 +301,13 @@ procedure executePCode;
             readBooleanLineValueOrHalt := 1
         else
         begin
-            reportRuntimeError(ERROR_INTERPRETER_INVALID_BOOLEAN_INPUT);
+            reportRuntimeError(ERROR_PCODEINT_INVALID_BOOLEAN_INPUT);
             halt(1)
         end
     end;
 
 begin
-    emitDiagnostic(status, STATUS_INTERPRETER_START);
+    emitDiagnostic(status, STATUS_PCODEINT_START);
     stackTop := 0; basePointer := 1; programCounter := 0;
     runtimeStack[1] := 0; runtimeStack[2] := 0; runtimeStack[3] := 0;
     {Frame layout: static link, dynamic link, return address.}
@@ -444,13 +444,13 @@ begin
                  end
         end {with, case}
     until programCounter = 0;
-    emitDiagnostic(status, STATUS_INTERPRETER_END);
+    emitDiagnostic(status, STATUS_PCODEINT_END);
 end {executePCode} ;
 
 begin {main program}
     if ParamCount < 1 then
     begin
-        writeln('Usage: interpreter <pcode-file> [quiet|all]');
+        writeln('Usage: pcodeint <pcode-file> [quiet|all]');
         halt(1)
     end;
 
