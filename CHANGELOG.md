@@ -9,6 +9,7 @@ and this project is expected to follow [Semantic Versioning](https://semver.org/
 
 ## [Added]
 
+- Add `for` ident := low `to` high `do` statementSequence `endfor` loop statement.
 - Add `repeat` .. `until` loop statement.
 
 ## [v0.0.8] - 2026-06-01

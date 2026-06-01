@@ -327,6 +327,7 @@ end;
 procedure generateStatement(node: astNode; var context: pCodeContext; var errorCount: integer);
 var
   firstChildNode, secondChildNode, childNode: astNode;
+  thirdChildNode, fourthChildNode, fifthChildNode: astNode;
   resolvedSymbol: symbolIndex;
   procKind: builtinProcedure;
   conditionalJumpIndex, loopStartAddress, loopExitJumpIndex, elseSkipJumpIndex: integer;
@@ -447,6 +448,52 @@ begin
         generateExpression(secondChildNode, context, errorCount);
         loopExitJumpIndex := emitConditionalJump;
         patchInstructionArgument(loopExitJumpIndex, loopStartAddress)
+      end;
+    astForStatement:
+      begin
+        firstChildNode := node^.firstChild;
+        secondChildNode := nil;
+        thirdChildNode := nil;
+        fourthChildNode := nil;
+        fifthChildNode := nil;
+        if firstChildNode <> nil then
+          secondChildNode := firstChildNode^.nextSibling;
+        if secondChildNode <> nil then
+          thirdChildNode := secondChildNode^.nextSibling;
+        if thirdChildNode <> nil then
+          fourthChildNode := thirdChildNode^.nextSibling;
+        if fourthChildNode <> nil then
+          fifthChildNode := fourthChildNode^.nextSibling;
+
+        generateExpression(secondChildNode, context, errorCount);
+        if hasResolvedSymbol(firstChildNode) then
+        begin
+          resolvedSymbol := resolvedSymbolOf(firstChildNode);
+          emitStoreVar(lexicalLevelDistance(context.currentLevel,
+                                            getDeclarationLevel(resolvedSymbol),
+                                            firstChildNode^.source, errorCount),
+                       getAddress(resolvedSymbol))
+        end;
+
+        loopStartAddress := currentCodeAddress;
+        generateExpression(firstChildNode, context, errorCount);
+        generateExpression(thirdChildNode, context, errorCount);
+        emitBinaryOp(13);
+        loopExitJumpIndex := emitConditionalJump;
+        generateStatement(fifthChildNode, context, errorCount);
+        generateExpression(firstChildNode, context, errorCount);
+        generateExpression(fourthChildNode, context, errorCount);
+        emitBinaryOp(2);
+        if hasResolvedSymbol(firstChildNode) then
+        begin
+          resolvedSymbol := resolvedSymbolOf(firstChildNode);
+          emitStoreVar(lexicalLevelDistance(context.currentLevel,
+                                            getDeclarationLevel(resolvedSymbol),
+                                            firstChildNode^.source, errorCount),
+                       getAddress(resolvedSymbol))
+        end;
+        emitJump(loopStartAddress);
+        patchJumpToCurrent(loopExitJumpIndex)
       end
   end
 end;
@@ -482,7 +529,7 @@ begin
   begin
     if childNode^.kind in [astCompoundStatement, astAssignmentStatement,
                            astCallStatement, astIfStatement, astWhileStatement,
-                           astRepeatStatement] then
+                           astRepeatStatement, astForStatement] then
       generateStatement(childNode, context, errorCount);
     childNode := childNode^.nextSibling
   end;

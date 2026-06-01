@@ -1,0 +1,10 @@
+program forbadstep;
+
+const step: boolean = true;
+var i: integer;
+
+begin
+  for i := 1 to 3 by step do
+    write(i);
+  endfor;
+end.

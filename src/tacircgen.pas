@@ -316,6 +316,69 @@ begin
   appendGotoIfZero(conditionOperand, startLabel)
 end;
 
+procedure lowerForStatement(node: astNode; var errorCount: integer);
+var
+  counterNode, startNode, endNode, stepNode, bodyNode: astNode;
+  counterOperand, startOperand, endOperand, stepOperand: tacOperand;
+  comparisonOperand, incrementOperand: tacOperand;
+  startLabel, exitLabel: tacLabelId;
+  instruction: tacInstruction;
+begin
+  counterNode := node^.firstChild;
+  startNode := nil;
+  endNode := nil;
+  stepNode := nil;
+  bodyNode := nil;
+  if counterNode <> nil then
+    startNode := counterNode^.nextSibling;
+  if startNode <> nil then
+    endNode := startNode^.nextSibling;
+  if endNode <> nil then
+    stepNode := endNode^.nextSibling;
+  if stepNode <> nil then
+    bodyNode := stepNode^.nextSibling;
+
+  counterOperand := symbolOperandFromNode(counterNode);
+  startOperand := lowerExpression(startNode, errorCount);
+  instruction := newTacInstruction(irStoreVar);
+  instruction.resultOperand := counterOperand;
+  instruction.leftOperand := startOperand;
+  appendTacInstruction(instruction);
+
+  startLabel := newTacLabel;
+  exitLabel := newTacLabel;
+  appendLabel(startLabel);
+
+  endOperand := lowerExpression(endNode, errorCount);
+  comparisonOperand := newTacTemporary(typeBoolean);
+  instruction := newTacInstruction(irBinaryOp);
+  instruction.resultOperand := comparisonOperand;
+  instruction.leftOperand := lowerIdentifierReference(counterNode);
+  instruction.rightOperand := endOperand;
+  instruction.operatorSymbol := leq;
+  appendTacInstruction(instruction);
+  appendGotoIfZero(comparisonOperand, exitLabel);
+
+  lowerStatement(bodyNode, errorCount);
+
+  stepOperand := lowerExpression(stepNode, errorCount);
+  incrementOperand := newTacTemporary(typeInteger);
+  instruction := newTacInstruction(irBinaryOp);
+  instruction.resultOperand := incrementOperand;
+  instruction.leftOperand := lowerIdentifierReference(counterNode);
+  instruction.rightOperand := stepOperand;
+  instruction.operatorSymbol := plus;
+  appendTacInstruction(instruction);
+
+  instruction := newTacInstruction(irStoreVar);
+  instruction.resultOperand := counterOperand;
+  instruction.leftOperand := incrementOperand;
+  appendTacInstruction(instruction);
+
+  appendGoto(startLabel);
+  appendLabel(exitLabel)
+end;
+
 procedure lowerStatement(node: astNode; var errorCount: integer);
 var
   childNode: astNode;
@@ -342,7 +405,9 @@ begin
     astWhileStatement:
       lowerWhileStatement(node, errorCount);
     astRepeatStatement:
-      lowerRepeatStatement(node, errorCount)
+      lowerRepeatStatement(node, errorCount);
+    astForStatement:
+      lowerForStatement(node, errorCount)
   end
 end;
 
@@ -374,7 +439,7 @@ begin
   begin
     if childNode^.kind in [astCompoundStatement, astAssignmentStatement,
                            astCallStatement, astIfStatement, astWhileStatement,
-                           astRepeatStatement] then
+                           astRepeatStatement, astForStatement] then
       lowerStatement(childNode, errorCount);
     childNode := childNode^.nextSibling
   end;

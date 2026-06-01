@@ -78,6 +78,14 @@ const
     ERR_PROGRAM_HEADER_SEMICOLON_EXPECTED = 62;
     ERR_UNTIL_EXPECTED = 63;
     ERR_SEMICOLON_OR_UNTIL_EXPECTED = 64;
+    ERR_FOR_CONTROL_VARIABLE_EXPECTED = 65;
+    ERR_BECOMES_EXPECTED = 66;
+    ERR_TO_EXPECTED = 67;
+    ERR_BY_EXPECTED = 68;
+    ERR_ENDFOR_EXPECTED = 69;
+    ERR_SEMICOLON_OR_ENDFOR_EXPECTED = 70;
+    ERR_FOR_COUNTER_MUST_BE_INTEGER_VARIABLE = 71;
+    ERR_FOR_RANGE_MUST_BE_INTEGER = 72;
 
     ERROR_PCODEINT_INVALID_L_VALUE = 'Error converting l-value';
     ERROR_PCODEINT_INVALID_A_VALUE = 'Error converting a-value';
@@ -236,6 +244,14 @@ begin
         ERR_PROGRAM_HEADER_SEMICOLON_EXPECTED: compilerErrorMessage := 'Semicolon expected after program header.';
         ERR_UNTIL_EXPECTED: compilerErrorMessage := '"until" expected. Possible reserved-word case error.';
         ERR_SEMICOLON_OR_UNTIL_EXPECTED: compilerErrorMessage := 'Semicolon or "until" expected. Possible reserved-word case error.';
+        ERR_FOR_CONTROL_VARIABLE_EXPECTED: compilerErrorMessage := '"for" must be followed by an identifier.';
+        ERR_BECOMES_EXPECTED: compilerErrorMessage := '":=" expected.';
+        ERR_TO_EXPECTED: compilerErrorMessage := '"to" expected. Possible reserved-word case error.';
+        ERR_BY_EXPECTED: compilerErrorMessage := '"by" expected. Possible reserved-word case error.';
+        ERR_ENDFOR_EXPECTED: compilerErrorMessage := '"endfor" expected. Possible reserved-word case error.';
+        ERR_SEMICOLON_OR_ENDFOR_EXPECTED: compilerErrorMessage := 'Semicolon or "endfor" expected. Possible reserved-word case error.';
+        ERR_FOR_COUNTER_MUST_BE_INTEGER_VARIABLE: compilerErrorMessage := 'For-loop counter must be an integer variable.';
+        ERR_FOR_RANGE_MUST_BE_INTEGER: compilerErrorMessage := 'For-loop start, end, and step expressions must resolve to integer.';
     else
         compilerErrorMessage := 'Unknown compiler error.'
     end

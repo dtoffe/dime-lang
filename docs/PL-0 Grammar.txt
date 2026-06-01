@@ -106,7 +106,10 @@ statement = [ ident ( ":=" expression | "(" [ expression ] ")" )
             | "if" expression "then" statementSequence
               { "elsif" expression "then" statementSequence }
               [ "else" statementSequence ] "endif"
-            | "while" expression "do" statementSequence "endwhile" ] ;
+            | "while" expression "do" statementSequence "endwhile"
+            | "repeat" statementSequence "until" expression
+            | "for" ident ":=" expression "to" expression "by" expression
+              "do" statementSequence "endfor" ] ;
 
 statementSequence = statement ";" { statement ";" } ;
 
@@ -115,12 +118,18 @@ statementSequence = statement ";" { statement ";" } ;
 // part of `statement`; it is mandatory only for the main program body and for
 // procedure bodies, and each such body requires at least one inner statement.
 
-// `while` now requires `endwhile`, and its body also requires at least one
-// inner statement. Inside that body, `;` is a statement terminator, so the
-// final statement before `endwhile` must also end with `;`.
+// `while`, `repeat`, and `for` bodies all require at least one inner
+// statement. Inside those bodies, `;` is a statement terminator, so the
+// final statement before `endwhile`, `until`, or `endfor` must also end
+// with `;`.
 
-// Syntax accepts any expression in `if` and `while` condition position.
-// Semantic analysis must ensure that the expression resolves to a boolean value.
+// Syntax accepts any expression in `if`, `while`, and `repeat ... until`
+// condition position. Semantic analysis must ensure that the expression
+// resolves to a boolean value.
+
+// The `for` loop is currently only the ascending `to` form. Semantic analysis
+// must ensure that the control variable denotes an integer variable, and that
+// the `start`, `end`, and `step` expressions all resolve to integer values.
 
 // The one-argument call form is intentionally transitional. The parser accepts
 // a single argument expression after `(`, but current semantic analysis

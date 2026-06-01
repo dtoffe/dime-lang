@@ -34,7 +34,7 @@ uses
 
 const
   declarationStartTokens: symbolSet = [constsym, varsym, procsym];
-  statementStartTokens: symbolSet = [ifsym, repeatsym, whilesym];
+  statementStartTokens: symbolSet = [forsym, ifsym, repeatsym, whilesym];
   factorStartTokens: symbolSet = [ident, number, charlit, truesym, falsesym, lparen, plus, minus, notsym];
   binaryOperatorTokens: symbolSet = [eql, neq, lss, leq, gtr, geq,
                                      plus, minus, orsym, xorsym,
@@ -580,6 +580,58 @@ function compileBlock (currentLevel: integer; followTokens: symbolSet;
                             reportCompilerError(ERR_UNTIL_EXPECTED,
                                                 lexerCurrentSourceContext, errorCount);
                         appendChild(compileStatement, compileExpression(followTokens))
+                    end
+                    else if lexerCurrentToken = forsym then
+                    begin
+                        statementSource := lexerCurrentSourceContext;
+                        compileStatement := newForStatementNode(statementSource);
+                        readNextToken(errorCount);
+                        if lexerCurrentToken = ident then
+                        begin
+                            appendChild(compileStatement,
+                                        newIdentifierReferenceNode(lexerCurrentIdentifier,
+                                                                   lexerCurrentSourceContext));
+                            readNextToken(errorCount)
+                        end
+                        else
+                            reportCompilerError(ERR_FOR_CONTROL_VARIABLE_EXPECTED,
+                                                lexerCurrentSourceContext, errorCount);
+                        if lexerCurrentToken = becomes then
+                            readNextToken(errorCount)
+                        else
+                            reportCompilerError(ERR_BECOMES_EXPECTED,
+                                                lexerCurrentSourceContext, errorCount);
+                        appendChild(compileStatement,
+                                    compileExpression([tosym] + followTokens));
+                        if lexerCurrentToken = tosym then
+                            readNextToken(errorCount)
+                        else
+                            reportCompilerError(ERR_TO_EXPECTED,
+                                                lexerCurrentSourceContext, errorCount);
+                        appendChild(compileStatement,
+                                    compileExpression([bysym] + followTokens));
+                        if lexerCurrentToken = bysym then
+                            readNextToken(errorCount)
+                        else
+                            reportCompilerError(ERR_BY_EXPECTED,
+                                                lexerCurrentSourceContext, errorCount);
+                        appendChild(compileStatement,
+                                    compileExpression([dosym] + followTokens));
+                        if lexerCurrentToken = dosym then
+                            readNextToken(errorCount)
+                        else
+                            reportCompilerError(ERR_DO_EXPECTED, lexerCurrentSourceContext, errorCount);
+                        appendStatementNode(compileStatement,
+                                            compileStatementSequence(followTokens,
+                                                                     [endforsym],
+                                                                     ERR_SEMICOLON_OR_ENDFOR_EXPECTED,
+                                                                     ERR_ENDFOR_EXPECTED,
+                                                                     [endsym, period, nul]));
+                        if lexerCurrentToken = endforsym then
+                            readNextToken(errorCount)
+                        else if not (lexerCurrentToken in [endsym, period, nul]) then
+                            reportCompilerError(ERR_ENDFOR_EXPECTED,
+                                                lexerCurrentSourceContext, errorCount)
                     end ;
         recoverIfUnexpectedToken(followTokens, [ ], ERR_INCORRECT_SYMBOL_FOLLOWING_STATEMENT, errorCount)
      end {compileStatement} ;

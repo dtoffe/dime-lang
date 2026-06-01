@@ -387,6 +387,7 @@ end;
 procedure analyzeStatement(node: astNode; var sema: semanticContext; var errorCount: integer);
 var
   targetNode, valueNode, conditionNode, thenOrBodyNode, elseNode, childNode, argumentNode: astNode;
+  startNode, endNode, stepNode, bodyNode: astNode;
   resolvedSymbol: symbolIndex;
   builtinProc: builtinProcedure;
 begin
@@ -527,6 +528,46 @@ begin
         analyzeStatement(thenOrBodyNode, sema, errorCount);
         analyzeExpression(conditionNode, sema, errorCount);
         requireBooleanExpression(conditionNode, errorCount)
+      end;
+    astForStatement:
+      begin
+        targetNode := node^.firstChild;
+        startNode := nil;
+        endNode := nil;
+        stepNode := nil;
+        bodyNode := nil;
+        if targetNode <> nil then
+          startNode := targetNode^.nextSibling;
+        if startNode <> nil then
+          endNode := startNode^.nextSibling;
+        if endNode <> nil then
+          stepNode := endNode^.nextSibling;
+        if stepNode <> nil then
+          bodyNode := stepNode^.nextSibling;
+
+        if targetNode <> nil then
+        begin
+          resolvedSymbol := lookupSymbol(targetNode^.identifierText);
+          if resolvedSymbol = 0 then
+            reportCompilerError(ERR_UNDECLARED_IDENTIFIER, nodeSourceContext(targetNode), errorCount)
+          else
+          begin
+            rememberResolvedSymbol(targetNode, resolvedSymbol);
+            setNodeType(targetNode, getDeclarationType(resolvedSymbol));
+            if (getDeclarationKind(resolvedSymbol) <> variable) or
+               (getDeclarationType(resolvedSymbol) <> typeInteger) then
+              reportCompilerError(ERR_FOR_COUNTER_MUST_BE_INTEGER_VARIABLE,
+                                  nodeSourceContext(targetNode), errorCount)
+          end
+        end;
+
+        analyzeExpression(startNode, sema, errorCount);
+        analyzeExpression(endNode, sema, errorCount);
+        analyzeExpression(stepNode, sema, errorCount);
+        requireIntegerExpression(startNode, ERR_FOR_RANGE_MUST_BE_INTEGER, errorCount);
+        requireIntegerExpression(endNode, ERR_FOR_RANGE_MUST_BE_INTEGER, errorCount);
+        requireIntegerExpression(stepNode, ERR_FOR_RANGE_MUST_BE_INTEGER, errorCount);
+        analyzeStatement(bodyNode, sema, errorCount)
       end
   else
     analyzeExpression(node, sema, errorCount)
@@ -553,7 +594,8 @@ begin
       astCallStatement,
       astIfStatement,
       astWhileStatement,
-      astRepeatStatement:
+      astRepeatStatement,
+      astForStatement:
         analyzeStatement(childNode, sema, errorCount)
     else
       analyzeExpression(childNode, sema, errorCount)
