@@ -118,3 +118,30 @@ begin
     printsummary();
 end.
 ```
+
+## Running the Toolchain
+
+Compile a source file once:
+
+```sh
+./src/dimec examples/programs/fizzbuzz.pl0 [quiet|all]
+```
+
+That writes both target files beside the source:
+
+```text
+examples/programs/fizzbuzz.pcode
+examples/programs/fizzbuzz.tac
+```
+
+Run the p-code image with the p-code interpreter:
+
+```sh
+./src/pcodeint examples/programs/fizzbuzz.pcode [quiet|all]
+```
+
+Run the TAC IR image with the TAC interpreter:
+
+```sh
+./src/tacirint examples/programs/fizzbuzz.tac [quiet|all]
+```

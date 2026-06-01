@@ -9,6 +9,8 @@ and this project is expected to follow [Semantic Versioning](https://semver.org/
 
 ### Added
 
+- Add README usage notes for compiling the PL/0 source and running p-code and TAC outputs.
+- Add TAC IR format and interpreter documentation.
 - Add a new `tacirint` TAC IR interpreter for executing dumped `.tac` images.
 - Dump the IR image into a `.tac` file during compiler builds alongside `.pcode`.
 - Add a new unit `tacircgen` with an AST-to-TAC lowering walker.

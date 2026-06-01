@@ -31,7 +31,7 @@ This roadmap is intentionally conservative. The goal is to build the project in 
 - Keep the pcode backend in paralell for some time.
 - Maybe start defining some kind of target specific layer.
 
-### v0.0.8 - Add more statements
+### v0.0.9 - Add more statements
 
 - Add `case` statement.
 - Add `repeat` statement.
