@@ -9,6 +9,7 @@ and this project is expected to follow [Semantic Versioning](https://semver.org/
 
 ### Added
 
+- Add a new `tacirint` TAC IR interpreter for executing dumped `.tac` images.
 - Dump the IR image into a `.tac` file during compiler builds alongside `.pcode`.
 - Add a new unit `tacircgen` with an AST-to-TAC lowering walker.
 - Add a new `tacir` unit with flat three-address-code IR data structures and low-level build/dump state management.

@@ -3,4 +3,5 @@ attic
 *.ppu
 *.exe
 dimec
-interpreter
+pcodeint
+tacirint
