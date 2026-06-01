@@ -38,10 +38,4 @@ This roadmap is intentionally conservative. The goal is to build the project in 
 - Add `for` statement.
 - Rework examples to add the new statements.
 
-### v0.0.8 - Add a mid-level IR
-
-- Add codegen for a mid-level IR, likely some form of three address code
-- Add another interpreter for the new mid-level IR
-- Keep pcode and the stack machine in paralell for some time
-
 For older releases, see [CHANGELOG.md](./CHANGELOG.md).

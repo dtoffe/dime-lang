@@ -25,6 +25,7 @@ type
       astCallStatement         callee identifier reference, followed by an optional argument expression
       astIfStatement           condition, then-body statement sequence, optional else-body (including nested elsif as if-nodes)
       astWhileStatement        condition, body statement sequence
+      astRepeatStatement       body statement sequence, condition
       astBinaryExpression      left operand, right operand, including relational operators
       astUnaryExpression       operand
       astCompoundStatement     block body or control-structure statement sequence children in source order }
@@ -39,6 +40,7 @@ type
     astCallStatement,
     astIfStatement,
     astWhileStatement,
+    astRepeatStatement,
     astBinaryExpression,
     astUnaryExpression,
     astIdentifierReference,
@@ -86,6 +88,7 @@ function newAssignmentStatementNode(const source: sourceContext): astNode;
 function newCallStatementNode(const source: sourceContext): astNode;
 function newIfStatementNode(const source: sourceContext): astNode;
 function newWhileStatementNode(const source: sourceContext): astNode;
+function newRepeatStatementNode(const source: sourceContext): astNode;
 function newBinaryExpressionNode(expressionOperator: symbol;
                                  const source: sourceContext): astNode;
 function newUnaryExpressionNode(expressionOperator: symbol;
@@ -142,6 +145,7 @@ begin
     astCallStatement: astNodeKindToString := 'CallStmt';
     astIfStatement: astNodeKindToString := 'IfStmt';
     astWhileStatement: astNodeKindToString := 'WhileStmt';
+    astRepeatStatement: astNodeKindToString := 'RepeatStmt';
     astBinaryExpression: astNodeKindToString := 'BinaryExpr';
     astUnaryExpression: astNodeKindToString := 'UnaryExpr';
     astIdentifierReference: astNodeKindToString := 'IdentifierRef';
@@ -265,6 +269,11 @@ end;
 function newWhileStatementNode(const source: sourceContext): astNode;
 begin
   newWhileStatementNode := newAstNode(astWhileStatement, source)
+end;
+
+function newRepeatStatementNode(const source: sourceContext): astNode;
+begin
+  newRepeatStatementNode := newAstNode(astRepeatStatement, source)
 end;
 
 function newBinaryExpressionNode(expressionOperator: symbol;

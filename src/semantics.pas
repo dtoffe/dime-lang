@@ -517,6 +517,16 @@ begin
         analyzeExpression(conditionNode, sema, errorCount);
         requireBooleanExpression(conditionNode, errorCount);
         analyzeStatement(thenOrBodyNode, sema, errorCount)
+      end;
+    astRepeatStatement:
+      begin
+        thenOrBodyNode := node^.firstChild;
+        conditionNode := nil;
+        if thenOrBodyNode <> nil then
+          conditionNode := thenOrBodyNode^.nextSibling;
+        analyzeStatement(thenOrBodyNode, sema, errorCount);
+        analyzeExpression(conditionNode, sema, errorCount);
+        requireBooleanExpression(conditionNode, errorCount)
       end
   else
     analyzeExpression(node, sema, errorCount)
@@ -542,7 +552,8 @@ begin
       astAssignmentStatement,
       astCallStatement,
       astIfStatement,
-      astWhileStatement:
+      astWhileStatement,
+      astRepeatStatement:
         analyzeStatement(childNode, sema, errorCount)
     else
       analyzeExpression(childNode, sema, errorCount)

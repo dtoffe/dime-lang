@@ -435,6 +435,18 @@ begin
         generateStatement(secondChildNode, context, errorCount);
         emitJump(loopStartAddress);
         patchJumpToCurrent(loopExitJumpIndex)
+      end;
+    astRepeatStatement:
+      begin
+        loopStartAddress := currentCodeAddress;
+        firstChildNode := node^.firstChild;
+        secondChildNode := nil;
+        if firstChildNode <> nil then
+          secondChildNode := firstChildNode^.nextSibling;
+        generateStatement(firstChildNode, context, errorCount);
+        generateExpression(secondChildNode, context, errorCount);
+        loopExitJumpIndex := emitConditionalJump;
+        patchInstructionArgument(loopExitJumpIndex, loopStartAddress)
       end
   end
 end;
@@ -469,7 +481,8 @@ begin
   while childNode <> nil do
   begin
     if childNode^.kind in [astCompoundStatement, astAssignmentStatement,
-                           astCallStatement, astIfStatement, astWhileStatement] then
+                           astCallStatement, astIfStatement, astWhileStatement,
+                           astRepeatStatement] then
       generateStatement(childNode, context, errorCount);
     childNode := childNode^.nextSibling
   end;

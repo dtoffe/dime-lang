@@ -76,6 +76,8 @@ const
     ERR_PROGRAM_HEADER_EXPECTED = 60;
     ERR_PROGRAM_NAME_EXPECTED = 61;
     ERR_PROGRAM_HEADER_SEMICOLON_EXPECTED = 62;
+    ERR_UNTIL_EXPECTED = 63;
+    ERR_SEMICOLON_OR_UNTIL_EXPECTED = 64;
 
     ERROR_PCODEINT_INVALID_L_VALUE = 'Error converting l-value';
     ERROR_PCODEINT_INVALID_A_VALUE = 'Error converting a-value';
@@ -232,6 +234,8 @@ begin
         ERR_PROGRAM_HEADER_EXPECTED: compilerErrorMessage := 'Program must start with "program <name>;". Possible reserved-word case error.';
         ERR_PROGRAM_NAME_EXPECTED: compilerErrorMessage := '"program" must be followed by an identifier.';
         ERR_PROGRAM_HEADER_SEMICOLON_EXPECTED: compilerErrorMessage := 'Semicolon expected after program header.';
+        ERR_UNTIL_EXPECTED: compilerErrorMessage := '"until" expected. Possible reserved-word case error.';
+        ERR_SEMICOLON_OR_UNTIL_EXPECTED: compilerErrorMessage := 'Semicolon or "until" expected. Possible reserved-word case error.';
     else
         compilerErrorMessage := 'Unknown compiler error.'
     end

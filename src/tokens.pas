@@ -31,7 +31,7 @@ type
         eql, neq, lss, leq, gtr, geq, lparen, rparen, comma, semicolon,
         period, colon, becomes, andsym, beginsym, booleansym, charsym, elsesym, elsifsym,
         endsym, endifsym, endwhilesym, falsesym, ifsym,
-        notsym, orsym, thensym, truesym, whilesym, xorsym, dosym,
+        notsym, orsym, repeatsym, thensym, truesym, untilsym, whilesym, xorsym, dosym,
         constsym, varsym, procsym, programsym, integersym);
     symbolSet = set of symbol;
 

@@ -298,6 +298,24 @@ begin
   appendLabel(exitLabel)
 end;
 
+procedure lowerRepeatStatement(node: astNode; var errorCount: integer);
+var
+  bodyNode, conditionNode: astNode;
+  startLabel: tacLabelId;
+  conditionOperand: tacOperand;
+begin
+  bodyNode := node^.firstChild;
+  conditionNode := nil;
+  if bodyNode <> nil then
+    conditionNode := bodyNode^.nextSibling;
+
+  startLabel := newTacLabel;
+  appendLabel(startLabel);
+  lowerStatement(bodyNode, errorCount);
+  conditionOperand := lowerExpression(conditionNode, errorCount);
+  appendGotoIfZero(conditionOperand, startLabel)
+end;
+
 procedure lowerStatement(node: astNode; var errorCount: integer);
 var
   childNode: astNode;
@@ -322,7 +340,9 @@ begin
     astIfStatement:
       lowerIfStatement(node, errorCount);
     astWhileStatement:
-      lowerWhileStatement(node, errorCount)
+      lowerWhileStatement(node, errorCount);
+    astRepeatStatement:
+      lowerRepeatStatement(node, errorCount)
   end
 end;
 
@@ -353,7 +373,8 @@ begin
   while childNode <> nil do
   begin
     if childNode^.kind in [astCompoundStatement, astAssignmentStatement,
-                           astCallStatement, astIfStatement, astWhileStatement] then
+                           astCallStatement, astIfStatement, astWhileStatement,
+                           astRepeatStatement] then
       lowerStatement(childNode, errorCount);
     childNode := childNode^.nextSibling
   end;

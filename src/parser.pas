@@ -34,7 +34,7 @@ uses
 
 const
   declarationStartTokens: symbolSet = [constsym, varsym, procsym];
-  statementStartTokens: symbolSet = [ifsym, whilesym];
+  statementStartTokens: symbolSet = [ifsym, repeatsym, whilesym];
   factorStartTokens: symbolSet = [ident, number, charlit, truesym, falsesym, lparen, plus, minus, notsym];
   binaryOperatorTokens: symbolSet = [eql, neq, lss, leq, gtr, geq,
                                      plus, minus, orsym, xorsym,
@@ -562,6 +562,24 @@ function compileBlock (currentLevel: integer; followTokens: symbolSet;
                         else
                             {The shared statement-sequence parser already reported
                              the missing loop terminator at structural boundaries.}
+                    end
+                    else if lexerCurrentToken = repeatsym then
+                    begin
+                        statementSource := lexerCurrentSourceContext;
+                        compileStatement := newRepeatStatementNode(statementSource);
+                        readNextToken(errorCount);
+                        appendStatementNode(compileStatement,
+                                            compileStatementSequence(followTokens,
+                                                                     [untilsym],
+                                                                     ERR_SEMICOLON_OR_UNTIL_EXPECTED,
+                                                                     ERR_UNTIL_EXPECTED,
+                                                                     [endsym, period, nul]));
+                        if lexerCurrentToken = untilsym then
+                            readNextToken(errorCount)
+                        else if not (lexerCurrentToken in [endsym, period, nul]) then
+                            reportCompilerError(ERR_UNTIL_EXPECTED,
+                                                lexerCurrentSourceContext, errorCount);
+                        appendChild(compileStatement, compileExpression(followTokens))
                     end ;
         recoverIfUnexpectedToken(followTokens, [ ], ERR_INCORRECT_SYMBOL_FOLLOWING_STATEMENT, errorCount)
      end {compileStatement} ;
