@@ -14,6 +14,8 @@
   It does not mutate the AST or generate code. }
 unit semantics;
 
+{$mode objfpc}
+
 interface
 
 uses
@@ -107,6 +109,17 @@ begin
      (getNodeType(selectorNode) <> getNodeType(labelNode)) then
     reportCompilerError(ERR_SWITCH_LABEL_TYPE_MISMATCH,
                         nodeSourceContext(labelNode), errorCount)
+end;
+
+procedure requireMatchingCaseResultType(expectedNode, actualNode: astNode; var errorCount: integer);
+begin
+  if (expectedNode = nil) or (actualNode = nil) then
+    exit;
+
+  if hasNodeType(expectedNode) and hasNodeType(actualNode) and
+     (getNodeType(expectedNode) <> getNodeType(actualNode)) then
+    reportCompilerError(ERR_CASE_RESULT_TYPE_MISMATCH,
+                        nodeSourceContext(actualNode), errorCount)
 end;
 
 procedure requireIntegerExpression(node: astNode; errorCode: integer; var errorCount: integer);
@@ -240,6 +253,7 @@ end;
 procedure analyzeExpression(node: astNode; var sema: semanticContext; var errorCount: integer);
 var
   childNode, leftNode, rightNode: astNode;
+  selectorNode, caseArmNode, whenNode, resultNode, elseNode, firstResultNode: astNode;
 begin
   if node = nil then
     exit;
@@ -327,6 +341,68 @@ begin
           end;
           if isArithmeticBinaryOperator(node^.operatorSymbol) then
             setNodeType(node, typeInteger)
+        end
+      end;
+    astCaseExpression:
+      begin
+        selectorNode := nil;
+        caseArmNode := node^.firstChild;
+        elseNode := node^.lastChild;
+        firstResultNode := nil;
+
+        if node^.operatorSymbol = casesym then
+        begin
+          selectorNode := node^.firstChild;
+          if selectorNode <> nil then
+          begin
+            analyzeExpression(selectorNode, sema, errorCount);
+            caseArmNode := selectorNode^.nextSibling
+          end
+        end;
+
+        while caseArmNode <> nil do
+        begin
+          if caseArmNode^.kind <> astCaseArm then
+            break;
+          whenNode := caseArmNode^.firstChild;
+          resultNode := nil;
+          if whenNode <> nil then
+            resultNode := whenNode^.nextSibling;
+          analyzeExpression(whenNode, sema, errorCount);
+          analyzeExpression(resultNode, sema, errorCount);
+          if selectorNode <> nil then
+            requireMatchingSwitchLabelType(selectorNode, whenNode, errorCount)
+          else
+            if (whenNode <> nil) and
+               ((not hasNodeType(whenNode)) or (getNodeType(whenNode) <> typeBoolean)) then
+              reportCompilerError(ERR_CASE_WHEN_CONDITION_MUST_BE_BOOLEAN,
+                                  nodeSourceContext(whenNode), errorCount);
+          if firstResultNode = nil then
+            firstResultNode := resultNode
+          else
+            requireMatchingCaseResultType(firstResultNode, resultNode, errorCount);
+          caseArmNode := caseArmNode^.nextSibling
+        end;
+
+        if (elseNode <> nil) and (elseNode^.kind <> astCaseArm) then
+        begin
+          analyzeExpression(elseNode, sema, errorCount);
+          if firstResultNode = nil then
+            firstResultNode := elseNode
+          else
+            requireMatchingCaseResultType(firstResultNode, elseNode, errorCount)
+        end;
+
+        if (firstResultNode <> nil) and hasNodeType(firstResultNode) then
+          setNodeType(node, getNodeType(firstResultNode))
+      end;
+    astCaseArm:
+      begin
+        childNode := node^.firstChild;
+        while childNode <> nil do
+        begin
+          analyzeExpression(childNode, sema, errorCount);
+          childNode := childNode^.nextSibling
         end
       end
   else

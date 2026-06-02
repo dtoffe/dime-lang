@@ -7,6 +7,8 @@
   for declaration metadata used by later passes. }
 unit symboltable;
 
+{$mode objfpc}
+
 interface
 
 uses

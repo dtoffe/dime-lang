@@ -142,6 +142,14 @@ statementSequence = statement ";" { statement ";" } ;
 // the selector type. `break` exits the switch; `next` falls through into the
 // next branch body. If the last branch uses `next`, control continues into the
 // optional `else` body when present, or out of the switch otherwise.
+//
+// `case` is an expression form inspired by SQL dialects. It can be used as a
+// more advanced elvis-style expression with multiple branches. In the simple
+// form, the optional selector expression appears immediately after `case` and
+// each `when` expression must match that selector type. In the searched form,
+// `case` is followed directly by `when`, and each `when` expression must
+// resolve to boolean. All branch result expressions, including `else`, must
+// resolve to the same type.
 
 // The one-argument call form is intentionally transitional. The parser accepts
 // a single argument expression after `(`, but current semantic analysis
@@ -169,7 +177,12 @@ simpleExpression = term { ( "+" | "-" | "or" | "xor" ) term } ;
 
 term = factor { ( "*" | "/" | "and" ) factor } ;
 
-factor = ident | number | "true" | "false" | characterLiteral | ( "+" | "-" | "not" ) factor | "(" expression ")" ;
+factor = ident | number | "true" | "false" | characterLiteral | caseExpression
+       | ( "+" | "-" | "not" ) factor | "(" expression ")" ;
+
+caseExpression = "case" [ expression ] "when" expression "then" expression
+                 { "when" expression "then" expression }
+                 "else" expression "end" ;
 
 relationalOperator = "=" | "<>" | "<" | "<=" | ">" | ">=" ;
 

@@ -158,6 +158,71 @@ begin
   appendTacInstruction(instruction)
 end;
 
+function lowerCaseExpression(node: astNode; var errorCount: integer): tacOperand;
+var
+  selectorNode, caseArmNode, whenNode, resultNode: astNode;
+  selectorOperand, conditionOperand, whenOperand, branchOperand: tacOperand;
+  resultOperand: tacOperand;
+  nextLabel, endLabel: tacLabelId;
+  instruction: tacInstruction;
+begin
+  selectorNode := nil;
+  caseArmNode := node^.firstChild;
+  selectorOperand := makeTacNoneOperand;
+  if node^.operatorSymbol = casesym then
+  begin
+    selectorNode := node^.firstChild;
+    if selectorNode <> nil then
+    begin
+      selectorOperand := lowerExpression(selectorNode, errorCount);
+      caseArmNode := selectorNode^.nextSibling
+    end
+  end;
+
+  resultOperand := newTacTemporary(nodeValueType(node));
+  endLabel := newTacLabel;
+  while (caseArmNode <> nil) and (caseArmNode^.kind = astCaseArm) do
+  begin
+    whenNode := caseArmNode^.firstChild;
+    resultNode := nil;
+    if whenNode <> nil then
+      resultNode := whenNode^.nextSibling;
+
+    if selectorNode <> nil then
+    begin
+      whenOperand := lowerExpression(whenNode, errorCount);
+      conditionOperand := newTacTemporary(typeBoolean);
+      instruction := newTacInstruction(irBinaryOp);
+      instruction.resultOperand := conditionOperand;
+      instruction.leftOperand := selectorOperand;
+      instruction.rightOperand := whenOperand;
+      instruction.operatorSymbol := eql;
+      appendTacInstruction(instruction)
+    end
+    else
+      conditionOperand := lowerExpression(whenNode, errorCount);
+
+    nextLabel := newTacLabel;
+    appendGotoIfZero(conditionOperand, nextLabel);
+    branchOperand := lowerExpression(resultNode, errorCount);
+    instruction := newTacInstruction(irCopy);
+    instruction.resultOperand := resultOperand;
+    instruction.leftOperand := branchOperand;
+    appendTacInstruction(instruction);
+    appendGoto(endLabel);
+    appendLabel(nextLabel);
+    caseArmNode := caseArmNode^.nextSibling
+  end;
+
+  branchOperand := lowerExpression(caseArmNode, errorCount);
+  instruction := newTacInstruction(irCopy);
+  instruction.resultOperand := resultOperand;
+  instruction.leftOperand := branchOperand;
+  appendTacInstruction(instruction);
+  appendLabel(endLabel);
+  lowerCaseExpression := resultOperand
+end;
+
 function lowerExpression(node: astNode; var errorCount: integer): tacOperand;
 begin
   lowerExpression := makeTacNoneOperand;
@@ -174,7 +239,9 @@ begin
     astUnaryExpression:
       lowerExpression := lowerUnaryExpression(node, errorCount);
     astBinaryExpression:
-      lowerExpression := lowerBinaryExpression(node, errorCount)
+      lowerExpression := lowerBinaryExpression(node, errorCount);
+    astCaseExpression:
+      lowerExpression := lowerCaseExpression(node, errorCount)
   end
 end;
 

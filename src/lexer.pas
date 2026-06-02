@@ -7,6 +7,8 @@
   cleanup needed to feed tokens to the parser. }
 unit lexer;
 
+{$mode objfpc}
+
 interface
 
 uses
@@ -26,7 +28,7 @@ implementation
 uses
   SysUtils;
 
-const reservedWordCount = 34;
+const reservedWordCount = 36;
     numberMaxDigits = 14;
 
 type sourceLineBuffer = array [1..81] of char;
@@ -55,6 +57,7 @@ const
     'boolean   ',
     'break     ',
     'by        ',
+    'case      ',
     'char      ',
     'const     ',
     'do        ',
@@ -82,6 +85,7 @@ const
     'true      ',
     'until     ',
     'var       ',
+    'when      ',
     'while     ',
     'xor       '
   );
@@ -91,6 +95,7 @@ const
     booleansym,
     breaksym,
     bysym,
+    casesym,
     charsym,
     constsym,
     dosym,
@@ -118,6 +123,7 @@ const
     truesym,
     untilsym,
     varsym,
+    whensym,
     whilesym,
     xorsym
   );

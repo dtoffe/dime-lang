@@ -106,6 +106,12 @@ load_const result=t2:integer left=#1:integer
 binary result=t3:integer left=t1:integer right=t2:integer op=+
 ```
 
+`case` expressions are lowered into labels, conditional jumps, and one result
+temporary. This makes them useful as a more advanced multi-branch elvis-style
+expression without adding a special TAC instruction. Each taken branch copies
+its chosen result into the shared temporary, then jumps to the common end
+label.
+
 An assignment stores the final expression operand into the symbolic target:
 
 ```text

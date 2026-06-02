@@ -7,6 +7,8 @@
   shared compiler/runtime error reporting helpers. }
 unit diagnostics;
 
+{$mode objfpc}
+
 interface
 
 type
@@ -96,6 +98,11 @@ const
     ERR_BREAK_OR_NEXT_EXPECTED = 80;
     ERR_SEMICOLON_OR_BREAK_OR_NEXT_EXPECTED = 81;
     ERR_SEMICOLON_OR_ENDSWITCH_EXPECTED = 82;
+    ERR_WHEN_EXPECTED = 83;
+    ERR_CASE_ELSE_EXPECTED = 84;
+    ERR_CASE_RESULT_TYPE_MISMATCH = 85;
+    ERR_CASE_SELECTOR_TYPE_MISMATCH = 86;
+    ERR_CASE_WHEN_CONDITION_MUST_BE_BOOLEAN = 87;
 
     ERROR_PCODEINT_INVALID_L_VALUE = 'Error converting l-value';
     ERROR_PCODEINT_INVALID_A_VALUE = 'Error converting a-value';
@@ -272,6 +279,11 @@ begin
         ERR_BREAK_OR_NEXT_EXPECTED: compilerErrorMessage := '"break" or "next" expected. Possible reserved-word case error.';
         ERR_SEMICOLON_OR_BREAK_OR_NEXT_EXPECTED: compilerErrorMessage := 'Semicolon, "break", or "next" expected. Possible reserved-word case error.';
         ERR_SEMICOLON_OR_ENDSWITCH_EXPECTED: compilerErrorMessage := 'Semicolon or "endswitch" expected. Possible reserved-word case error.';
+        ERR_WHEN_EXPECTED: compilerErrorMessage := '"when" expected. Possible reserved-word case error.';
+        ERR_CASE_ELSE_EXPECTED: compilerErrorMessage := 'Case expression must include an "else" branch.';
+        ERR_CASE_RESULT_TYPE_MISMATCH: compilerErrorMessage := 'All case expression result branches must resolve to the same type.';
+        ERR_CASE_SELECTOR_TYPE_MISMATCH: compilerErrorMessage := 'Simple case branch values must match the case selector type.';
+        ERR_CASE_WHEN_CONDITION_MUST_BE_BOOLEAN: compilerErrorMessage := 'Searched case branch conditions must resolve to boolean.';
     else
         compilerErrorMessage := 'Unknown compiler error.'
     end

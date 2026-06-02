@@ -8,6 +8,8 @@
   text or perform semantic checks. }
 unit pcode;
 
+{$mode objfpc}
+
 interface
 
 uses
@@ -258,6 +260,56 @@ procedure generateExpression(node: astNode; var context: pCodeContext; var error
 procedure generateStatement(node: astNode; var context: pCodeContext; var errorCount: integer); forward;
 procedure generateBlock(node: astNode; var context: pCodeContext; var errorCount: integer); forward;
 
+procedure generateCaseExpression(node: astNode; var context: pCodeContext; var errorCount: integer);
+var
+  selectorNode, caseArmNode, whenNode, resultNode: astNode;
+  endJumpIndices: array [1..codeMaxIndex] of integer;
+  endJumpCount: integer;
+  skipJumpIndex: integer;
+begin
+  selectorNode := nil;
+  caseArmNode := node^.firstChild;
+  if node^.operatorSymbol = casesym then
+  begin
+    selectorNode := node^.firstChild;
+    if selectorNode <> nil then
+      caseArmNode := selectorNode^.nextSibling
+  end;
+
+  endJumpCount := 0;
+  while (caseArmNode <> nil) and (caseArmNode^.kind = astCaseArm) do
+  begin
+    whenNode := caseArmNode^.firstChild;
+    resultNode := nil;
+    if whenNode <> nil then
+      resultNode := whenNode^.nextSibling;
+
+    if selectorNode <> nil then
+    begin
+      generateExpression(selectorNode, context, errorCount);
+      generateExpression(whenNode, context, errorCount);
+      emitBinaryOp(8)
+    end
+    else
+      generateExpression(whenNode, context, errorCount);
+
+    skipJumpIndex := emitConditionalJump;
+    generateExpression(resultNode, context, errorCount);
+    endJumpCount := endJumpCount + 1;
+    endJumpIndices[endJumpCount] := reserveJump(jmp);
+    patchJumpToCurrent(skipJumpIndex);
+    caseArmNode := caseArmNode^.nextSibling
+  end;
+
+  generateExpression(caseArmNode, context, errorCount);
+
+  while endJumpCount > 0 do
+  begin
+    patchJumpToCurrent(endJumpIndices[endJumpCount]);
+    endJumpCount := endJumpCount - 1
+  end
+end;
+
 procedure generateExpression(node: astNode; var context: pCodeContext; var errorCount: integer);
 var
   leftNode, rightNode, operandNode: astNode;
@@ -320,7 +372,9 @@ begin
           orsym: emitBinaryOp(16);
           xorsym: emitBinaryOp(17);
         end
-      end
+      end;
+    astCaseExpression:
+      generateCaseExpression(node, context, errorCount)
   end
 end;
 

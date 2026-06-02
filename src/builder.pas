@@ -8,6 +8,8 @@
   their own units. }
 unit builder;
 
+{$mode objfpc}
+
 interface
 
 procedure buildFile(const inputFileName: string);

@@ -20,6 +20,8 @@ This file contains the parser front end.
 unit parser;
 {PL/0 parser front end: parse source text into an AST}
 
+{$mode objfpc}
+
 interface
 
 uses
@@ -36,7 +38,7 @@ const
   declarationStartTokens: symbolSet = [constsym, varsym, procsym];
   statementStartTokens: symbolSet = [forsym, ifsym, repeatsym, switchsym, whilesym];
   switchLabelStartTokens: symbolSet = [number, charlit, truesym, falsesym];
-  factorStartTokens: symbolSet = [ident, number, charlit, truesym, falsesym, lparen, plus, minus, notsym];
+  factorStartTokens: symbolSet = [casesym, ident, number, charlit, truesym, falsesym, lparen, plus, minus, notsym];
   binaryOperatorTokens: symbolSet = [eql, neq, lss, leq, gtr, geq,
                                      plus, minus, orsym, xorsym,
                                      times, slash, andsym];
@@ -383,6 +385,58 @@ function compileBlock (currentLevel: integer; followTokens: symbolSet;
             function compileExpressionWithPrecedence(minPrecedence: integer;
                                                      followTokens: symbolSet): astNode; forward;
 
+            function compileCaseExpression(followTokens: symbolSet): astNode;
+            var
+              caseNode, caseArmNode: astNode;
+              caseSource: sourceContext;
+            begin
+                caseSource := lexerCurrentSourceContext;
+                caseNode := newCaseExpressionNode(whensym, caseSource);
+                readNextToken(errorCount);
+
+                if lexerCurrentToken <> whensym then
+                begin
+                    caseNode^.operatorSymbol := casesym;
+                    appendExpressionChild(caseNode,
+                                          compileExpressionWithPrecedence(1, [whensym] + followTokens))
+                end;
+
+                if lexerCurrentToken <> whensym then
+                    reportCompilerError(ERR_WHEN_EXPECTED, lexerCurrentSourceContext, errorCount);
+
+                while lexerCurrentToken = whensym do
+                begin
+                    caseArmNode := newCaseArmNode(lexerCurrentSourceContext);
+                    readNextToken(errorCount);
+                    appendExpressionChild(caseArmNode,
+                                          compileExpressionWithPrecedence(1, [thensym] + followTokens));
+                    if lexerCurrentToken = thensym then
+                        readNextToken(errorCount)
+                    else
+                        reportCompilerError(ERR_THEN_EXPECTED, lexerCurrentSourceContext, errorCount);
+                    appendExpressionChild(caseArmNode,
+                                          compileExpressionWithPrecedence(1, [whensym, elsesym, endsym] +
+                                                                             followTokens));
+                    appendExpressionChild(caseNode, caseArmNode)
+                end;
+
+                if lexerCurrentToken = elsesym then
+                begin
+                    readNextToken(errorCount);
+                    appendExpressionChild(caseNode,
+                                          compileExpressionWithPrecedence(1, [endsym] + followTokens))
+                end
+                else
+                    reportCompilerError(ERR_CASE_ELSE_EXPECTED, lexerCurrentSourceContext, errorCount);
+
+                if lexerCurrentToken = endsym then
+                    readNextToken(errorCount)
+                else
+                    reportCompilerError(ERR_END_EXPECTED, lexerCurrentSourceContext, errorCount);
+
+                compileCaseExpression := caseNode
+            end;
+
             {Parses an identifier, number, or parenthesized expression.}
             function compilePrimary(followTokens: symbolSet): astNode;
                 var primaryNode: astNode;
@@ -401,6 +455,8 @@ function compileBlock (currentLevel: integer; followTokens: symbolSet;
                     appendExpressionChild(primaryNode, compilePrimary(followTokens));
                     compilePrimary := primaryNode
                 end
+                else if lexerCurrentToken = casesym then
+                    compilePrimary := compileCaseExpression(followTokens)
                 else if lexerCurrentToken = ident then
                 begin
                     primarySource := lexerCurrentSourceContext;

@@ -291,6 +291,29 @@ Boolean `not` compiles its operand and then emits `OPR 0,14`. Boolean `and`,
 `or`, and `xor` compile both operands and then emit `OPR 0,15`, `OPR 0,16`,
 and `OPR 0,17`, respectively.
 
+### `case` expression
+
+`case` can be used anywhere a primary expression is allowed. It acts like a
+more advanced multi-branch elvis-style expression: one branch is selected and
+its value stays on the stack as the value of the whole expression.
+
+The simple form compares the selector against each `when` value using the same
+equality operation used elsewhere:
+
+```pascal
+case x when 1 then a when 2 then b else c end
+```
+
+The searched form compiles each `when` as a normal boolean condition:
+
+```pascal
+case when x > 5 then a when x = 5 then b else c end
+```
+
+Both forms lower as a chain of conditional jumps. Each matched branch leaves
+its result on the stack and jumps to the common end label. The final `else`
+branch supplies the fallback value.
+
 ### Boolean Conditions
 
 `if` and `while` now compile an ordinary expression in condition position.
