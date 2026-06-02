@@ -86,6 +86,16 @@ const
     ERR_SEMICOLON_OR_ENDFOR_EXPECTED = 70;
     ERR_FOR_COUNTER_MUST_BE_INTEGER_VARIABLE = 71;
     ERR_FOR_RANGE_MUST_BE_INTEGER = 72;
+    ERR_SWITCH_IDENTIFIER_EXPECTED = 73;
+    ERR_ON_EXPECTED = 74;
+    ERR_SWITCH_LABEL_EXPECTED = 75;
+    ERR_END_EXPECTED = 76;
+    ERR_ENDSWITCH_EXPECTED = 77;
+    ERR_SEMICOLON_EXPECTED_BEFORE_ELSE_OR_ENDSWITCH = 78;
+    ERR_SWITCH_LABEL_TYPE_MISMATCH = 79;
+    ERR_BREAK_OR_NEXT_EXPECTED = 80;
+    ERR_SEMICOLON_OR_BREAK_OR_NEXT_EXPECTED = 81;
+    ERR_SEMICOLON_OR_ENDSWITCH_EXPECTED = 82;
 
     ERROR_PCODEINT_INVALID_L_VALUE = 'Error converting l-value';
     ERROR_PCODEINT_INVALID_A_VALUE = 'Error converting a-value';
@@ -252,6 +262,16 @@ begin
         ERR_SEMICOLON_OR_ENDFOR_EXPECTED: compilerErrorMessage := 'Semicolon or "endfor" expected. Possible reserved-word case error.';
         ERR_FOR_COUNTER_MUST_BE_INTEGER_VARIABLE: compilerErrorMessage := 'For-loop counter must be an integer variable.';
         ERR_FOR_RANGE_MUST_BE_INTEGER: compilerErrorMessage := 'For-loop start, end, and step expressions must resolve to integer.';
+        ERR_SWITCH_IDENTIFIER_EXPECTED: compilerErrorMessage := '"switch" must be followed by an identifier.';
+        ERR_ON_EXPECTED: compilerErrorMessage := '"on" expected. Possible reserved-word case error.';
+        ERR_SWITCH_LABEL_EXPECTED: compilerErrorMessage := 'Switch branch label must be a literal.';
+        ERR_END_EXPECTED: compilerErrorMessage := '"end" expected. Possible reserved-word case error.';
+        ERR_ENDSWITCH_EXPECTED: compilerErrorMessage := '"endswitch" expected. Possible reserved-word case error.';
+        ERR_SEMICOLON_EXPECTED_BEFORE_ELSE_OR_ENDSWITCH: compilerErrorMessage := 'Semicolon expected before the next switch branch, "else", or "endswitch".';
+        ERR_SWITCH_LABEL_TYPE_MISMATCH: compilerErrorMessage := 'Switch branch label type must match the switch selector type.';
+        ERR_BREAK_OR_NEXT_EXPECTED: compilerErrorMessage := '"break" or "next" expected. Possible reserved-word case error.';
+        ERR_SEMICOLON_OR_BREAK_OR_NEXT_EXPECTED: compilerErrorMessage := 'Semicolon, "break", or "next" expected. Possible reserved-word case error.';
+        ERR_SEMICOLON_OR_ENDSWITCH_EXPECTED: compilerErrorMessage := 'Semicolon or "endswitch" expected. Possible reserved-word case error.';
     else
         compilerErrorMessage := 'Unknown compiler error.'
     end

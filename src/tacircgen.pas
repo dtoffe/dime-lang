@@ -379,6 +379,86 @@ begin
   appendLabel(exitLabel)
 end;
 
+procedure lowerSwitchStatement(node: astNode; var errorCount: integer);
+var
+  selectorNode, switchCaseNode, labelNode, bodyNode: astNode;
+  selectorOperand, labelOperand, comparisonOperand: tacOperand;
+  nextLabel, endLabel, defaultLabel: tacLabelId;
+  bodyLabels: array [1..maxTacInstructions] of tacLabelId;
+  bodyLabelCount: integer;
+  instruction: tacInstruction;
+begin
+  selectorNode := node^.firstChild;
+  switchCaseNode := nil;
+  if selectorNode <> nil then
+    switchCaseNode := selectorNode^.nextSibling;
+
+  endLabel := newTacLabel;
+  if (node^.lastChild <> nil) and (node^.lastChild^.kind <> astSwitchCaseArm) then
+    defaultLabel := newTacLabel
+  else
+    defaultLabel := endLabel;
+  bodyLabelCount := 0;
+  while switchCaseNode <> nil do
+  begin
+    if switchCaseNode^.kind = astSwitchCaseArm then
+    begin
+      labelNode := switchCaseNode^.firstChild;
+      bodyNode := nil;
+      if labelNode <> nil then
+        bodyNode := labelNode^.nextSibling;
+
+      selectorOperand := lowerIdentifierReference(selectorNode);
+      labelOperand := lowerExpression(labelNode, errorCount);
+      comparisonOperand := newTacTemporary(typeBoolean);
+      instruction := newTacInstruction(irBinaryOp);
+      instruction.resultOperand := comparisonOperand;
+      instruction.leftOperand := selectorOperand;
+      instruction.rightOperand := labelOperand;
+      instruction.operatorSymbol := eql;
+      appendTacInstruction(instruction);
+
+      bodyLabelCount := bodyLabelCount + 1;
+      bodyLabels[bodyLabelCount] := newTacLabel;
+      nextLabel := newTacLabel;
+      appendGotoIfZero(comparisonOperand, nextLabel);
+      appendGoto(bodyLabels[bodyLabelCount]);
+      appendLabel(nextLabel)
+    end;
+    switchCaseNode := switchCaseNode^.nextSibling
+  end;
+
+  appendGoto(defaultLabel);
+
+  switchCaseNode := nil;
+  if selectorNode <> nil then
+    switchCaseNode := selectorNode^.nextSibling;
+  bodyLabelCount := 1;
+  while switchCaseNode <> nil do
+  begin
+    if switchCaseNode^.kind = astSwitchCaseArm then
+    begin
+      labelNode := switchCaseNode^.firstChild;
+      bodyNode := nil;
+      if labelNode <> nil then
+        bodyNode := labelNode^.nextSibling;
+      appendLabel(bodyLabels[bodyLabelCount]);
+      bodyLabelCount := bodyLabelCount + 1;
+      lowerStatement(bodyNode, errorCount);
+      if switchCaseNode^.operatorSymbol = breaksym then
+        appendGoto(endLabel)
+    end
+    else
+    begin
+      appendLabel(defaultLabel);
+      lowerStatement(switchCaseNode, errorCount)
+    end;
+    switchCaseNode := switchCaseNode^.nextSibling
+  end;
+
+  appendLabel(endLabel)
+end;
+
 procedure lowerStatement(node: astNode; var errorCount: integer);
 var
   childNode: astNode;
@@ -407,7 +487,9 @@ begin
     astRepeatStatement:
       lowerRepeatStatement(node, errorCount);
     astForStatement:
-      lowerForStatement(node, errorCount)
+      lowerForStatement(node, errorCount);
+    astSwitchStatement:
+      lowerSwitchStatement(node, errorCount)
   end
 end;
 
@@ -439,7 +521,7 @@ begin
   begin
     if childNode^.kind in [astCompoundStatement, astAssignmentStatement,
                            astCallStatement, astIfStatement, astWhileStatement,
-                           astRepeatStatement, astForStatement] then
+                           astRepeatStatement, astForStatement, astSwitchStatement] then
       lowerStatement(childNode, errorCount);
     childNode := childNode^.nextSibling
   end;

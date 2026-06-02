@@ -27,6 +27,8 @@ type
       astWhileStatement        condition, body statement sequence
       astRepeatStatement       body statement sequence, condition
       astForStatement          counter identifier, start expression, end expression, step expression, body statement sequence
+      astSwitchStatement       selector identifier, switch-case arms, optional else-body compound statement
+      astSwitchCaseArm         label literal, body statement sequence
       astBinaryExpression      left operand, right operand, including relational operators
       astUnaryExpression       operand
       astCompoundStatement     block body or control-structure statement sequence children in source order }
@@ -43,6 +45,8 @@ type
     astWhileStatement,
     astRepeatStatement,
     astForStatement,
+    astSwitchStatement,
+    astSwitchCaseArm,
     astBinaryExpression,
     astUnaryExpression,
     astIdentifierReference,
@@ -92,6 +96,8 @@ function newIfStatementNode(const source: sourceContext): astNode;
 function newWhileStatementNode(const source: sourceContext): astNode;
 function newRepeatStatementNode(const source: sourceContext): astNode;
 function newForStatementNode(const source: sourceContext): astNode;
+function newSwitchStatementNode(const source: sourceContext): astNode;
+function newSwitchCaseArmNode(const source: sourceContext): astNode;
 function newBinaryExpressionNode(expressionOperator: symbol;
                                  const source: sourceContext): astNode;
 function newUnaryExpressionNode(expressionOperator: symbol;
@@ -150,6 +156,8 @@ begin
     astWhileStatement: astNodeKindToString := 'WhileStmt';
     astRepeatStatement: astNodeKindToString := 'RepeatStmt';
     astForStatement: astNodeKindToString := 'ForStmt';
+    astSwitchStatement: astNodeKindToString := 'SwitchStmt';
+    astSwitchCaseArm: astNodeKindToString := 'SwitchCaseArm';
     astBinaryExpression: astNodeKindToString := 'BinaryExpr';
     astUnaryExpression: astNodeKindToString := 'UnaryExpr';
     astIdentifierReference: astNodeKindToString := 'IdentifierRef';
@@ -283,6 +291,16 @@ end;
 function newForStatementNode(const source: sourceContext): astNode;
 begin
   newForStatementNode := newAstNode(astForStatement, source)
+end;
+
+function newSwitchStatementNode(const source: sourceContext): astNode;
+begin
+  newSwitchStatementNode := newAstNode(astSwitchStatement, source)
+end;
+
+function newSwitchCaseArmNode(const source: sourceContext): astNode;
+begin
+  newSwitchCaseArmNode := newAstNode(astSwitchCaseArm, source)
 end;
 
 function newBinaryExpressionNode(expressionOperator: symbol;

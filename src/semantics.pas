@@ -98,6 +98,17 @@ begin
     reportCompilerError(ERR_ASSIGNMENT_TYPE_MISMATCH, nodeSourceContext(valueNode), errorCount)
 end;
 
+procedure requireMatchingSwitchLabelType(selectorNode, labelNode: astNode; var errorCount: integer);
+begin
+  if (selectorNode = nil) or (labelNode = nil) then
+    exit;
+
+  if hasNodeType(selectorNode) and hasNodeType(labelNode) and
+     (getNodeType(selectorNode) <> getNodeType(labelNode)) then
+    reportCompilerError(ERR_SWITCH_LABEL_TYPE_MISMATCH,
+                        nodeSourceContext(labelNode), errorCount)
+end;
+
 procedure requireIntegerExpression(node: astNode; errorCode: integer; var errorCount: integer);
 begin
   if node = nil then
@@ -388,6 +399,7 @@ procedure analyzeStatement(node: astNode; var sema: semanticContext; var errorCo
 var
   targetNode, valueNode, conditionNode, thenOrBodyNode, elseNode, childNode, argumentNode: astNode;
   startNode, endNode, stepNode, bodyNode: astNode;
+  selectorNode, caseNode, labelNode: astNode;
   resolvedSymbol: symbolIndex;
   builtinProc: builtinProcedure;
 begin
@@ -568,6 +580,31 @@ begin
         requireIntegerExpression(endNode, ERR_FOR_RANGE_MUST_BE_INTEGER, errorCount);
         requireIntegerExpression(stepNode, ERR_FOR_RANGE_MUST_BE_INTEGER, errorCount);
         analyzeStatement(bodyNode, sema, errorCount)
+      end;
+    astSwitchStatement:
+      begin
+        selectorNode := node^.firstChild;
+        caseNode := nil;
+        if selectorNode <> nil then
+          caseNode := selectorNode^.nextSibling;
+
+        analyzeExpression(selectorNode, sema, errorCount);
+        while caseNode <> nil do
+        begin
+          if caseNode^.kind = astSwitchCaseArm then
+          begin
+            labelNode := caseNode^.firstChild;
+            bodyNode := nil;
+            if labelNode <> nil then
+              bodyNode := labelNode^.nextSibling;
+            analyzeExpression(labelNode, sema, errorCount);
+            requireMatchingSwitchLabelType(selectorNode, labelNode, errorCount);
+            analyzeStatement(bodyNode, sema, errorCount)
+          end
+          else
+            analyzeStatement(caseNode, sema, errorCount);
+          caseNode := caseNode^.nextSibling
+        end
       end
   else
     analyzeExpression(node, sema, errorCount)
@@ -595,7 +632,8 @@ begin
       astIfStatement,
       astWhileStatement,
       astRepeatStatement,
-      astForStatement:
+      astForStatement,
+      astSwitchStatement:
         analyzeStatement(childNode, sema, errorCount)
     else
       analyzeExpression(childNode, sema, errorCount)

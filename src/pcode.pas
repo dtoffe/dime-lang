@@ -328,9 +328,15 @@ procedure generateStatement(node: astNode; var context: pCodeContext; var errorC
 var
   firstChildNode, secondChildNode, childNode: astNode;
   thirdChildNode, fourthChildNode, fifthChildNode: astNode;
+  switchCaseNode: astNode;
   resolvedSymbol: symbolIndex;
   procKind: builtinProcedure;
   conditionalJumpIndex, loopStartAddress, loopExitJumpIndex, elseSkipJumpIndex: integer;
+  switchEndJumpIndices: array [1..codeMaxIndex] of integer;
+  switchBodyJumpIndices: array [1..codeMaxIndex] of integer;
+  switchEndJumpCount: integer;
+  switchBodyJumpCount: integer;
+  elseEntryJumpIndex: integer;
 begin
   if node = nil then
     exit;
@@ -494,6 +500,76 @@ begin
         end;
         emitJump(loopStartAddress);
         patchJumpToCurrent(loopExitJumpIndex)
+      end;
+    astSwitchStatement:
+      begin
+        firstChildNode := node^.firstChild;
+        switchCaseNode := nil;
+        if firstChildNode <> nil then
+          switchCaseNode := firstChildNode^.nextSibling;
+        switchEndJumpCount := 0;
+        switchBodyJumpCount := 0;
+        elseEntryJumpIndex := -1;
+
+        while switchCaseNode <> nil do
+        begin
+          if switchCaseNode^.kind = astSwitchCaseArm then
+          begin
+            secondChildNode := switchCaseNode^.firstChild;
+            thirdChildNode := nil;
+            if secondChildNode <> nil then
+              thirdChildNode := secondChildNode^.nextSibling;
+            generateExpression(firstChildNode, context, errorCount);
+            generateExpression(secondChildNode, context, errorCount);
+            emitBinaryOp(8);
+            conditionalJumpIndex := emitConditionalJump;
+            switchBodyJumpCount := switchBodyJumpCount + 1;
+            switchBodyJumpIndices[switchBodyJumpCount] := reserveJump(jmp);
+            patchJumpToCurrent(conditionalJumpIndex)
+          end;
+          switchCaseNode := switchCaseNode^.nextSibling
+        end;
+
+        elseEntryJumpIndex := reserveJump(jmp);
+
+        switchCaseNode := nil;
+        if firstChildNode <> nil then
+          switchCaseNode := firstChildNode^.nextSibling;
+        switchBodyJumpCount := 1;
+        while switchCaseNode <> nil do
+        begin
+          if switchCaseNode^.kind = astSwitchCaseArm then
+          begin
+            secondChildNode := switchCaseNode^.firstChild;
+            thirdChildNode := nil;
+            if secondChildNode <> nil then
+              thirdChildNode := secondChildNode^.nextSibling;
+            patchJumpToCurrent(switchBodyJumpIndices[switchBodyJumpCount]);
+            switchBodyJumpCount := switchBodyJumpCount + 1;
+            generateStatement(thirdChildNode, context, errorCount);
+            if switchCaseNode^.operatorSymbol = breaksym then
+            begin
+              switchEndJumpCount := switchEndJumpCount + 1;
+              switchEndJumpIndices[switchEndJumpCount] := reserveJump(jmp)
+            end
+          end
+          else
+          begin
+            patchJumpToCurrent(elseEntryJumpIndex);
+            elseEntryJumpIndex := -1;
+            generateStatement(switchCaseNode, context, errorCount)
+          end;
+          switchCaseNode := switchCaseNode^.nextSibling
+        end;
+
+        if elseEntryJumpIndex >= 0 then
+          patchJumpToCurrent(elseEntryJumpIndex);
+
+        while switchEndJumpCount > 0 do
+        begin
+          patchJumpToCurrent(switchEndJumpIndices[switchEndJumpCount]);
+          switchEndJumpCount := switchEndJumpCount - 1
+        end
       end
   end
 end;
@@ -529,7 +605,7 @@ begin
   begin
     if childNode^.kind in [astCompoundStatement, astAssignmentStatement,
                            astCallStatement, astIfStatement, astWhileStatement,
-                           astRepeatStatement, astForStatement] then
+                           astRepeatStatement, astForStatement, astSwitchStatement] then
       generateStatement(childNode, context, errorCount);
     childNode := childNode^.nextSibling
   end;

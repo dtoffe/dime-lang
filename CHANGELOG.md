@@ -9,6 +9,7 @@ and this project is expected to follow [Semantic Versioning](https://semver.org/
 
 ## [Added]
 
+- Add `switch` ident `on` { literal `then` statementSequence ( `break` | `next` ) `;` } [ `else` statementSequence ] `endswitch` statement.
 - Add `for` ident := low `to` high `do` statementSequence `endfor` loop statement.
 - Add `repeat` .. `until` loop statement.
 

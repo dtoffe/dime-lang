@@ -109,7 +109,12 @@ statement = [ ident ( ":=" expression | "(" [ expression ] ")" )
             | "while" expression "do" statementSequence "endwhile"
             | "repeat" statementSequence "until" expression
             | "for" ident ":=" expression "to" expression "by" expression
-              "do" statementSequence "endfor" ] ;
+              "do" statementSequence "endfor"
+            | "switch" ident "on"
+              { literal "then" statementSequence ( "break" | "next" ) ";" }
+              [ "else" statementSequence ]
+              "endswitch"
+              ] ;
 
 statementSequence = statement ";" { statement ";" } ;
 
@@ -118,9 +123,10 @@ statementSequence = statement ";" { statement ";" } ;
 // part of `statement`; it is mandatory only for the main program body and for
 // procedure bodies, and each such body requires at least one inner statement.
 
-// `while`, `repeat`, and `for` bodies all require at least one inner
+// `while`, `repeat`, `for`, and `switch` branch bodies all require at least one inner
 // statement. Inside those bodies, `;` is a statement terminator, so the
-// final statement before `endwhile`, `until`, or `endfor` must also end
+// final statement before `endwhile`, `until`, `endfor`, or branch-closing
+// `break`/`next` in a `switch` arm must also end
 // with `;`.
 
 // Syntax accepts any expression in `if`, `while`, and `repeat ... until`
@@ -130,6 +136,12 @@ statementSequence = statement ";" { statement ";" } ;
 // The `for` loop is currently only the ascending `to` form. Semantic analysis
 // must ensure that the control variable denotes an integer variable, and that
 // the `start`, `end`, and `step` expressions all resolve to integer values.
+
+// `switch` currently accepts only an identifier selector and literal branch
+// labels. Semantic analysis must ensure that each branch label type matches
+// the selector type. `break` exits the switch; `next` falls through into the
+// next branch body. If the last branch uses `next`, control continues into the
+// optional `else` body when present, or out of the switch otherwise.
 
 // The one-argument call form is intentionally transitional. The parser accepts
 // a single argument expression after `(`, but current semantic analysis
