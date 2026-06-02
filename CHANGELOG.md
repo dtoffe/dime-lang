@@ -13,6 +13,10 @@ and this project is expected to follow [Semantic Versioning](https://semver.org/
 - Add `for` ident := low `to` high `do` statementSequence `endfor` loop statement.
 - Add `repeat` .. `until` loop statement.
 
+## [Changed]
+
+- Updated ROADMAP.md
+
 ## [v0.0.8] - 2026-06-01
 
 ### Added

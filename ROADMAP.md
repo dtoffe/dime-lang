@@ -4,32 +4,41 @@ This roadmap is intentionally conservative. The goal is to build the project in 
 
 ## Main Short Term Milestones
 
-### v0.0.13 - Structured Datatypes
+### v0.0.14 - Structured Datatypes
 
 - Add array datatypes
 - Add record datatypes
 - Add set datatypes.
 - Rework type table adding specialized tables for types.
 
-### v0.0.12 - Additional Datatypes
+### v0.0.13 - Additional Datatypes
 
 - Add `string` datatype.
 - Add enumeration datatypes.
 - Add subrange datatypes
 - Use strings in all examples.
 
-### v0.0.11 - Add function and return
+### v0.0.12 - Add assembler codegen
+
+- Define some kind of boundary between the assembler generator and some target arch/OS specific layer.
+- Add an x86/x64 assembler code generator.
+- Add support for write and read syscalls.
+- Setup the tooling for the assembling and linking process.
+- Keep the pcode backend in paralell for some time.
+
+### v0.0.11 - Backend preparation
+
+- Define storage layout assignment for locals, temporaries, and procedure state.
+- Add a model for the activation records of procedure calls.
+- Define an explicit call and return convention in the IR.
+- Introduce a target-neutral intrinsic layer for read, readln, write, and writeln.
+- Stress test TAC with more examples so it becomes stable and solid before moving on to assembler generation.
+
+### v0.0.10 - Add function and return
 
 - Add `function` construct.
 - Add `return` statement.
-- Possibly add some `break` and `continue` to adjust loops behaviour
-
-### v0.0.10 - Add assembler codegen
-
-- Add an x86/x64 assembler code generator.
-- Decide if adding an asm interpreter or going straight to binary.
-- Keep the pcode backend in paralell for some time.
-- Maybe start defining some kind of target specific layer.
+- Possibly add some `break` and `continue` to adjust loops behaviour.
 
 ### v0.0.9 - Add more statements
 
