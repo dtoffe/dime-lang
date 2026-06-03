@@ -297,6 +297,10 @@ and `OPR 0,17`, respectively.
 more advanced multi-branch elvis-style expression: one branch is selected and
 its value stays on the stack as the value of the whole expression.
 
+This is different from `switch`, which is a statement form and controls which
+statement sequence gets executed. `case` does not execute a statement body; it
+chooses one expression result value.
+
 The simple form compares the selector against each `when` value using the same
 equality operation used elsewhere:
 

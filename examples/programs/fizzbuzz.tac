@@ -15,23 +15,23 @@ blocks 10
   block 10 label=L10 first=86 count=28
 instructions 113
    1 label label=L1
-   2 load_const result=t1:integer left=#1:integer
-   3 store_var result=n:integer left=t1:integer
+   2 load_const result=t1:integer left=#0:integer
+   3 store_var result=cnorm:integer left=t1:integer
    4 load_const result=t2:integer left=#0:integer
-   5 store_var result=cnorm:integer left=t2:integer
+   5 store_var result=cfizz:integer left=t2:integer
    6 load_const result=t3:integer left=#0:integer
-   7 store_var result=cfizz:integer left=t3:integer
+   7 store_var result=cbuzz:integer left=t3:integer
    8 load_const result=t4:integer left=#0:integer
-   9 store_var result=cbuzz:integer left=t4:integer
+   9 store_var result=cfb:integer left=t4:integer
   10 load_const result=t5:integer left=#0:integer
-  11 store_var result=cfb:integer left=t5:integer
-  12 load_const result=t6:integer left=#0:integer
-  13 store_var result=sumcnt:integer left=t6:integer
+  11 store_var result=sumcnt:integer left=t5:integer
+  12 load_const result=t6:integer left=#1:integer
+  13 store_var result=n:integer left=t6:integer
   14 label label=L2
-  15 load_var result=t7:integer left=n:integer
-  16 load_const result=t8:integer left=#100:integer
-  17 binary result=t9:boolean left=t7:integer right=t8:integer op=<=
-  18 goto_if_zero left=t9:boolean label=L3
+  15 load_const result=t7:integer left=#100:integer
+  16 load_var result=t9:integer left=n:integer
+  17 binary result=t8:boolean left=t9:integer right=t7:integer op=<=
+  18 goto_if_zero left=t8:boolean label=L3
   19 load_var result=t10:integer left=n:integer
   20 load_const result=t11:integer left=#3:integer
   21 binary result=t12:integer left=t10:integer right=t11:integer op=/
@@ -91,10 +91,10 @@ instructions 113
   75 label label=L9
   76 label label=L7
   77 label label=L5
-  78 load_var result=t46:integer left=n:integer
-  79 load_const result=t47:integer left=#1:integer
-  80 binary result=t48:integer left=t46:integer right=t47:integer op=+
-  81 store_var result=n:integer left=t48:integer
+  78 load_const result=t46:integer left=#1:integer
+  79 load_var result=t48:integer left=n:integer
+  80 binary result=t47:integer left=t48:integer right=t46:integer op=+
+  81 store_var result=n:integer left=t47:integer
   82 goto label=L2
   83 label label=L3
   84 call_proc proc=printsumma

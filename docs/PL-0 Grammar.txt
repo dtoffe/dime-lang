@@ -137,19 +137,22 @@ statementSequence = statement ";" { statement ";" } ;
 // must ensure that the control variable denotes an integer variable, and that
 // the `start`, `end`, and `step` expressions all resolve to integer values.
 
-// `switch` currently accepts only an identifier selector and literal branch
-// labels. Semantic analysis must ensure that each branch label type matches
-// the selector type. `break` exits the switch; `next` falls through into the
-// next branch body. If the last branch uses `next`, control continues into the
-// optional `else` body when present, or out of the switch otherwise.
+// `switch` is a statement form. It currently accepts only an identifier
+// selector and literal branch labels. Semantic analysis must ensure that each
+// branch label type matches the selector type. `break` exits the switch; `next`
+// falls through into the next branch body. If the last branch uses `next`,
+// control continues into the optional `else` body when present, or out of the
+// switch otherwise.
 //
-// `case` is an expression form inspired by SQL dialects. It can be used as a
-// more advanced elvis-style expression with multiple branches. In the simple
-// form, the optional selector expression appears immediately after `case` and
-// each `when` expression must match that selector type. In the searched form,
-// `case` is followed directly by `when`, and each `when` expression must
-// resolve to boolean. All branch result expressions, including `else`, must
-// resolve to the same type.
+// `case` is an expression form inspired by SQL dialects. Unlike `switch`, it
+// does not control a statement sequence; it produces one value and can be used
+// wherever a primary expression is allowed. It can be used as a more advanced
+// elvis-style expression with multiple branches. In the simple form, the
+// optional selector expression appears immediately after `case` and each `when`
+// expression must match that selector type. In the searched form, `case` is
+// followed directly by `when`, and each `when` expression must resolve to
+// boolean. All branch result expressions, including `else`, must resolve to
+// the same type.
 
 // The one-argument call form is intentionally transitional. The parser accepts
 // a single argument expression after `(`, but current semantic analysis

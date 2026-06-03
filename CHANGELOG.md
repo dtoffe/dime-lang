@@ -16,7 +16,9 @@ and this project is expected to follow [Semantic Versioning](https://semver.org/
 
 ## [Changed]
 
-- Updated ROADMAP.md
+- Enhance primes example, minor docs cleanup.
+- Move primes.pl0 into programs folder, enhance with new statements.
+- Update ROADMAP.md.
 
 ## [v0.0.8] - 2026-06-01
 

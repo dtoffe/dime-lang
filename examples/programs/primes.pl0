@@ -1,16 +1,16 @@
 program primes;
 
 const max: integer = 100;
-var arg: integer, ret: integer;
+var arg: integer, ret: boolean;
 
 procedure isprime;
 var i: integer;
 begin
-    ret := 1;
+    ret := true;
     i := 2;
     while i < arg do
         if arg / i * i = arg then
-            ret := 0;
+            ret := false;
             i := arg;
         endif;
         i := i + 1;
@@ -19,11 +19,12 @@ end;
 
 procedure primes;
 begin
-    arg := 2;
-    while arg < max do
+    for arg := 2 to max - 1 by 1 do
         isprime();
-        arg := arg + 1;
-    endwhile;
+        if ret then
+            writeln(arg);
+        endif;
+    endfor;
 end;
 
 begin

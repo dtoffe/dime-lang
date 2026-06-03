@@ -16,13 +16,12 @@ begin
 end;
 
 begin
-    n := 1;
     cnorm := 0;
     cfizz := 0;
     cbuzz := 0;
     cfb := 0;
     sumcnt := 0;
-    while n <= max do
+    for n := 1 to max by 1 do
         fizz := n / three * three = n;
         buzz := n / five * five = n;
         if fizz and buzz then
@@ -39,7 +38,6 @@ begin
             writeln(n);
             cnorm := cnorm + 1;
         endif;
-        n := n + 1;
-    endwhile;
+    endfor;
     printsummary();
 end.
