@@ -35,18 +35,27 @@ function addVariable(const declarationIdentifier: identifier;
                      declaredType: typeValue): symbolIndex;
 function addProcedure(const declarationIdentifier: identifier;
                       declarationLevelValue: integer): symbolIndex;
+function addProcedureParameter(index: symbolIndex;
+                               parameterType: typeValue;
+                               parameterSymbol: symbolIndex): boolean;
 function lookupSymbol(const declarationIdentifier: identifier): symbolIndex;
 function lexicalLevelDistance(currentLevel, targetDeclarationLevel: integer;
                               const sourceContext: sourceContext;
                               var errorCount: integer): integer;
 function getDeclarationKind(index: symbolIndex): declarationKind;
 function getDeclarationType(index: symbolIndex): typeValue;
+function getDeclarationIdentifier(index: symbolIndex): identifier;
 function getDeclarationLevel(index: symbolIndex): integer;
 function getAddress(index: symbolIndex): integer;
 procedure setAddress(index: symbolIndex; newAddress: integer);
 function getConstantValue(index: symbolIndex): integer;
 function getBuiltinProcedure(index: symbolIndex): builtinProcedure;
 function builtinProcedureName(procKind: builtinProcedure): string;
+function getProcedureParameterCount(index: symbolIndex): integer;
+function getProcedureParameterType(index: symbolIndex;
+                                   parameterIndex: integer): typeValue;
+function getProcedureParameterSymbol(index: symbolIndex;
+                                     parameterIndex: integer): symbolIndex;
 
 implementation
 
@@ -68,6 +77,9 @@ var
   entryTypes: array [symbolIndex] of typeValue;
   entryVisible: array [symbolIndex] of boolean;
   entryBuiltinProcedures: array [symbolIndex] of builtinProcedure;
+  entryProcedureParameterCount: array [symbolIndex] of integer;
+  entryProcedureParameterTypes: array [symbolIndex, 1..maxProcedureParameters] of typeValue;
+  entryProcedureParameterSymbols: array [symbolIndex, 1..maxProcedureParameters] of symbolIndex;
 
 function identifierFromString(const text: string): identifier;
 var
@@ -112,6 +124,7 @@ begin
   tableTop := 0;
   entryVisible[0] := false;
   entryBuiltinProcedures[0] := builtinNone;
+  entryProcedureParameterCount[0] := 0;
   predeclareBuiltinProcedure('read');
   predeclareBuiltinProcedure('readln');
   predeclareBuiltinProcedure('write');
@@ -146,6 +159,7 @@ begin
     entryTypes[tableTop] := declaredType;
     entryVisible[tableTop] := true;
     entryBuiltinProcedures[tableTop] := builtinNone;
+    entryProcedureParameterCount[tableTop] := 0;
     declarationType := constant;
     constantValue := declarationValue
   end;
@@ -168,6 +182,7 @@ begin
     entryTypes[tableTop] := declaredType;
     entryVisible[tableTop] := true;
     entryBuiltinProcedures[tableTop] := builtinNone;
+    entryProcedureParameterCount[tableTop] := 0;
     declarationType := variable;
     declarationLevel := declarationLevelValue;
     address := nextAddress
@@ -190,11 +205,32 @@ begin
     entryTypes[tableTop] := typeInteger;
     entryVisible[tableTop] := true;
     entryBuiltinProcedures[tableTop] := builtinNone;
+    entryProcedureParameterCount[tableTop] := 0;
     declarationType := proc;
     declarationLevel := declarationLevelValue;
     address := 0
   end;
   addProcedure := tableTop
+end;
+
+function addProcedureParameter(index: symbolIndex;
+                               parameterType: typeValue;
+                               parameterSymbol: symbolIndex): boolean;
+var
+  nextParameterIndex: integer;
+begin
+  addProcedureParameter := false;
+  if (index = 0) or (getDeclarationKind(index) <> proc) then
+    exit;
+
+  nextParameterIndex := entryProcedureParameterCount[index] + 1;
+  if nextParameterIndex > maxProcedureParameters then
+    exit;
+
+  entryProcedureParameterCount[index] := nextParameterIndex;
+  entryProcedureParameterTypes[index, nextParameterIndex] := parameterType;
+  entryProcedureParameterSymbols[index, nextParameterIndex] := parameterSymbol;
+  addProcedureParameter := true
 end;
 
 function lookupSymbol(const declarationIdentifier: identifier): symbolIndex;
@@ -230,6 +266,11 @@ end;
 function getDeclarationType(index: symbolIndex): typeValue;
 begin
   getDeclarationType := entryTypes[index]
+end;
+
+function getDeclarationIdentifier(index: symbolIndex): identifier;
+begin
+  getDeclarationIdentifier := tableEntries[index].identifier
 end;
 
 function getDeclarationLevel(index: symbolIndex): integer;
@@ -271,6 +312,31 @@ begin
   else
     builtinProcedureName := ''
   end
+end;
+
+function getProcedureParameterCount(index: symbolIndex): integer;
+begin
+  getProcedureParameterCount := entryProcedureParameterCount[index]
+end;
+
+function getProcedureParameterType(index: symbolIndex;
+                                   parameterIndex: integer): typeValue;
+begin
+  if (parameterIndex < 1) or
+     (parameterIndex > entryProcedureParameterCount[index]) then
+    getProcedureParameterType := typeInteger
+  else
+    getProcedureParameterType := entryProcedureParameterTypes[index, parameterIndex]
+end;
+
+function getProcedureParameterSymbol(index: symbolIndex;
+                                     parameterIndex: integer): symbolIndex;
+begin
+  if (parameterIndex < 1) or
+     (parameterIndex > entryProcedureParameterCount[index]) then
+    getProcedureParameterSymbol := 0
+  else
+    getProcedureParameterSymbol := entryProcedureParameterSymbols[index, parameterIndex]
 end;
 
 end.

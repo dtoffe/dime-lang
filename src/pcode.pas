@@ -28,12 +28,14 @@ uses
 
 const
   codeMaxIndex = 200;        {maximum code array index}
+  maxEncodedCallMetadata = ((maxProcedureParameters + 1) *
+                            (maxLexicalNestingLevel + 1)) - 1;
 
 type
   opcode = (lit, opr, lod, sto, cal, int, jmp, jpc); {functions}
   pCodeInstruction = packed record
     operation: opcode;                              {virtual machine opcode}
-    lexicalLevel: 0..maxLexicalNestingLevel;        {static-link distance}
+    lexicalLevel: 0..maxEncodedCallMetadata;        {static-link distance or encoded call metadata}
     argument: 0..maxNumericValue;                   {opcode-specific operand}
   end;
 
@@ -48,6 +50,7 @@ var
 type
   pCodeContext = record
     currentLevel: integer;
+    parameterCount: integer;
   end;
 
 function reserveJump(jumpOpcode: opcode): integer; forward;
@@ -127,9 +130,16 @@ begin
   emitInstruction(sto, lexicalLevel, address)
 end;
 
-procedure emitCall(lexicalLevel, address: integer);
+procedure emitArgumentPush;
 begin
-  emitInstruction(cal, lexicalLevel, address)
+  emitInstruction(opr, 0, 28)
+end;
+
+procedure emitCall(lexicalLevel, parameterCount, address: integer);
+begin
+  emitInstruction(cal,
+                  parameterCount * (maxLexicalNestingLevel + 1) + lexicalLevel,
+                  address)
 end;
 
 procedure emitBuiltinProcedureNotImplemented(procKind: builtinProcedure;
@@ -236,11 +246,11 @@ begin
   currentCodeAddress := currentCodeIndex
 end;
 
-function blockLocalAllocation(blockNode: astNode): integer;
+function blockLocalAllocation(blockNode: astNode; parameterCount: integer): integer;
 var
   childNode: astNode;
 begin
-  blockLocalAllocation := 3; {static link, dynamic link, return address}
+  blockLocalAllocation := 3 + parameterCount; {activation header plus copied parameters}
   if blockNode = nil then
     exit;
 
@@ -391,6 +401,7 @@ var
   switchEndJumpCount: integer;
   switchBodyJumpCount: integer;
   elseEntryJumpIndex: integer;
+  argumentCount: integer;
 begin
   if node = nil then
     exit;
@@ -435,10 +446,21 @@ begin
           begin
             procKind := getBuiltinProcedure(resolvedSymbol);
             if procKind = builtinNone then
+            begin
+              argumentCount := 0;
+              while secondChildNode <> nil do
+              begin
+                generateExpression(secondChildNode, context, errorCount);
+                emitArgumentPush;
+                argumentCount := argumentCount + 1;
+                secondChildNode := secondChildNode^.nextSibling
+              end;
               emitCall(lexicalLevelDistance(context.currentLevel,
                                             getDeclarationLevel(resolvedSymbol),
                                             firstChildNode^.source, errorCount),
+                       argumentCount,
                        getAddress(resolvedSymbol))
+            end
             else if procKind in [builtinWrite, builtinWriteLn] then
             begin
               generateExpression(secondChildNode, context, errorCount);
@@ -632,8 +654,9 @@ procedure generateProcedureDeclaration(node: astNode; var context: pCodeContext;
 var
   nestedContext: pCodeContext;
   procedureSymbol: symbolIndex;
+  blockNode: astNode;
 begin
-  if (node = nil) or (node^.firstChild = nil) then
+  if node = nil then
     exit;
 
   if not hasResolvedSymbol(node) then
@@ -642,7 +665,12 @@ begin
   procedureSymbol := resolvedSymbolOf(node);
   setAddress(procedureSymbol, currentCodeAddress);
   nestedContext.currentLevel := context.currentLevel + 1;
-  generateBlock(node^.firstChild, nestedContext, errorCount)
+  nestedContext.parameterCount := getProcedureParameterCount(procedureSymbol);
+  blockNode := node^.firstChild;
+  while (blockNode <> nil) and
+        (blockNode^.kind = astVarDeclaration) do
+    blockNode := blockNode^.nextSibling;
+  generateBlock(blockNode, nestedContext, errorCount)
 end;
 
 procedure generateBlockBody(blockNode: astNode; var context: pCodeContext; var errorCount: integer);
@@ -652,7 +680,7 @@ begin
   if blockNode = nil then
     exit;
 
-  emitBlockAllocation(blockLocalAllocation(blockNode));
+  emitBlockAllocation(blockLocalAllocation(blockNode, context.parameterCount));
 
   childNode := blockNode^.firstChild;
   while childNode <> nil do
@@ -702,6 +730,7 @@ begin
     exit;
 
   context.currentLevel := 0;
+  context.parameterCount := 0;
   if rootNode^.kind = astProgram then
     generateBlock(rootNode^.firstChild, context, errorCount)
   else

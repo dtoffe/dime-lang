@@ -223,6 +223,54 @@ function compileBlock (currentLevel: integer; followTokens: symbolSet;
             reportCompilerError(ERR_DECLARATION_IDENTIFIER_EXPECTED, lexerCurrentSourceContext, errorCount)
     end {parseVariableDeclaration} ;
 
+    procedure parseProcedureParameterList(procedureNode: astNode; followTokens: symbolSet);
+    var
+      parameterNode: astNode;
+      parameterCount: integer;
+    begin
+      parameterCount := 0;
+      if lexerCurrentToken <> lparen then
+        exit;
+
+      readNextToken(errorCount);
+      if lexerCurrentToken = rparen then
+      begin
+        readNextToken(errorCount);
+        exit
+      end;
+
+      repeat
+        parameterNode := parseVariableDeclaration;
+        if parameterNode <> nil then
+        begin
+          parameterCount := parameterCount + 1;
+          if parameterCount <= maxProcedureParameters then
+            appendChild(procedureNode, parameterNode)
+          else
+          begin
+            reportCompilerError(ERR_PROCEDURE_PARAMETER_LIMIT_EXCEEDED,
+                                parameterNode^.source, errorCount);
+            freeAst(parameterNode)
+          end
+        end;
+
+        if lexerCurrentToken = comma then
+          readNextToken(errorCount)
+        else
+          break
+      until false;
+
+      if lexerCurrentToken = rparen then
+        readNextToken(errorCount)
+      else
+      begin
+        reportCompilerError(ERR_RIGHT_PARENTHESIS_MISSING, lexerCurrentSourceContext, errorCount);
+        recoverIfUnexpectedToken([rparen], followTokens, ERR_RIGHT_PARENTHESIS_MISSING, errorCount);
+        if lexerCurrentToken = rparen then
+          readNextToken(errorCount)
+      end
+    end;
+
     function compileStatement (followTokens: symbolSet): astNode; forward;
 
     {Parses one statement into AST form.}
@@ -234,32 +282,37 @@ function compileBlock (currentLevel: integer; followTokens: symbolSet;
 
         function compileExpression(followTokens: symbolSet): astNode; forward;
 
-        procedure parseOptionalCallArgument(targetCallNode: astNode; argumentFollowTokens: symbolSet);
+        procedure parseCallArguments(targetCallNode: astNode; argumentFollowTokens: symbolSet);
         var
           parsedArgument: astNode;
+          argumentCount: integer;
         begin
-          { Temporary restriction: this syntax step allows either ident() or
-            ident(expr). Full argument-list parsing will come with the later
-            procedure/built-in call work. }
+          argumentCount := 0;
           if lexerCurrentToken = rparen then
           begin
             readNextToken(errorCount);
             exit
           end;
 
-          parsedArgument := compileExpression([comma, rparen] + argumentFollowTokens);
-          appendCallArgumentNode(targetCallNode, parsedArgument);
+          repeat
+            parsedArgument := compileExpression([comma, rparen] + argumentFollowTokens);
+            argumentCount := argumentCount + 1;
+            if argumentCount <= maxProcedureParameters then
+              appendCallArgumentNode(targetCallNode, parsedArgument)
+            else
+            begin
+              reportCompilerError(ERR_PROCEDURE_PARAMETER_LIMIT_EXCEEDED,
+                                  lexerCurrentSourceContext, errorCount);
+              freeAst(parsedArgument)
+            end;
 
-          if lexerCurrentToken = comma then
-          begin
-            reportCompilerError(ERR_ONLY_ONE_CALL_ARGUMENT_SUPPORTED, lexerCurrentSourceContext, errorCount);
-            while (lexerCurrentToken <> nul) and
-                  not (lexerCurrentToken in [rparen] + argumentFollowTokens) do
-              readNextToken(errorCount);
-            if lexerCurrentToken = rparen then
+            if lexerCurrentToken = comma then
               readNextToken(errorCount)
-          end
-          else if lexerCurrentToken = rparen then
+            else
+              break
+          until false;
+
+          if lexerCurrentToken = rparen then
             readNextToken(errorCount)
           else
           begin
@@ -564,7 +617,7 @@ function compileBlock (currentLevel: integer; followTokens: symbolSet;
                 appendCalleeNode(callNode,
                                  newIdentifierReferenceNode(statementIdentifier, statementSource));
                 readNextToken(errorCount);
-                parseOptionalCallArgument(callNode, followTokens)
+                parseCallArguments(callNode, followTokens)
             end
             else
             begin
@@ -922,7 +975,8 @@ begin {compileBlock}
             if lexerCurrentToken = ident then
             begin
                 declarationNode := newProcedureDeclarationNode(lexerCurrentIdentifier, lexerCurrentSourceContext);
-                readNextToken(errorCount)
+                readNextToken(errorCount);
+                parseProcedureParameterList(declarationNode, [semicolon] + followTokens)
             end
             else
                 reportCompilerError(ERR_DECLARATION_IDENTIFIER_EXPECTED, lexerCurrentSourceContext, errorCount);

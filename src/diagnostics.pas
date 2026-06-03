@@ -103,6 +103,9 @@ const
     ERR_CASE_RESULT_TYPE_MISMATCH = 85;
     ERR_CASE_SELECTOR_TYPE_MISMATCH = 86;
     ERR_CASE_WHEN_CONDITION_MUST_BE_BOOLEAN = 87;
+    ERR_PROCEDURE_PARAMETER_LIMIT_EXCEEDED = 88;
+    ERR_PROCEDURE_ARGUMENT_COUNT_MISMATCH = 89;
+    ERR_PROCEDURE_ARGUMENT_TYPE_MISMATCH = 90;
 
     ERROR_PCODEINT_INVALID_L_VALUE = 'Error converting l-value';
     ERROR_PCODEINT_INVALID_A_VALUE = 'Error converting a-value';
@@ -215,7 +218,7 @@ begin
         ERR_PERIOD_EXPECTED: compilerErrorMessage := 'Period expected.';
         ERR_UNDECLARED_IDENTIFIER: compilerErrorMessage := 'Undeclared identifier.';
         ERR_ASSIGNMENT_TO_CONSTANT_OR_PROCEDURE: compilerErrorMessage := 'Assignment to constant or procedure is not allowed.';
-        ERR_IDENTIFIER_STATEMENT_MUST_BE_ASSIGNMENT_OR_CALL: compilerErrorMessage := 'Statement starting with an identifier must be an assignment or a procedure call written as ident().';
+        ERR_IDENTIFIER_STATEMENT_MUST_BE_ASSIGNMENT_OR_CALL: compilerErrorMessage := 'Statement starting with an identifier must be an assignment or a procedure call written as ident(...).';
         ERR_CALL_OF_CONSTANT_OR_VARIABLE: compilerErrorMessage := 'Call of a constant or a variable is meaningless.';
         ERR_THEN_EXPECTED: compilerErrorMessage := '"then" expected. Possible reserved-word case error.';
         ERR_ENDIF_EXPECTED: compilerErrorMessage := '"endif" expected. Possible reserved-word case error.';
@@ -284,6 +287,9 @@ begin
         ERR_CASE_RESULT_TYPE_MISMATCH: compilerErrorMessage := 'All case expression result branches must resolve to the same type.';
         ERR_CASE_SELECTOR_TYPE_MISMATCH: compilerErrorMessage := 'Simple case branch values must match the case selector type.';
         ERR_CASE_WHEN_CONDITION_MUST_BE_BOOLEAN: compilerErrorMessage := 'Searched case branch conditions must resolve to boolean.';
+        ERR_PROCEDURE_PARAMETER_LIMIT_EXCEEDED: compilerErrorMessage := 'Procedure declarations and calls support at most 8 parameters.';
+        ERR_PROCEDURE_ARGUMENT_COUNT_MISMATCH: compilerErrorMessage := 'Procedure call argument count must match the declared parameter count.';
+        ERR_PROCEDURE_ARGUMENT_TYPE_MISMATCH: compilerErrorMessage := 'Procedure call argument type must match the declared parameter type.';
     else
         compilerErrorMessage := 'Unknown compiler error.'
     end

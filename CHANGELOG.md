@@ -5,16 +5,22 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project is expected to follow [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+### [Added]
+
+- Add support for procedure parameters, simple types and by value only for now.
+
 ## [v0.0.9] - 2026-06-02
 
-## [Added]
+### [Added]
 
 - Add SQL-style `case` expressions in both simple and searched forms, usable anywhere an expression primary is allowed.
 - Add `switch` ident `on` { literal `then` statementSequence ( `break` | `next` ) `;` } [ `else` statementSequence ] `endswitch` statement.
 - Add `for` ident := low `to` high `do` statementSequence `endfor` loop statement.
 - Add `repeat` .. `until` loop statement.
 
-## [Changed]
+### [Changed]
 
 - Enhance primes example, minor docs cleanup.
 - Move primes.pl0 into programs folder, enhance with new statements.

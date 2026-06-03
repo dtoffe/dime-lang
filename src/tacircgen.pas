@@ -24,6 +24,14 @@ implementation
 uses
   semantics, symboltable, tacir, tokens, typetable;
 
+function procedureBlockNode(node: astNode): astNode;
+begin
+  procedureBlockNode := node^.firstChild;
+  while (procedureBlockNode <> nil) and
+        (procedureBlockNode^.kind = astVarDeclaration) do
+    procedureBlockNode := procedureBlockNode^.nextSibling
+end;
+
 function nodeValueType(node: astNode): typeValue;
 begin
   if (node <> nil) and hasNodeType(node) then
@@ -267,9 +275,12 @@ procedure lowerCallStatement(node: astNode; var errorCount: integer);
 var
   calleeNode, argumentNode: astNode;
   argumentOperand: tacOperand;
+  parameterOperand: tacOperand;
   resolvedSymbol: symbolIndex;
   procKind: builtinProcedure;
-  instruction: tacInstruction;
+  instruction, storeInstruction: tacInstruction;
+  argumentIndex: integer;
+  parameterSymbol: symbolIndex;
 begin
   calleeNode := node^.firstChild;
   argumentNode := nil;
@@ -304,10 +315,25 @@ begin
     instruction := newTacInstruction(irCallProc);
     instruction.procedureSymbol := resolvedSymbol;
     instruction.procedureName := calleeNode^.identifierText;
-    if argumentNode <> nil then
+    argumentIndex := 1;
+    while argumentNode <> nil do
     begin
       argumentOperand := lowerExpression(argumentNode, errorCount);
-      setTacCallArgument(instruction, 1, argumentOperand)
+      parameterSymbol := getProcedureParameterSymbol(resolvedSymbol, argumentIndex);
+      if parameterSymbol <> 0 then
+      begin
+        parameterOperand := makeTacSymbolOperand(
+          parameterSymbol,
+          getDeclarationIdentifier(parameterSymbol),
+          getProcedureParameterType(resolvedSymbol, argumentIndex));
+        storeInstruction := newTacInstruction(irStoreVar);
+        storeInstruction.resultOperand := parameterOperand;
+        storeInstruction.leftOperand := argumentOperand;
+        appendTacInstruction(storeInstruction)
+      end;
+      setTacCallArgument(instruction, argumentIndex, argumentOperand);
+      argumentIndex := argumentIndex + 1;
+      argumentNode := argumentNode^.nextSibling
     end;
     appendTacInstruction(instruction)
   end
@@ -564,7 +590,7 @@ procedure lowerProcedureDeclaration(node: astNode; var errorCount: integer);
 var
   procedureSymbol: symbolIndex;
 begin
-  if (node = nil) or (node^.firstChild = nil) then
+  if node = nil then
     exit;
 
   procedureSymbol := 0;
@@ -572,7 +598,7 @@ begin
     procedureSymbol := resolvedSymbolOf(node);
   appendTacProcedure(node^.identifierText, procedureSymbol);
   appendLabel(newTacLabel);
-  lowerBlock(node^.firstChild, errorCount)
+  lowerBlock(procedureBlockNode(node), errorCount)
 end;
 
 procedure lowerBlockBody(blockNode: astNode; var errorCount: integer);

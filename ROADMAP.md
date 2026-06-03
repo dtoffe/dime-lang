@@ -40,12 +40,4 @@ This roadmap is intentionally conservative. The goal is to build the project in 
 - Add `return` statement.
 - Possibly add some `break` and `continue` to adjust loops behaviour.
 
-### v0.0.9 - Add more statements
-
-- Add `case` expression.
-- Add `switch` statement.
-- Add `repeat` statement.
-- Add `for` statement.
-- Rework examples to add the new statements.
-
 For older releases, see [CHANGELOG.md](./CHANGELOG.md).

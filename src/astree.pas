@@ -20,9 +20,9 @@ type
     Expected child layouts are:
       astProgram               program name, block child
       astBlock                 declarations/statements in source order
-      astProcedureDeclaration  nested block as child
+      astProcedureDeclaration  zero or more parameter declarations, then nested block
       astAssignmentStatement   target identifier, value expression
-      astCallStatement         callee identifier reference, followed by an optional argument expression
+      astCallStatement         callee identifier reference, followed by zero or more argument expressions
       astIfStatement           condition, then-body statement sequence, optional else-body (including nested elsif as if-nodes)
       astWhileStatement        condition, body statement sequence
       astRepeatStatement       body statement sequence, condition

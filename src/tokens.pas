@@ -17,6 +17,7 @@ const
     maxIdentLength = 10;
     maxNumericValue = 2047;
     maxLexicalNestingLevel = 1;
+    maxProcedureParameters = 8;
 
 type
     { Lexical symbols produced by lexer.pas.  Reserved words are represented by

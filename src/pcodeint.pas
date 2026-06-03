@@ -26,12 +26,14 @@ const
     maxNestingLevel = 1;    {the language has only global and procedure-local lexical scopes}
     maxAddress = 2047;      {maximum address}
     codeMaxIndex = 200;     {maximum code array index}
+    maxProcedureParameters = 8;
+    maxEncodedCallMetadata = ((maxProcedureParameters + 1) * (maxNestingLevel + 1)) - 1;
 
 type
     opcode = (lit, opr, lod, sto, cal, int, jmp, jpc); {functions}
     pCodeInstruction = packed record
                     operation: opcode;                  {virtual machine opcode}
-                    lexicalLevel: 0..maxNestingLevel;   {static-link distance}
+                    lexicalLevel: 0..maxEncodedCallMetadata; {static-link distance or encoded call metadata}
                     argument: 0..maxAddress;            {opcode-specific operand}
                   end ;
 {   LIT 0,a  :  load constant a
@@ -155,9 +157,12 @@ end;
 procedure executePCode;
 
     const stackMaxSize = 500;
+          argumentStackMaxSize = stackMaxSize;
     var programCounter, basePointer, stackTop: integer; {PC, base pointer, and top-of-stack index}
         instructionRegister: pCodeInstruction; {instruction currently being executed}
         runtimeStack: array [1..stackMaxSize] of integer; {shared operand stack and activation records}
+        argumentStack: array [1..argumentStackMaxSize] of integer;
+        argumentStackTop, callArgumentCount, argumentIndex: integer;
 
     {Finds the base pointer for an enclosing lexical scope.
      The VM still supports walking outward by arbitrary distances as legacy
@@ -309,6 +314,7 @@ procedure executePCode;
 begin
     emitDiagnostic(status, STATUS_PCODEINT_START);
     stackTop := 0; basePointer := 1; programCounter := 0;
+    argumentStackTop := 0;
     runtimeStack[1] := 0; runtimeStack[2] := 0; runtimeStack[3] := 0;
     {Frame layout: static link, dynamic link, return address.}
     repeat
@@ -415,6 +421,16 @@ begin
                         stackTop := stackTop + 1;
                         runtimeStack[stackTop] := readBooleanLineValueOrHalt
                     end ;
+                28: begin
+                        if argumentStackTop >= argumentStackMaxSize then
+                        begin
+                            reportRuntimeError('Procedure call argument stack overflow.');
+                            halt(1)
+                        end;
+                        argumentStackTop := argumentStackTop + 1;
+                        argumentStack[argumentStackTop] := runtimeStack[stackTop];
+                        stackTop := stackTop - 1
+                    end ;
                 end ;
             lod: begin stackTop := stackTop+1;
                     runtimeStack[stackTop] := runtimeStack[findBase(lexicalLevel)+argument]
@@ -429,10 +445,20 @@ begin
                     stackTop := stackTop-1
                  end ;
             cal: begin {build a new activation record and jump to the callee}
-                    runtimeStack[stackTop+1] := findBase(lexicalLevel);
+                    callArgumentCount := lexicalLevel div (maxNestingLevel + 1);
+                    runtimeStack[stackTop+1] := findBase(lexicalLevel mod (maxNestingLevel + 1));
                     runtimeStack[stackTop+2] := basePointer;
                     runtimeStack[stackTop+3] := programCounter;
+                    if callArgumentCount > argumentStackTop then
+                    begin
+                        reportRuntimeError('Procedure call argument stack underflow.');
+                        halt(1)
+                    end;
                     basePointer := stackTop+1;
+                    for argumentIndex := 1 to callArgumentCount do
+                        runtimeStack[basePointer + 2 + argumentIndex] :=
+                            argumentStack[argumentStackTop - callArgumentCount + argumentIndex];
+                    argumentStackTop := argumentStackTop - callArgumentCount;
                     programCounter := argument
                  end ;
             int: stackTop := stackTop+argument;

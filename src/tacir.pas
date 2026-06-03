@@ -21,7 +21,7 @@ const
   maxTacInstructions = 500;
   maxTacBasicBlocks = 100;
   maxTacProcedures = 64;
-  maxTacOperandsPerCall = 1; {matches the current staged call syntax}
+  maxTacOperandsPerCall = maxProcedureParameters;
 
 type
   tacInstructionIndex = 0..maxTacInstructions;

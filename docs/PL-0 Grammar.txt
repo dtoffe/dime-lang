@@ -81,7 +81,9 @@ program = "program" ident ";" globalBlock "." ;
 
 globalBlock = [ "const" constantDeclaration { "," constantDeclaration } ";" ]
               [ "var" variableDeclaration { "," variableDeclaration } ";" ]
-              { "procedure" ident ";" procedureBlock ";" }
+              { "procedure" ident [ "(" [ parameterDeclaration
+                                          { "," parameterDeclaration } ] ")" ]
+                ";" procedureBlock ";" }
               "begin" statementSequence "end" ;
 
 procedureBlock = [ "const" constantDeclaration { "," constantDeclaration } ";" ]
@@ -92,17 +94,21 @@ constantDeclaration = ident ":" typeName "=" literal ;
 
 variableDeclaration = ident ":" typeName ;
 
+parameterDeclaration = ident ":" typeName ;
+
 // semantic disambiguation:
 // - if ident denotes a variable (lvalue), this is assignment
 // - if ident denotes a procedure, this is invocation (and parentheses are mandatory)
 //
-// current staged call support:
-// - syntax accepts ident() and ident(expression)
-// - semantically, built-in write uses write(expression)
-// - semantically, built-in read uses read(variableIdentifier)
-// - user-defined procedures still accept only ident() at this stage
+// current call support:
+// - user-defined procedures accept zero or more value arguments
+// - built-in write uses exactly one expression argument
+// - built-in read uses exactly one variable identifier argument
+// - procedure parameters and arguments are limited to simple scalar types
+//   integer, boolean, and char
+// - a procedure may declare at most 8 parameters
 
-statement = [ ident ( ":=" expression | "(" [ expression ] ")" )
+statement = [ ident ( ":=" expression | "(" [ expression { "," expression } ] ")" )
             | "if" expression "then" statementSequence
               { "elsif" expression "then" statementSequence }
               [ "else" statementSequence ] "endif"
@@ -154,9 +160,11 @@ statementSequence = statement ";" { statement ";" } ;
 // boolean. All branch result expressions, including `else`, must resolve to
 // the same type.
 
-// The one-argument call form is intentionally transitional. The parser accepts
-// a single argument expression after `(`, but current semantic analysis
-// reserves that form for built-in procedures:
+// User-defined procedure calls are value calls only. Semantic analysis must
+// ensure that the number of arguments matches the declared parameter count and
+// that each argument type matches its corresponding parameter type.
+//
+// Built-in procedures remain restricted to one argument:
 //
 // - `write(expr)` where expr resolves to integer, boolean, or char
 // - `read(ident)` where ident denotes a writable variable of type integer,

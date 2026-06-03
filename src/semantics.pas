@@ -122,6 +122,19 @@ begin
                         nodeSourceContext(actualNode), errorCount)
 end;
 
+procedure requireMatchingProcedureArgumentType(argumentNode: astNode;
+                                               expectedType: typeValue;
+                                               var errorCount: integer);
+begin
+  if argumentNode = nil then
+    exit;
+
+  if hasNodeType(argumentNode) and
+     (getNodeType(argumentNode) <> expectedType) then
+    reportCompilerError(ERR_PROCEDURE_ARGUMENT_TYPE_MISMATCH,
+                        nodeSourceContext(argumentNode), errorCount)
+end;
+
 procedure requireIntegerExpression(node: astNode; errorCode: integer; var errorCount: integer);
 begin
   if node = nil then
@@ -232,6 +245,24 @@ procedure analyzeDeclaration(node: astNode; var sema: semanticContext; var error
 procedure analyzeExpression(node: astNode; var sema: semanticContext; var errorCount: integer); forward;
 procedure analyzeStatement(node: astNode; var sema: semanticContext; var errorCount: integer); forward;
 procedure analyzeBlock(node: astNode; var sema: semanticContext; var errorCount: integer); forward;
+
+function callArgumentCount(callNode: astNode): integer;
+var
+  argumentNode: astNode;
+begin
+  callArgumentCount := 0;
+  if callNode = nil then
+    exit;
+
+  argumentNode := callNode^.firstChild;
+  if argumentNode <> nil then
+    argumentNode := argumentNode^.nextSibling;
+  while argumentNode <> nil do
+  begin
+    callArgumentCount := callArgumentCount + 1;
+    argumentNode := argumentNode^.nextSibling
+  end
+end;
 
 procedure analyzeIdentifierReference(node: astNode; identifierUseIsExpression: boolean;
                                      var errorCount: integer);
@@ -421,6 +452,8 @@ procedure analyzeDeclaration(node: astNode; var sema: semanticContext; var error
 var
   nestedContext: semanticContext;
   declaredSymbol: symbolIndex;
+  parameterNode, blockNode: astNode;
+  procedureScopeMarker: symbolIndex;
 begin
   if node = nil then
     exit;
@@ -448,6 +481,8 @@ begin
       end;
     astProcedureDeclaration:
       begin
+        nestedContext.currentLevel := sema.currentLevel + 1;
+        nestedContext.nextAddress := 3;
         if sema.currentLevel <> 0 then
         begin
           reportCompilerError(ERR_NESTED_PROCEDURES_NOT_SUPPORTED, nodeSourceContext(node), errorCount);
@@ -461,12 +496,36 @@ begin
           rememberResolvedSymbol(node, declaredSymbol)
         end;
 
-        if node^.firstChild <> nil then
+        procedureScopeMarker := markScope;
+        parameterNode := node^.firstChild;
+        while (parameterNode <> nil) and
+              (parameterNode^.kind = astVarDeclaration) do
         begin
-          nestedContext.currentLevel := sema.currentLevel + 1;
-          nestedContext.nextAddress := 3;
-          analyzeBlock(node^.firstChild, nestedContext, errorCount)
-        end
+          declaredSymbol := addVariable(parameterNode^.identifierText,
+                                        nestedContext.currentLevel,
+                                        nestedContext.nextAddress,
+                                        parameterNode^.declaredType);
+          if declaredSymbol = 0 then
+            reportCompilerError(ERR_SYMBOL_TABLE_OVERFLOW,
+                                nodeSourceContext(parameterNode), errorCount)
+          else
+          begin
+            rememberResolvedSymbol(parameterNode, declaredSymbol);
+            setNodeType(parameterNode, parameterNode^.declaredType);
+            if hasResolvedSymbol(node) and
+               not addProcedureParameter(resolvedSymbolOf(node),
+                                         parameterNode^.declaredType,
+                                         declaredSymbol) then
+              reportCompilerError(ERR_PROCEDURE_PARAMETER_LIMIT_EXCEEDED,
+                                  nodeSourceContext(parameterNode), errorCount)
+          end;
+          parameterNode := parameterNode^.nextSibling
+        end;
+
+        blockNode := parameterNode;
+        if blockNode <> nil then
+          analyzeBlock(blockNode, nestedContext, errorCount);
+        restoreScope(procedureScopeMarker)
       end
   end
 end;
@@ -478,6 +537,7 @@ var
   selectorNode, caseNode, labelNode: astNode;
   resolvedSymbol: symbolIndex;
   builtinProc: builtinProcedure;
+  actualArgumentCount, expectedArgumentCount, argumentIndex: integer;
 begin
   if node = nil then
     exit;
@@ -541,44 +601,63 @@ begin
                                   nodeSourceContext(targetNode), errorCount)
           end
         end;
+        actualArgumentCount := callArgumentCount(node);
         if (resolvedSymbol <> 0) and (builtinProc in [builtinWrite, builtinWriteLn]) then
         begin
-          if argumentNode = nil then
+          if actualArgumentCount <> 1 then
             reportCompilerError(ERR_WRITE_REQUIRES_ARGUMENT,
-                                nodeSourceContext(targetNode), errorCount)
-          else
+                                nodeSourceContext(targetNode), errorCount);
+          while argumentNode <> nil do
           begin
             analyzeExpression(argumentNode, sema, errorCount);
-            requireWriteArgumentType(argumentNode, errorCount)
+            if argumentNode = targetNode^.nextSibling then
+              requireWriteArgumentType(argumentNode, errorCount);
+            argumentNode := argumentNode^.nextSibling
           end
         end
         else if (resolvedSymbol <> 0) and (builtinProc in [builtinRead, builtinReadLn]) then
         begin
-          if argumentNode = nil then
+          if actualArgumentCount <> 1 then
             reportCompilerError(ERR_READ_REQUIRES_ARGUMENT,
-                                nodeSourceContext(targetNode), errorCount)
-          else
+                                nodeSourceContext(targetNode), errorCount);
+          while argumentNode <> nil do
           begin
             analyzeExpression(argumentNode, sema, errorCount);
-            if argumentNode^.kind <> astIdentifierReference then
-              reportCompilerError(ERR_READ_ARGUMENT_MUST_BE_VARIABLE,
-                                  nodeSourceContext(argumentNode), errorCount)
-            else if (not hasResolvedSymbol(argumentNode)) or
-                    (getDeclarationKind(resolvedSymbolOf(argumentNode)) <> variable) then
-              reportCompilerError(ERR_READ_ARGUMENT_MUST_BE_VARIABLE,
-                                  nodeSourceContext(argumentNode), errorCount)
-            else
-              requireReadArgumentType(argumentNode, errorCount)
+            if argumentNode = targetNode^.nextSibling then
+            begin
+              if argumentNode^.kind <> astIdentifierReference then
+                reportCompilerError(ERR_READ_ARGUMENT_MUST_BE_VARIABLE,
+                                    nodeSourceContext(argumentNode), errorCount)
+              else if (not hasResolvedSymbol(argumentNode)) or
+                      (getDeclarationKind(resolvedSymbolOf(argumentNode)) <> variable) then
+                reportCompilerError(ERR_READ_ARGUMENT_MUST_BE_VARIABLE,
+                                    nodeSourceContext(argumentNode), errorCount)
+              else
+                requireReadArgumentType(argumentNode, errorCount)
+            end;
+            argumentNode := argumentNode^.nextSibling
           end
         end
         else
         begin
-          if argumentNode <> nil then
-            reportCompilerError(ERR_PROCEDURE_ARGUMENTS_NOT_YET_SUPPORTED,
-                                nodeSourceContext(argumentNode), errorCount);
+          expectedArgumentCount := 0;
+          if resolvedSymbol <> 0 then
+            expectedArgumentCount := getProcedureParameterCount(resolvedSymbol);
+          if (resolvedSymbol <> 0) and
+             (actualArgumentCount <> expectedArgumentCount) then
+            reportCompilerError(ERR_PROCEDURE_ARGUMENT_COUNT_MISMATCH,
+                                nodeSourceContext(targetNode), errorCount);
+          argumentIndex := 1;
           while argumentNode <> nil do
           begin
             analyzeExpression(argumentNode, sema, errorCount);
+            if (resolvedSymbol <> 0) and
+               (argumentIndex <= expectedArgumentCount) then
+              requireMatchingProcedureArgumentType(argumentNode,
+                                                  getProcedureParameterType(resolvedSymbol,
+                                                                            argumentIndex),
+                                                  errorCount);
+            argumentIndex := argumentIndex + 1;
             argumentNode := argumentNode^.nextSibling
           end
         end
