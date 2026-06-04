@@ -35,8 +35,8 @@ uses
   diagnostics, tokens, lexer, typetable;
 
 const
-  declarationStartTokens: symbolSet = [constsym, varsym, procsym];
-  statementStartTokens: symbolSet = [forsym, ifsym, repeatsym, switchsym, whilesym];
+  declarationStartTokens: symbolSet = [constsym, varsym, procsym, funcsym];
+  statementStartTokens: symbolSet = [forsym, ifsym, repeatsym, returnsym, switchsym, whilesym];
   switchLabelStartTokens: symbolSet = [number, charlit, truesym, falsesym];
   factorStartTokens: symbolSet = [casesym, ident, number, charlit, truesym, falsesym, lparen, plus, minus, notsym];
   binaryOperatorTokens: symbolSet = [eql, neq, lss, leq, gtr, geq,
@@ -95,6 +95,8 @@ function compileBlock (currentLevel: integer; followTokens: symbolSet;
     var declarationNode: astNode;         {AST node produced for one declaration}
         blockNode: astNode;      {AST node for the current block}
         activeDeclarationStartTokens: symbolSet;
+        routineIdentifier: identifier;
+        routineSource: sourceContext;
 
     {Parses the shared mandatory declaration type annotation.}
     function parseDeclarationType(followTokens: symbolSet): typeValue;
@@ -223,7 +225,7 @@ function compileBlock (currentLevel: integer; followTokens: symbolSet;
             reportCompilerError(ERR_DECLARATION_IDENTIFIER_EXPECTED, lexerCurrentSourceContext, errorCount)
     end {parseVariableDeclaration} ;
 
-    procedure parseProcedureParameterList(procedureNode: astNode; followTokens: symbolSet);
+    procedure parseRoutineParameterList(routineNode: astNode; followTokens: symbolSet);
     var
       parameterNode: astNode;
       parameterCount: integer;
@@ -245,7 +247,7 @@ function compileBlock (currentLevel: integer; followTokens: symbolSet;
         begin
           parameterCount := parameterCount + 1;
           if parameterCount <= maxProcedureParameters then
-            appendChild(procedureNode, parameterNode)
+            appendChild(routineNode, parameterNode)
           else
           begin
             reportCompilerError(ERR_PROCEDURE_PARAMETER_LIMIT_EXCEEDED,
@@ -321,6 +323,12 @@ function compileBlock (currentLevel: integer; followTokens: symbolSet;
             if lexerCurrentToken = rparen then
               readNextToken(errorCount)
           end
+        end;
+
+        procedure parseReturnStatement(targetReturnNode: astNode; returnFollowTokens: symbolSet);
+        begin
+          appendExpressionChild(targetReturnNode,
+                                compileExpression(returnFollowTokens))
         end;
 
         function compileStatementSequence(statementFollowTokens: symbolSet;
@@ -514,8 +522,16 @@ function compileBlock (currentLevel: integer; followTokens: symbolSet;
                 begin
                     primarySource := lexerCurrentSourceContext;
                     primaryNode := newIdentifierReferenceNode(lexerCurrentIdentifier, primarySource);
-                    compilePrimary := primaryNode;
-                    readNextToken(errorCount)
+                    readNextToken(errorCount);
+                    if lexerCurrentToken = lparen then
+                    begin
+                        compilePrimary := newCallExpressionNode(primarySource);
+                        appendCalleeNode(compilePrimary, primaryNode);
+                        readNextToken(errorCount);
+                        parseCallArguments(compilePrimary, followTokens)
+                    end
+                    else
+                        compilePrimary := primaryNode
                 end
                 else if lexerCurrentToken = number then
                 begin
@@ -629,6 +645,14 @@ function compileBlock (currentLevel: integer; followTokens: symbolSet;
             end
         end
         else
+            if lexerCurrentToken = returnsym then
+                begin
+                    statementSource := lexerCurrentSourceContext;
+                    compileStatement := newReturnStatementNode(statementSource);
+                    readNextToken(errorCount);
+                    parseReturnStatement(compileStatement, followTokens)
+                end
+            else
             if lexerCurrentToken = ifsym then
                 begin
                     statementSource := lexerCurrentSourceContext;
@@ -919,7 +943,7 @@ begin {compileBlock}
     blockNode := newBlockNode(lexerCurrentSourceContext);
     activeDeclarationStartTokens := [constsym, varsym];
     if allowProcedureDeclarations then
-        activeDeclarationStartTokens := activeDeclarationStartTokens + [procsym];
+        activeDeclarationStartTokens := activeDeclarationStartTokens + [procsym, funcsym];
     repeat
         if lexerCurrentToken = constsym then
         begin
@@ -957,7 +981,7 @@ begin {compileBlock}
                     reportCompilerError(ERR_SEMICOLON_OR_COMMA_MISSING, lexerCurrentSourceContext, errorCount)
             until lexerCurrentToken <> ident;
         end ;
-        while allowProcedureDeclarations and (lexerCurrentToken = procsym) do
+        while allowProcedureDeclarations and (lexerCurrentToken in [procsym, funcsym]) do
         begin
             if currentLevel <> 0 then
             begin
@@ -971,15 +995,35 @@ begin {compileBlock}
                     readNextToken(errorCount);
                 continue
             end;
-            readNextToken(errorCount);
-            if lexerCurrentToken = ident then
+            if lexerCurrentToken = procsym then
             begin
-                declarationNode := newProcedureDeclarationNode(lexerCurrentIdentifier, lexerCurrentSourceContext);
                 readNextToken(errorCount);
-                parseProcedureParameterList(declarationNode, [semicolon] + followTokens)
+                if lexerCurrentToken = ident then
+                begin
+                    declarationNode := newProcedureDeclarationNode(lexerCurrentIdentifier, lexerCurrentSourceContext);
+                    readNextToken(errorCount);
+                    parseRoutineParameterList(declarationNode, [semicolon] + followTokens)
+                end
+                else
+                    reportCompilerError(ERR_DECLARATION_IDENTIFIER_EXPECTED, lexerCurrentSourceContext, errorCount)
             end
             else
-                reportCompilerError(ERR_DECLARATION_IDENTIFIER_EXPECTED, lexerCurrentSourceContext, errorCount);
+            begin
+                readNextToken(errorCount);
+                if lexerCurrentToken = ident then
+                begin
+                    routineIdentifier := lexerCurrentIdentifier;
+                    routineSource := lexerCurrentSourceContext;
+                    readNextToken(errorCount)
+                end
+                else
+                    reportCompilerError(ERR_DECLARATION_IDENTIFIER_EXPECTED, lexerCurrentSourceContext, errorCount);
+                declarationNode := newFunctionDeclarationNode(routineIdentifier,
+                                                              typeInteger,
+                                                              routineSource);
+                parseRoutineParameterList(declarationNode, [colon, semicolon] + followTokens);
+                declarationNode^.declaredType := parseDeclarationType([semicolon] + followTokens)
+            end;
             if lexerCurrentToken = semicolon then
                 readNextToken(errorCount)
             else
@@ -998,7 +1042,7 @@ begin {compileBlock}
             else
                 reportCompilerError(ERR_SEMICOLON_OR_COMMA_MISSING, lexerCurrentSourceContext, errorCount)
         end ;
-        if (not allowProcedureDeclarations) and (lexerCurrentToken = procsym) then
+        if (not allowProcedureDeclarations) and (lexerCurrentToken in [procsym, funcsym]) then
         begin
             reportCompilerError(ERR_NESTED_PROCEDURES_NOT_SUPPORTED, lexerCurrentSourceContext, errorCount);
             readNextToken(errorCount);

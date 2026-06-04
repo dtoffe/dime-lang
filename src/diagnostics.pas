@@ -106,6 +106,11 @@ const
     ERR_PROCEDURE_PARAMETER_LIMIT_EXCEEDED = 88;
     ERR_PROCEDURE_ARGUMENT_COUNT_MISMATCH = 89;
     ERR_PROCEDURE_ARGUMENT_TYPE_MISMATCH = 90;
+    ERR_FUNCTION_CALL_REQUIRES_RESULT_USE = 91;
+    ERR_PROCEDURE_CALL_NOT_ALLOWED_IN_EXPRESSION = 92;
+    ERR_RETURN_ONLY_ALLOWED_IN_FUNCTION = 93;
+    ERR_FUNCTION_RETURN_TYPE_MISMATCH = 94;
+    ERR_FUNCTION_REQUIRES_AT_LEAST_ONE_RETURN = 95;
 
     ERROR_PCODEINT_INVALID_L_VALUE = 'Error converting l-value';
     ERROR_PCODEINT_INVALID_A_VALUE = 'Error converting a-value';
@@ -290,6 +295,11 @@ begin
         ERR_PROCEDURE_PARAMETER_LIMIT_EXCEEDED: compilerErrorMessage := 'Procedure declarations and calls support at most 8 parameters.';
         ERR_PROCEDURE_ARGUMENT_COUNT_MISMATCH: compilerErrorMessage := 'Procedure call argument count must match the declared parameter count.';
         ERR_PROCEDURE_ARGUMENT_TYPE_MISMATCH: compilerErrorMessage := 'Procedure call argument type must match the declared parameter type.';
+        ERR_FUNCTION_CALL_REQUIRES_RESULT_USE: compilerErrorMessage := 'Function identifiers must be used as calls whose returned value is consumed by an expression or assignment.';
+        ERR_PROCEDURE_CALL_NOT_ALLOWED_IN_EXPRESSION: compilerErrorMessage := 'Expression calls must target a function, not a procedure.';
+        ERR_RETURN_ONLY_ALLOWED_IN_FUNCTION: compilerErrorMessage := '"return <expression>" is only allowed inside a function body.';
+        ERR_FUNCTION_RETURN_TYPE_MISMATCH: compilerErrorMessage := 'Returned expression type must match the declared function result type.';
+        ERR_FUNCTION_REQUIRES_AT_LEAST_ONE_RETURN: compilerErrorMessage := 'Function body must contain at least one return statement.';
     else
         compilerErrorMessage := 'Unknown compiler error.'
     end

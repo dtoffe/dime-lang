@@ -32,8 +32,8 @@ type
         eql, neq, lss, leq, gtr, geq, lparen, rparen, comma, semicolon,
         period, colon, becomes, andsym, beginsym, booleansym, breaksym, bysym, casesym, charsym, elsesym, elsifsym,
         endsym, endforsym, endifsym, endswitchsym, endwhilesym, falsesym, forsym, ifsym,
-        nextsym, notsym, onsym, orsym, repeatsym, switchsym, thensym, tosym, truesym, untilsym, whensym, whilesym, xorsym, dosym,
-        constsym, varsym, procsym, programsym, integersym);
+        nextsym, notsym, onsym, orsym, repeatsym, returnsym, switchsym, thensym, tosym, truesym, untilsym, whensym, whilesym, xorsym, dosym,
+        constsym, varsym, procsym, funcsym, programsym, integersym);
     symbolSet = set of symbol;
 
     identifier = packed array [1 .. maxIdentLength] of char;

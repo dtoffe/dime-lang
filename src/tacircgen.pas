@@ -24,12 +24,15 @@ implementation
 uses
   semantics, symboltable, tacir, tokens, typetable;
 
-function procedureBlockNode(node: astNode): astNode;
+var
+  currentLoweredFunctionSymbol: symbolIndex;
+
+function routineBlockNode(node: astNode): astNode;
 begin
-  procedureBlockNode := node^.firstChild;
-  while (procedureBlockNode <> nil) and
-        (procedureBlockNode^.kind = astVarDeclaration) do
-    procedureBlockNode := procedureBlockNode^.nextSibling
+  routineBlockNode := node^.firstChild;
+  while (routineBlockNode <> nil) and
+        (routineBlockNode^.kind = astVarDeclaration) do
+    routineBlockNode := routineBlockNode^.nextSibling
 end;
 
 function nodeValueType(node: astNode): typeValue;
@@ -80,6 +83,7 @@ begin
 end;
 
 function lowerExpression(node: astNode; var errorCount: integer): tacOperand; forward;
+procedure lowerCallStatement(node: astNode; var errorCount: integer); forward;
 procedure lowerStatement(node: astNode; var errorCount: integer); forward;
 procedure lowerBlock(node: astNode; var errorCount: integer); forward;
 
@@ -232,6 +236,8 @@ begin
 end;
 
 function lowerExpression(node: astNode; var errorCount: integer): tacOperand;
+var
+  instruction: tacInstruction;
 begin
   lowerExpression := makeTacNoneOperand;
   if node = nil then
@@ -248,6 +254,21 @@ begin
       lowerExpression := lowerUnaryExpression(node, errorCount);
     astBinaryExpression:
       lowerExpression := lowerBinaryExpression(node, errorCount);
+    astCallExpression:
+      begin
+        lowerCallStatement(node, errorCount);
+        if hasResolvedSymbol(node^.firstChild) then
+        begin
+          lowerExpression := newTacTemporary(nodeValueType(node));
+          instruction := newTacInstruction(irLoadVar);
+          instruction.resultOperand := lowerExpression;
+          instruction.leftOperand := makeTacSymbolOperand(
+            resolvedSymbolOf(node^.firstChild),
+            node^.firstChild^.identifierText,
+            nodeValueType(node));
+          appendTacInstruction(instruction)
+        end
+      end;
     astCaseExpression:
       lowerExpression := lowerCaseExpression(node, errorCount)
   end
@@ -291,10 +312,13 @@ begin
     exit;
 
   resolvedSymbol := resolvedSymbolOf(calleeNode);
-  if getDeclarationKind(resolvedSymbol) <> proc then
+  if not (getDeclarationKind(resolvedSymbol) in [proc, func]) then
     exit;
 
-  procKind := getBuiltinProcedure(resolvedSymbol);
+  if getDeclarationKind(resolvedSymbol) = proc then
+    procKind := getBuiltinProcedure(resolvedSymbol)
+  else
+    procKind := builtinNone;
   if procKind in [builtinWrite, builtinWriteLn] then
   begin
     argumentOperand := lowerExpression(argumentNode, errorCount);
@@ -337,6 +361,29 @@ begin
     end;
     appendTacInstruction(instruction)
   end
+end;
+
+procedure lowerReturnStatement(node: astNode; var errorCount: integer);
+var
+  valueNode: astNode;
+  valueOperand: tacOperand;
+  instruction: tacInstruction;
+begin
+  valueNode := node^.firstChild;
+  valueOperand := lowerExpression(valueNode, errorCount);
+
+  if currentLoweredFunctionSymbol <> 0 then
+  begin
+    instruction := newTacInstruction(irStoreVar);
+    instruction.resultOperand := makeTacSymbolOperand(currentLoweredFunctionSymbol,
+                                                      getDeclarationIdentifier(currentLoweredFunctionSymbol),
+                                                      nodeValueType(valueNode));
+    instruction.leftOperand := valueOperand;
+    appendTacInstruction(instruction)
+  end;
+
+  instruction := newTacInstruction(irReturn);
+  appendTacInstruction(instruction)
 end;
 
 procedure lowerIfStatement(node: astNode; var errorCount: integer);
@@ -573,6 +620,8 @@ begin
       lowerAssignmentStatement(node, errorCount);
     astCallStatement:
       lowerCallStatement(node, errorCount);
+    astReturnStatement:
+      lowerReturnStatement(node, errorCount);
     astIfStatement:
       lowerIfStatement(node, errorCount);
     astWhileStatement:
@@ -598,7 +647,25 @@ begin
     procedureSymbol := resolvedSymbolOf(node);
   appendTacProcedure(node^.identifierText, procedureSymbol);
   appendLabel(newTacLabel);
-  lowerBlock(procedureBlockNode(node), errorCount)
+  currentLoweredFunctionSymbol := 0;
+  lowerBlock(routineBlockNode(node), errorCount)
+end;
+
+procedure lowerFunctionDeclaration(node: astNode; var errorCount: integer);
+var
+  functionSymbol: symbolIndex;
+begin
+  if node = nil then
+    exit;
+
+  functionSymbol := 0;
+  if hasResolvedSymbol(node) then
+    functionSymbol := resolvedSymbolOf(node);
+  appendTacProcedure(node^.identifierText, functionSymbol);
+  appendLabel(newTacLabel);
+  currentLoweredFunctionSymbol := functionSymbol;
+  lowerBlock(routineBlockNode(node), errorCount);
+  currentLoweredFunctionSymbol := 0
 end;
 
 procedure lowerBlockBody(blockNode: astNode; var errorCount: integer);
@@ -613,7 +680,8 @@ begin
   while childNode <> nil do
   begin
     if childNode^.kind in [astCompoundStatement, astAssignmentStatement,
-                           astCallStatement, astIfStatement, astWhileStatement,
+                           astCallStatement, astReturnStatement,
+                           astIfStatement, astWhileStatement,
                            astRepeatStatement, astForStatement, astSwitchStatement] then
       lowerStatement(childNode, errorCount);
     childNode := childNode^.nextSibling
@@ -636,7 +704,9 @@ begin
   while childNode <> nil do
   begin
     if childNode^.kind = astProcedureDeclaration then
-      lowerProcedureDeclaration(childNode, errorCount);
+      lowerProcedureDeclaration(childNode, errorCount)
+    else if childNode^.kind = astFunctionDeclaration then
+      lowerFunctionDeclaration(childNode, errorCount);
     childNode := childNode^.nextSibling
   end
 end;
@@ -649,6 +719,7 @@ begin
     exit;
 
   initializeTacIr;
+  currentLoweredFunctionSymbol := 0;
   if rootNode^.kind = astProgram then
   begin
     appendTacProcedure(rootNode^.identifierText, 0);

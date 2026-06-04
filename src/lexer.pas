@@ -28,7 +28,7 @@ implementation
 uses
   SysUtils;
 
-const reservedWordCount = 36;
+const reservedWordCount = 38;
     numberMaxDigits = 14;
 
 type sourceLineBuffer = array [1..81] of char;
@@ -70,6 +70,7 @@ const
     'endwhile  ',
     'false     ',
     'for       ',
+    'function  ',
     'if        ',
     'integer   ',
     'next      ',
@@ -79,6 +80,7 @@ const
     'procedure ',
     'program   ',
     'repeat    ',
+    'return    ',
     'switch    ',
     'then      ',
     'to        ',
@@ -108,6 +110,7 @@ const
     endwhilesym,
     falsesym,
     forsym,
+    funcsym,
     ifsym,
     integersym,
     nextsym,
@@ -117,6 +120,7 @@ const
     procsym,
     programsym,
     repeatsym,
+    returnsym,
     switchsym,
     thensym,
     tosym,

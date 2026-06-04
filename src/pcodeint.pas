@@ -163,6 +163,7 @@ procedure executePCode;
         runtimeStack: array [1..stackMaxSize] of integer; {shared operand stack and activation records}
         argumentStack: array [1..argumentStackMaxSize] of integer;
         argumentStackTop, callArgumentCount, argumentIndex: integer;
+        returnValue: integer;
 
     {Finds the base pointer for an enclosing lexical scope.
      The VM still supports walking outward by arbitrary distances as legacy
@@ -430,6 +431,14 @@ begin
                         argumentStackTop := argumentStackTop + 1;
                         argumentStack[argumentStackTop] := runtimeStack[stackTop];
                         stackTop := stackTop - 1
+                    end ;
+                29: begin
+                        returnValue := runtimeStack[stackTop];
+                        stackTop := basePointer-1;
+                        programCounter := runtimeStack[stackTop+3];
+                        basePointer := runtimeStack[stackTop+2];
+                        stackTop := stackTop + 1;
+                        runtimeStack[stackTop] := returnValue
                     end ;
                 end ;
             lod: begin stackTop := stackTop+1;

@@ -18,7 +18,7 @@ const
   symbolTableMax = 100;      {length of identifier table}
 
 type
-  declarationKind = (constant, variable, proc);
+  declarationKind = (constant, variable, proc, func);
   builtinProcedure = (builtinNone, builtinRead, builtinReadLn,
                       builtinWrite, builtinWriteLn);
   symbolIndex = 0..symbolTableMax;
@@ -35,6 +35,9 @@ function addVariable(const declarationIdentifier: identifier;
                      declaredType: typeValue): symbolIndex;
 function addProcedure(const declarationIdentifier: identifier;
                       declarationLevelValue: integer): symbolIndex;
+function addFunction(const declarationIdentifier: identifier;
+                     declarationLevelValue: integer;
+                     declaredType: typeValue): symbolIndex;
 function addProcedureParameter(index: symbolIndex;
                                parameterType: typeValue;
                                parameterSymbol: symbolIndex): boolean;
@@ -67,8 +70,8 @@ type
     identifier: identifier; {sentinel slot 0 is used by lookupSymbol}
     case declarationType: declarationKind of
       constant: (constantValue: integer);
-      variable, proc: (declarationLevel, address: integer)
-      {for variables, address is the stack slot; for procedures, the entry point}
+      variable, proc, func: (declarationLevel, address: integer)
+      {for variables, address is the stack slot; for routines, the entry point}
   end;
 
 var
@@ -213,6 +216,29 @@ begin
   addProcedure := tableTop
 end;
 
+function addFunction(const declarationIdentifier: identifier;
+                     declarationLevelValue: integer;
+                     declaredType: typeValue): symbolIndex;
+begin
+  if not tryReserveEntry then
+  begin
+    addFunction := 0;
+    exit
+  end;
+  with tableEntries[tableTop] do
+  begin
+    identifier := declarationIdentifier;
+    entryTypes[tableTop] := declaredType;
+    entryVisible[tableTop] := true;
+    entryBuiltinProcedures[tableTop] := builtinNone;
+    entryProcedureParameterCount[tableTop] := 0;
+    declarationType := func;
+    declarationLevel := declarationLevelValue;
+    address := 0
+  end;
+  addFunction := tableTop
+end;
+
 function addProcedureParameter(index: symbolIndex;
                                parameterType: typeValue;
                                parameterSymbol: symbolIndex): boolean;
@@ -220,7 +246,7 @@ var
   nextParameterIndex: integer;
 begin
   addProcedureParameter := false;
-  if (index = 0) or (getDeclarationKind(index) <> proc) then
+  if (index = 0) or not (getDeclarationKind(index) in [proc, func]) then
     exit;
 
   nextParameterIndex := entryProcedureParameterCount[index] + 1;

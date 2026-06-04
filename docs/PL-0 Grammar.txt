@@ -83,7 +83,10 @@ globalBlock = [ "const" constantDeclaration { "," constantDeclaration } ";" ]
               [ "var" variableDeclaration { "," variableDeclaration } ";" ]
               { "procedure" ident [ "(" [ parameterDeclaration
                                           { "," parameterDeclaration } ] ")" ]
-                ";" procedureBlock ";" }
+                ";" procedureBlock ";"
+              | "function" ident [ "(" [ parameterDeclaration
+                                         { "," parameterDeclaration } ] ")" ]
+                ":" typeName ";" procedureBlock ";" }
               "begin" statementSequence "end" ;
 
 procedureBlock = [ "const" constantDeclaration { "," constantDeclaration } ";" ]
@@ -99,16 +102,20 @@ parameterDeclaration = ident ":" typeName ;
 // semantic disambiguation:
 // - if ident denotes a variable (lvalue), this is assignment
 // - if ident denotes a procedure, this is invocation (and parentheses are mandatory)
+// - if ident denotes a function, it may appear only as a call expression
 //
 // current call support:
 // - user-defined procedures accept zero or more value arguments
+// - user-defined functions accept zero or more value arguments and return one
+//   simple scalar value
 // - built-in write uses exactly one expression argument
 // - built-in read uses exactly one variable identifier argument
 // - procedure parameters and arguments are limited to simple scalar types
 //   integer, boolean, and char
-// - a procedure may declare at most 8 parameters
+// - a routine may declare at most 8 parameters
 
 statement = [ ident ( ":=" expression | "(" [ expression { "," expression } ] ")" )
+            | "return" expression
             | "if" expression "then" statementSequence
               { "elsif" expression "then" statementSequence }
               [ "else" statementSequence ] "endif"
@@ -160,9 +167,17 @@ statementSequence = statement ";" { statement ";" } ;
 // boolean. All branch result expressions, including `else`, must resolve to
 // the same type.
 
-// User-defined procedure calls are value calls only. Semantic analysis must
+// User-defined routine calls are value calls only. Semantic analysis must
 // ensure that the number of arguments matches the declared parameter count and
-// that each argument type matches its corresponding parameter type.
+// that each argument type matches its corresponding parameter type. Function
+// calls are valid only in expression position. Procedure calls remain
+// statement-only.
+//
+// Function bodies may use `return expr`. Semantic analysis must ensure that
+// the returned expression type matches the declared function result type. At
+// the current implementation stage, the compiler only requires at least one
+// return somewhere in the function body; it does not verify every execution
+// path.
 //
 // Built-in procedures remain restricted to one argument:
 //
@@ -188,7 +203,8 @@ simpleExpression = term { ( "+" | "-" | "or" | "xor" ) term } ;
 
 term = factor { ( "*" | "/" | "and" ) factor } ;
 
-factor = ident | number | "true" | "false" | characterLiteral | caseExpression
+factor = ident [ "(" [ expression { "," expression } ] ")" ]
+       | number | "true" | "false" | characterLiteral | caseExpression
        | ( "+" | "-" | "not" ) factor | "(" expression ")" ;
 
 caseExpression = "case" [ expression ] "when" expression "then" expression
@@ -198,8 +214,8 @@ caseExpression = "case" [ expression ] "when" expression "then" expression
 relationalOperator = "=" | "<>" | "<" | "<=" | ">" | ">=" ;
 
 // Procedure identifiers are valid lexical identifiers, but they are not valid
-// expression factors semantically. Using a procedure name in an expression is
-// rejected during compilation.
+// expression factors semantically. A function identifier must be used as a
+// call when it appears in an expression.
 
 // Lexical Rules:
 // ==============

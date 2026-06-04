@@ -51,6 +51,8 @@ type
   pCodeContext = record
     currentLevel: integer;
     parameterCount: integer;
+    currentRoutineIsFunction: boolean;
+    currentReturnType: typeValue;
   end;
 
 function reserveJump(jumpOpcode: opcode): integer; forward;
@@ -220,6 +222,11 @@ begin
   emitInstruction(opr, 0, 0)
 end;
 
+procedure emitReturnValue;
+begin
+  emitInstruction(opr, 0, 29)
+end;
+
 function reserveJump(jumpOpcode: opcode): integer;
 begin
   reserveJump := codeIndex;
@@ -263,8 +270,17 @@ begin
   end
 end;
 
+function routineBlockNode(node: astNode): astNode;
+begin
+  routineBlockNode := node^.firstChild;
+  while (routineBlockNode <> nil) and
+        (routineBlockNode^.kind = astVarDeclaration) do
+    routineBlockNode := routineBlockNode^.nextSibling
+end;
+
 procedure generateBlockBody(blockNode: astNode; var context: pCodeContext; var errorCount: integer); forward;
 procedure generateProcedureDeclaration(node: astNode; var context: pCodeContext; var errorCount: integer); forward;
+procedure generateFunctionDeclaration(node: astNode; var context: pCodeContext; var errorCount: integer); forward;
 
 procedure generateExpression(node: astNode; var context: pCodeContext; var errorCount: integer); forward;
 procedure generateStatement(node: astNode; var context: pCodeContext; var errorCount: integer); forward;
@@ -322,8 +338,9 @@ end;
 
 procedure generateExpression(node: astNode; var context: pCodeContext; var errorCount: integer);
 var
-  leftNode, rightNode, operandNode: astNode;
+  leftNode, rightNode, operandNode, argumentNode: astNode;
   resolvedSymbol: symbolIndex;
+  argumentCount: integer;
 begin
   if node = nil then
     exit;
@@ -342,8 +359,8 @@ begin
                                              getDeclarationLevel(resolvedSymbol),
                                              node^.source, errorCount),
                         getAddress(resolvedSymbol));
-          proc:
-            {procedure-in-expression is rejected during semantics}
+          proc, func:
+            {routine identifier usage without a call is rejected during semantics}
         end
       end;
     astNumberLiteral,
@@ -381,6 +398,30 @@ begin
           andsym: emitBinaryOp(15);
           orsym: emitBinaryOp(16);
           xorsym: emitBinaryOp(17);
+        end
+      end;
+    astCallExpression:
+      begin
+        leftNode := node^.firstChild;
+        argumentNode := nil;
+        if leftNode <> nil then
+          argumentNode := leftNode^.nextSibling;
+        if hasResolvedSymbol(leftNode) then
+        begin
+          resolvedSymbol := resolvedSymbolOf(leftNode);
+          argumentCount := 0;
+          while argumentNode <> nil do
+          begin
+            generateExpression(argumentNode, context, errorCount);
+            emitArgumentPush;
+            argumentCount := argumentCount + 1;
+            argumentNode := argumentNode^.nextSibling
+          end;
+          emitCall(lexicalLevelDistance(context.currentLevel,
+                                        getDeclarationLevel(resolvedSymbol),
+                                        leftNode^.source, errorCount),
+                   argumentCount,
+                   getAddress(resolvedSymbol))
         end
       end;
     astCaseExpression:
@@ -483,6 +524,12 @@ begin
               emitBuiltinProcedureNotImplemented(procKind, firstChildNode^.source, errorCount)
           end
         end
+      end;
+    astReturnStatement:
+      begin
+        firstChildNode := node^.firstChild;
+        generateExpression(firstChildNode, context, errorCount);
+        emitReturnValue
       end;
     astIfStatement:
       begin
@@ -654,7 +701,6 @@ procedure generateProcedureDeclaration(node: astNode; var context: pCodeContext;
 var
   nestedContext: pCodeContext;
   procedureSymbol: symbolIndex;
-  blockNode: astNode;
 begin
   if node = nil then
     exit;
@@ -666,11 +712,29 @@ begin
   setAddress(procedureSymbol, currentCodeAddress);
   nestedContext.currentLevel := context.currentLevel + 1;
   nestedContext.parameterCount := getProcedureParameterCount(procedureSymbol);
-  blockNode := node^.firstChild;
-  while (blockNode <> nil) and
-        (blockNode^.kind = astVarDeclaration) do
-    blockNode := blockNode^.nextSibling;
-  generateBlock(blockNode, nestedContext, errorCount)
+  nestedContext.currentRoutineIsFunction := false;
+  nestedContext.currentReturnType := typeInteger;
+  generateBlock(routineBlockNode(node), nestedContext, errorCount)
+end;
+
+procedure generateFunctionDeclaration(node: astNode; var context: pCodeContext; var errorCount: integer);
+var
+  nestedContext: pCodeContext;
+  functionSymbol: symbolIndex;
+begin
+  if node = nil then
+    exit;
+
+  if not hasResolvedSymbol(node) then
+    exit;
+
+  functionSymbol := resolvedSymbolOf(node);
+  setAddress(functionSymbol, currentCodeAddress);
+  nestedContext.currentLevel := context.currentLevel + 1;
+  nestedContext.parameterCount := getProcedureParameterCount(functionSymbol);
+  nestedContext.currentRoutineIsFunction := true;
+  nestedContext.currentReturnType := getDeclarationType(functionSymbol);
+  generateBlock(routineBlockNode(node), nestedContext, errorCount)
 end;
 
 procedure generateBlockBody(blockNode: astNode; var context: pCodeContext; var errorCount: integer);
@@ -686,13 +750,20 @@ begin
   while childNode <> nil do
   begin
     if childNode^.kind in [astCompoundStatement, astAssignmentStatement,
-                           astCallStatement, astIfStatement, astWhileStatement,
+                           astCallStatement, astReturnStatement,
+                           astIfStatement, astWhileStatement,
                            astRepeatStatement, astForStatement, astSwitchStatement] then
       generateStatement(childNode, context, errorCount);
     childNode := childNode^.nextSibling
   end;
 
-  emitReturn
+  if context.currentRoutineIsFunction then
+  begin
+    emitLoadConst(0);
+    emitReturnValue
+  end
+  else
+    emitReturn
 end;
 
 procedure generateBlock(node: astNode; var context: pCodeContext; var errorCount: integer);
@@ -712,7 +783,9 @@ begin
   while childNode <> nil do
   begin
     if childNode^.kind = astProcedureDeclaration then
-      generateProcedureDeclaration(childNode, context, errorCount);
+      generateProcedureDeclaration(childNode, context, errorCount)
+    else if childNode^.kind = astFunctionDeclaration then
+      generateFunctionDeclaration(childNode, context, errorCount);
     childNode := childNode^.nextSibling
   end;
 
@@ -731,6 +804,8 @@ begin
 
   context.currentLevel := 0;
   context.parameterCount := 0;
+  context.currentRoutineIsFunction := false;
+  context.currentReturnType := typeInteger;
   if rootNode^.kind = astProgram then
     generateBlock(rootNode^.firstChild, context, errorCount)
   else

@@ -35,6 +35,9 @@ type
   semanticContext = record
     currentLevel: integer;
     nextAddress: integer;
+    currentRoutineKind: declarationKind;
+    currentFunctionSymbol: symbolIndex;
+    functionHasReturn: boolean;
   end;
   semanticBinding = ^semanticBindingRecord;
   semanticBindingRecord = record
@@ -278,6 +281,8 @@ begin
     setNodeType(node, getDeclarationType(resolvedSymbol));
     if identifierUseIsExpression and (getDeclarationKind(resolvedSymbol) = proc) then
       reportCompilerError(ERR_PROCEDURE_IDENTIFIER_IN_EXPRESSION, nodeSourceContext(node), errorCount)
+    else if identifierUseIsExpression and (getDeclarationKind(resolvedSymbol) = func) then
+      reportCompilerError(ERR_FUNCTION_CALL_REQUIRES_RESULT_USE, nodeSourceContext(node), errorCount)
   end
 end;
 
@@ -285,6 +290,9 @@ procedure analyzeExpression(node: astNode; var sema: semanticContext; var errorC
 var
   childNode, leftNode, rightNode: astNode;
   selectorNode, caseArmNode, whenNode, resultNode, elseNode, firstResultNode: astNode;
+  calleeNode, argumentNode: astNode;
+  resolvedSymbol: symbolIndex;
+  argumentIndex, expectedArgumentCount, actualArgumentCount: integer;
 begin
   if node = nil then
     exit;
@@ -435,6 +443,52 @@ begin
           analyzeExpression(childNode, sema, errorCount);
           childNode := childNode^.nextSibling
         end
+      end;
+    astCallExpression:
+      begin
+        calleeNode := node^.firstChild;
+        argumentNode := nil;
+        expectedArgumentCount := 0;
+        if calleeNode <> nil then
+          argumentNode := calleeNode^.nextSibling;
+        if calleeNode <> nil then
+        begin
+          resolvedSymbol := lookupSymbol(calleeNode^.identifierText);
+          if resolvedSymbol = 0 then
+            reportCompilerError(ERR_UNDECLARED_IDENTIFIER, nodeSourceContext(calleeNode), errorCount)
+          else
+          begin
+            rememberResolvedSymbol(calleeNode, resolvedSymbol);
+            setNodeType(calleeNode, getDeclarationType(resolvedSymbol));
+            if getDeclarationKind(resolvedSymbol) <> func then
+              reportCompilerError(ERR_PROCEDURE_CALL_NOT_ALLOWED_IN_EXPRESSION,
+                                  nodeSourceContext(calleeNode), errorCount)
+            else
+            begin
+              expectedArgumentCount := getProcedureParameterCount(resolvedSymbol);
+              setNodeType(node, getDeclarationType(resolvedSymbol))
+            end
+          end
+        end;
+        actualArgumentCount := callArgumentCount(node);
+        if (calleeNode <> nil) and hasResolvedSymbol(calleeNode) and
+           (getDeclarationKind(resolvedSymbolOf(calleeNode)) = func) and
+           (actualArgumentCount <> expectedArgumentCount) then
+          reportCompilerError(ERR_PROCEDURE_ARGUMENT_COUNT_MISMATCH,
+                              nodeSourceContext(calleeNode), errorCount);
+        argumentIndex := 1;
+        while argumentNode <> nil do
+        begin
+          analyzeExpression(argumentNode, sema, errorCount);
+          if (calleeNode <> nil) and hasResolvedSymbol(calleeNode) and
+             (argumentIndex <= expectedArgumentCount) then
+            requireMatchingProcedureArgumentType(argumentNode,
+                                                getProcedureParameterType(resolvedSymbolOf(calleeNode),
+                                                                          argumentIndex),
+                                                errorCount);
+          argumentIndex := argumentIndex + 1;
+          argumentNode := argumentNode^.nextSibling
+        end
       end
   else
     begin
@@ -479,10 +533,14 @@ begin
         setNodeType(node, node^.declaredType);
         rememberResolvedSymbol(node, declaredSymbol)
       end;
-    astProcedureDeclaration:
+    astProcedureDeclaration,
+    astFunctionDeclaration:
       begin
         nestedContext.currentLevel := sema.currentLevel + 1;
         nestedContext.nextAddress := 3;
+        nestedContext.currentRoutineKind := proc;
+        nestedContext.currentFunctionSymbol := 0;
+        nestedContext.functionHasReturn := false;
         if sema.currentLevel <> 0 then
         begin
           reportCompilerError(ERR_NESTED_PROCEDURES_NOT_SUPPORTED, nodeSourceContext(node), errorCount);
@@ -490,7 +548,16 @@ begin
         end
         else
         begin
-          declaredSymbol := addProcedure(node^.identifierText, sema.currentLevel);
+          if node^.kind = astProcedureDeclaration then
+            declaredSymbol := addProcedure(node^.identifierText, sema.currentLevel)
+          else
+          begin
+            declaredSymbol := addFunction(node^.identifierText,
+                                          sema.currentLevel,
+                                          node^.declaredType);
+            nestedContext.currentRoutineKind := func;
+            nestedContext.currentFunctionSymbol := declaredSymbol
+          end;
           if declaredSymbol = 0 then
             reportCompilerError(ERR_SYMBOL_TABLE_OVERFLOW, nodeSourceContext(node), errorCount);
           rememberResolvedSymbol(node, declaredSymbol)
@@ -525,6 +592,10 @@ begin
         blockNode := parameterNode;
         if blockNode <> nil then
           analyzeBlock(blockNode, nestedContext, errorCount);
+        if (node^.kind = astFunctionDeclaration) and
+           not nestedContext.functionHasReturn then
+          reportCompilerError(ERR_FUNCTION_REQUIRES_AT_LEAST_ONE_RETURN,
+                              nodeSourceContext(node), errorCount);
         restoreScope(procedureScopeMarker)
       end
   end
@@ -596,7 +667,10 @@ begin
             rememberResolvedSymbol(targetNode, resolvedSymbol);
             setNodeType(targetNode, getDeclarationType(resolvedSymbol));
             builtinProc := getBuiltinProcedure(resolvedSymbol);
-            if getDeclarationKind(resolvedSymbol) <> proc then
+            if getDeclarationKind(resolvedSymbol) = func then
+              reportCompilerError(ERR_FUNCTION_CALL_REQUIRES_RESULT_USE,
+                                  nodeSourceContext(targetNode), errorCount)
+            else if getDeclarationKind(resolvedSymbol) <> proc then
               reportCompilerError(ERR_CALL_OF_CONSTANT_OR_VARIABLE,
                                   nodeSourceContext(targetNode), errorCount)
           end
@@ -660,6 +734,24 @@ begin
             argumentIndex := argumentIndex + 1;
             argumentNode := argumentNode^.nextSibling
           end
+        end
+      end;
+    astReturnStatement:
+      begin
+        valueNode := node^.firstChild;
+        analyzeExpression(valueNode, sema, errorCount);
+        if sema.currentRoutineKind <> func then
+          reportCompilerError(ERR_RETURN_ONLY_ALLOWED_IN_FUNCTION,
+                              nodeSourceContext(node), errorCount)
+        else
+        begin
+          sema.functionHasReturn := true;
+          if (sema.currentFunctionSymbol <> 0) and
+             hasNodeType(valueNode) and
+             (getNodeType(valueNode) <>
+              getDeclarationType(sema.currentFunctionSymbol)) then
+            reportCompilerError(ERR_FUNCTION_RETURN_TYPE_MISMATCH,
+                                nodeSourceContext(valueNode), errorCount)
         end
       end;
     astIfStatement:
@@ -779,11 +871,12 @@ begin
   while childNode <> nil do
   begin
     case childNode^.kind of
-      astConstDeclaration, astVarDeclaration, astProcedureDeclaration:
+      astConstDeclaration, astVarDeclaration, astProcedureDeclaration, astFunctionDeclaration:
         analyzeDeclaration(childNode, sema, errorCount);
       astCompoundStatement,
       astAssignmentStatement,
       astCallStatement,
+      astReturnStatement,
       astIfStatement,
       astWhileStatement,
       astRepeatStatement,
@@ -812,6 +905,9 @@ begin
   initializeSymbolTable;
   sema.currentLevel := 0;
   sema.nextAddress := 3;
+  sema.currentRoutineKind := proc;
+  sema.currentFunctionSymbol := 0;
+  sema.functionHasReturn := false;
 
   if rootNode^.kind = astProgram then
     analyzeBlock(rootNode^.firstChild, sema, errorCount)

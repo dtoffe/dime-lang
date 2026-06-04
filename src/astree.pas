@@ -21,8 +21,11 @@ type
       astProgram               program name, block child
       astBlock                 declarations/statements in source order
       astProcedureDeclaration  zero or more parameter declarations, then nested block
+      astFunctionDeclaration   zero or more parameter declarations, then nested block
       astAssignmentStatement   target identifier, value expression
       astCallStatement         callee identifier reference, followed by zero or more argument expressions
+      astReturnStatement       returned expression
+      astCallExpression        callee identifier reference, followed by zero or more argument expressions
       astIfStatement           condition, then-body statement sequence, optional else-body (including nested elsif as if-nodes)
       astWhileStatement        condition, body statement sequence
       astRepeatStatement       body statement sequence, condition
@@ -40,9 +43,11 @@ type
     astConstDeclaration,
     astVarDeclaration,
     astProcedureDeclaration,
+    astFunctionDeclaration,
     astCompoundStatement,
     astAssignmentStatement,
     astCallStatement,
+    astReturnStatement,
     astIfStatement,
     astWhileStatement,
     astRepeatStatement,
@@ -53,6 +58,7 @@ type
     astCaseArm,
     astBinaryExpression,
     astUnaryExpression,
+    astCallExpression,
     astIdentifierReference,
     astNumberLiteral,
     astCharLiteral,
@@ -93,9 +99,13 @@ function newVarDeclarationNode(const declarationIdentifier: identifier;
                                const source: sourceContext): astNode;
 function newProcedureDeclarationNode(const declarationIdentifier: identifier;
                                      const source: sourceContext): astNode;
+function newFunctionDeclarationNode(const declarationIdentifier: identifier;
+                                    declaredType: typeValue;
+                                    const source: sourceContext): astNode;
 function newCompoundStatementNode(const source: sourceContext): astNode;
 function newAssignmentStatementNode(const source: sourceContext): astNode;
 function newCallStatementNode(const source: sourceContext): astNode;
+function newReturnStatementNode(const source: sourceContext): astNode;
 function newIfStatementNode(const source: sourceContext): astNode;
 function newWhileStatementNode(const source: sourceContext): astNode;
 function newRepeatStatementNode(const source: sourceContext): astNode;
@@ -109,6 +119,7 @@ function newBinaryExpressionNode(expressionOperator: symbol;
                                  const source: sourceContext): astNode;
 function newUnaryExpressionNode(expressionOperator: symbol;
                                 const source: sourceContext): astNode;
+function newCallExpressionNode(const source: sourceContext): astNode;
 function newIdentifierReferenceNode(const identifierName: identifier;
                                     const source: sourceContext): astNode;
 function newIdentifierNode(const identifierName: identifier;
@@ -156,9 +167,11 @@ begin
     astConstDeclaration: astNodeKindToString := 'ConstDecl';
     astVarDeclaration: astNodeKindToString := 'VarDecl';
     astProcedureDeclaration: astNodeKindToString := 'ProcDecl';
+    astFunctionDeclaration: astNodeKindToString := 'FuncDecl';
     astCompoundStatement: astNodeKindToString := 'CompoundStmt';
     astAssignmentStatement: astNodeKindToString := 'AssignStmt';
     astCallStatement: astNodeKindToString := 'CallStmt';
+    astReturnStatement: astNodeKindToString := 'ReturnStmt';
     astIfStatement: astNodeKindToString := 'IfStmt';
     astWhileStatement: astNodeKindToString := 'WhileStmt';
     astRepeatStatement: astNodeKindToString := 'RepeatStmt';
@@ -169,6 +182,7 @@ begin
     astCaseArm: astNodeKindToString := 'CaseArm';
     astBinaryExpression: astNodeKindToString := 'BinaryExpr';
     astUnaryExpression: astNodeKindToString := 'UnaryExpr';
+    astCallExpression: astNodeKindToString := 'CallExpr';
     astIdentifierReference: astNodeKindToString := 'IdentifierRef';
     astNumberLiteral: astNodeKindToString := 'NumberLiteral';
     astCharLiteral: astNodeKindToString := 'CharLiteral';
@@ -180,7 +194,8 @@ function astNodeSummary(node: astNode): string;
 begin
   astNodeSummary := astNodeKindToString(node^.kind);
   case node^.kind of
-    astProgram, astConstDeclaration, astVarDeclaration, astProcedureDeclaration, astIdentifierReference:
+    astProgram, astConstDeclaration, astVarDeclaration, astProcedureDeclaration,
+    astFunctionDeclaration, astIdentifierReference:
       astNodeSummary := astNodeSummary + ' ' + identifierToString(node^.identifierText);
     astNumberLiteral:
       astNodeSummary := astNodeSummary + ' ' + IntToStr(node^.numberValue);
@@ -267,6 +282,15 @@ begin
   newProcedureDeclarationNode^.identifierText := declarationIdentifier
 end;
 
+function newFunctionDeclarationNode(const declarationIdentifier: identifier;
+                                    declaredType: typeValue;
+                                    const source: sourceContext): astNode;
+begin
+  newFunctionDeclarationNode := newAstNode(astFunctionDeclaration, source);
+  newFunctionDeclarationNode^.identifierText := declarationIdentifier;
+  newFunctionDeclarationNode^.declaredType := declaredType
+end;
+
 function newCompoundStatementNode(const source: sourceContext): astNode;
 begin
   newCompoundStatementNode := newAstNode(astCompoundStatement, source)
@@ -280,6 +304,11 @@ end;
 function newCallStatementNode(const source: sourceContext): astNode;
 begin
   newCallStatementNode := newAstNode(astCallStatement, source)
+end;
+
+function newReturnStatementNode(const source: sourceContext): astNode;
+begin
+  newReturnStatementNode := newAstNode(astReturnStatement, source)
 end;
 
 function newIfStatementNode(const source: sourceContext): astNode;
@@ -336,6 +365,11 @@ function newUnaryExpressionNode(expressionOperator: symbol;
 begin
   newUnaryExpressionNode := newAstNode(astUnaryExpression, source);
   newUnaryExpressionNode^.operatorSymbol := expressionOperator
+end;
+
+function newCallExpressionNode(const source: sourceContext): astNode;
+begin
+  newCallExpressionNode := newAstNode(astCallExpression, source)
 end;
 
 function newIdentifierReferenceNode(const identifierName: identifier;

@@ -9,6 +9,7 @@ and this project is expected to follow [Semantic Versioning](https://semver.org/
 
 ### [Added]
 
+- Add support for functions returning a simple scalar value with a return statement.
 - Add support for procedure parameters, simple types and by value only for now.
 
 ## [v0.0.9] - 2026-06-02
