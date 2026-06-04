@@ -585,8 +585,7 @@ begin
       appendLabel(bodyLabels[bodyLabelCount]);
       bodyLabelCount := bodyLabelCount + 1;
       lowerStatement(bodyNode, errorCount);
-      if switchCaseNode^.operatorSymbol = breaksym then
-        appendGoto(endLabel)
+      appendGoto(endLabel)
     end
     else
     begin

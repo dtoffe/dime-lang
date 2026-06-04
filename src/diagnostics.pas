@@ -95,8 +95,6 @@ const
     ERR_ENDSWITCH_EXPECTED = 77;
     ERR_SEMICOLON_EXPECTED_BEFORE_ELSE_OR_ENDSWITCH = 78;
     ERR_SWITCH_LABEL_TYPE_MISMATCH = 79;
-    ERR_BREAK_OR_NEXT_EXPECTED = 80;
-    ERR_SEMICOLON_OR_BREAK_OR_NEXT_EXPECTED = 81;
     ERR_SEMICOLON_OR_ENDSWITCH_EXPECTED = 82;
     ERR_WHEN_EXPECTED = 83;
     ERR_CASE_ELSE_EXPECTED = 84;
@@ -284,8 +282,6 @@ begin
         ERR_ENDSWITCH_EXPECTED: compilerErrorMessage := '"endswitch" expected. Possible reserved-word case error.';
         ERR_SEMICOLON_EXPECTED_BEFORE_ELSE_OR_ENDSWITCH: compilerErrorMessage := 'Semicolon expected before the next switch branch, "else", or "endswitch".';
         ERR_SWITCH_LABEL_TYPE_MISMATCH: compilerErrorMessage := 'Switch branch label type must match the switch selector type.';
-        ERR_BREAK_OR_NEXT_EXPECTED: compilerErrorMessage := '"break" or "next" expected. Possible reserved-word case error.';
-        ERR_SEMICOLON_OR_BREAK_OR_NEXT_EXPECTED: compilerErrorMessage := 'Semicolon, "break", or "next" expected. Possible reserved-word case error.';
         ERR_SEMICOLON_OR_ENDSWITCH_EXPECTED: compilerErrorMessage := 'Semicolon or "endswitch" expected. Possible reserved-word case error.';
         ERR_WHEN_EXPECTED: compilerErrorMessage := '"when" expected. Possible reserved-word case error.';
         ERR_CASE_ELSE_EXPECTED: compilerErrorMessage := 'Case expression must include an "else" branch.';

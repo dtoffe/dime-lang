@@ -839,19 +839,16 @@ function compileBlock (currentLevel: integer; followTokens: symbolSet;
                                 reportCompilerError(ERR_THEN_EXPECTED, lexerCurrentSourceContext, errorCount);
                             appendStatementNode(elseBranchTarget,
                                                 compileStatementSequence(followTokens,
-                                                                         [breaksym, nextsym],
-                                                                         ERR_SEMICOLON_OR_BREAK_OR_NEXT_EXPECTED,
-                                                                         ERR_BREAK_OR_NEXT_EXPECTED,
+                                                                         [endsym],
+                                                                         ERR_SEMICOLON_OR_END_EXPECTED,
+                                                                         ERR_END_EXPECTED,
                                                                          switchLabelStartTokens + [elsesym, endswitchsym,
                                                                                                   period, nul]));
-                            if lexerCurrentToken in [breaksym, nextsym] then
-                            begin
-                                elseBranchTarget^.operatorSymbol := lexerCurrentToken;
+                            if lexerCurrentToken = endsym then
                                 readNextToken(errorCount)
-                            end
                             else if not (lexerCurrentToken in switchLabelStartTokens + [elsesym, endswitchsym,
                                                                                        period, nul]) then
-                                reportCompilerError(ERR_BREAK_OR_NEXT_EXPECTED,
+                                reportCompilerError(ERR_END_EXPECTED,
                                                     lexerCurrentSourceContext, errorCount);
                             if lexerCurrentToken = semicolon then
                                 readNextToken(errorCount)

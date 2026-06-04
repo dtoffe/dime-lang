@@ -28,7 +28,7 @@ implementation
 uses
   SysUtils;
 
-const reservedWordCount = 38;
+const reservedWordCount = 36;
     numberMaxDigits = 14;
 
 type sourceLineBuffer = array [1..81] of char;
@@ -55,7 +55,6 @@ const
     'and       ',
     'begin     ',
     'boolean   ',
-    'break     ',
     'by        ',
     'case      ',
     'char      ',
@@ -73,7 +72,6 @@ const
     'function  ',
     'if        ',
     'integer   ',
-    'next      ',
     'not       ',
     'on        ',
     'or        ',
@@ -95,7 +93,6 @@ const
     andsym,
     beginsym,
     booleansym,
-    breaksym,
     bysym,
     casesym,
     charsym,
@@ -113,7 +110,6 @@ const
     funcsym,
     ifsym,
     integersym,
-    nextsym,
     notsym,
     onsym,
     orsym,

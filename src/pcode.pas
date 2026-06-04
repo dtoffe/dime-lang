@@ -670,11 +670,8 @@ begin
             patchJumpToCurrent(switchBodyJumpIndices[switchBodyJumpCount]);
             switchBodyJumpCount := switchBodyJumpCount + 1;
             generateStatement(thirdChildNode, context, errorCount);
-            if switchCaseNode^.operatorSymbol = breaksym then
-            begin
-              switchEndJumpCount := switchEndJumpCount + 1;
-              switchEndJumpIndices[switchEndJumpCount] := reserveJump(jmp)
-            end
+            switchEndJumpCount := switchEndJumpCount + 1;
+            switchEndJumpIndices[switchEndJumpCount] := reserveJump(jmp)
           end
           else
           begin
