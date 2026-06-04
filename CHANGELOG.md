@@ -16,6 +16,10 @@ and this project is expected to follow [Semantic Versioning](https://semver.org/
 
 - Remove (`break` | `next`) finalizer from switch statement, now the statement sequence ends with `end`.
 
+### [Fixed]
+
+- Fix `switch` statement, at least one label and statement sequence is required.
+
 ## [v0.0.9] - 2026-06-02
 
 ### [Added]

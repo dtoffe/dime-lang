@@ -824,44 +824,50 @@ function compileBlock (currentLevel: integer; followTokens: symbolSet;
                             reportCompilerError(ERR_ON_EXPECTED,
                                                 lexerCurrentSourceContext, errorCount);
 
-                        while lexerCurrentToken in switchLabelStartTokens do
+                        if lexerCurrentToken in switchLabelStartTokens then
                         begin
-                            appendStatementNode(compileStatement,
-                                                newSwitchCaseArmNode(lexerCurrentSourceContext));
-                            elseBranchTarget := compileStatement^.firstChild;
-                            while elseBranchTarget^.nextSibling <> nil do
-                                elseBranchTarget := elseBranchTarget^.nextSibling;
-                            appendChild(elseBranchTarget,
-                                        compileSwitchLabel([thensym] + followTokens));
-                            if lexerCurrentToken = thensym then
-                                readNextToken(errorCount)
-                            else
-                                reportCompilerError(ERR_THEN_EXPECTED, lexerCurrentSourceContext, errorCount);
-                            appendStatementNode(elseBranchTarget,
-                                                compileStatementSequence(followTokens,
-                                                                         [endsym],
-                                                                         ERR_SEMICOLON_OR_END_EXPECTED,
-                                                                         ERR_END_EXPECTED,
-                                                                         switchLabelStartTokens + [elsesym, endswitchsym,
-                                                                                                  period, nul]));
-                            if lexerCurrentToken = endsym then
-                                readNextToken(errorCount)
-                            else if not (lexerCurrentToken in switchLabelStartTokens + [elsesym, endswitchsym,
-                                                                                       period, nul]) then
-                                reportCompilerError(ERR_END_EXPECTED,
-                                                    lexerCurrentSourceContext, errorCount);
-                            if lexerCurrentToken = semicolon then
-                                readNextToken(errorCount)
-                            else if lexerCurrentToken in switchLabelStartTokens + [elsesym, endswitchsym] then
-                                reportCompilerError(ERR_SEMICOLON_EXPECTED_BEFORE_ELSE_OR_ENDSWITCH,
-                                                    lexerCurrentSourceContext, errorCount)
-                            else if lexerCurrentToken in [period, nul] then
+                            while lexerCurrentToken in switchLabelStartTokens do
                             begin
-                                reportCompilerError(ERR_ENDSWITCH_EXPECTED,
-                                                    lexerCurrentSourceContext, errorCount);
-                                break
+                                appendStatementNode(compileStatement,
+                                                    newSwitchCaseArmNode(lexerCurrentSourceContext));
+                                elseBranchTarget := compileStatement^.firstChild;
+                                while elseBranchTarget^.nextSibling <> nil do
+                                    elseBranchTarget := elseBranchTarget^.nextSibling;
+                                appendChild(elseBranchTarget,
+                                            compileSwitchLabel([thensym] + followTokens));
+                                if lexerCurrentToken = thensym then
+                                    readNextToken(errorCount)
+                                else
+                                    reportCompilerError(ERR_THEN_EXPECTED, lexerCurrentSourceContext, errorCount);
+                                appendStatementNode(elseBranchTarget,
+                                                    compileStatementSequence(followTokens,
+                                                                             [endsym],
+                                                                             ERR_SEMICOLON_OR_END_EXPECTED,
+                                                                             ERR_END_EXPECTED,
+                                                                             switchLabelStartTokens + [elsesym, endswitchsym,
+                                                                                                      period, nul]));
+                                if lexerCurrentToken = endsym then
+                                    readNextToken(errorCount)
+                                else if not (lexerCurrentToken in switchLabelStartTokens + [elsesym, endswitchsym,
+                                                                                           period, nul]) then
+                                    reportCompilerError(ERR_END_EXPECTED,
+                                                        lexerCurrentSourceContext, errorCount);
+                                if lexerCurrentToken = semicolon then
+                                    readNextToken(errorCount)
+                                else if lexerCurrentToken in switchLabelStartTokens + [elsesym, endswitchsym] then
+                                    reportCompilerError(ERR_SEMICOLON_EXPECTED_BEFORE_ELSE_OR_ENDSWITCH,
+                                                        lexerCurrentSourceContext, errorCount)
+                                else if lexerCurrentToken in [period, nul] then
+                                begin
+                                    reportCompilerError(ERR_ENDSWITCH_EXPECTED,
+                                                        lexerCurrentSourceContext, errorCount);
+                                    break
+                                end
                             end
-                        end;
+                        end
+                        else
+                            reportCompilerError(ERR_SWITCH_LABEL_EXPECTED,
+                                                lexerCurrentSourceContext, errorCount);
 
                         if lexerCurrentToken = elsesym then
                         begin

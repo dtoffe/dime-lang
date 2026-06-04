@@ -124,6 +124,7 @@ statement = [ ident ( ":=" expression | "(" [ expression { "," expression } ] ")
             | "for" ident ":=" expression "to" expression "by" expression
               "do" statementSequence "endfor"
             | "switch" ident "on"
+              literal "then" statementSequence "end" ";"
               { literal "then" statementSequence "end" ";" }
               [ "else" statementSequence ]
               "endswitch"
