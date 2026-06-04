@@ -124,8 +124,8 @@ statement = [ ident ( ":=" expression | "(" [ expression { "," expression } ] ")
             | "for" ident ":=" expression "to" expression "by" expression
               "do" statementSequence "endfor"
             | "switch" ident "on"
-              literal "then" statementSequence "end" ";"
-              { literal "then" statementSequence "end" ";" }
+              literal { "," literal } "then" statementSequence "end" ";"
+              { literal { "," literal } "then" statementSequence "end" ";" }
               [ "else" statementSequence ]
               "endswitch"
               ] ;
@@ -152,10 +152,10 @@ statementSequence = statement ";" { statement ";" } ;
 // the `start`, `end`, and `step` expressions all resolve to integer values.
 
 // `switch` is a statement form. It currently accepts only an identifier
-// selector and literal branch labels. Semantic analysis must ensure that each
-// branch label type matches the selector type. Each matching branch exits the
-// switch after its body completes; fallthrough between branches is not part of
-// the language.
+// selector and one-or-more literal branch labels per arm. Semantic analysis
+// must ensure that each branch label type matches the selector type. Each
+// matching branch exits the switch after its body completes; fallthrough
+// between branches is not part of the language.
 //
 // `case` is an expression form inspired by SQL dialects. Unlike `switch`, it
 // does not control a statement sequence; it produces one value and can be used

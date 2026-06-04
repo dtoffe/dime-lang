@@ -31,7 +31,7 @@ type
       astRepeatStatement       body statement sequence, condition
       astForStatement          counter identifier, start expression, end expression, step expression, body statement sequence
       astSwitchStatement       selector identifier, switch-case arms, optional else-body compound statement
-      astSwitchCaseArm         label literal, body statement sequence
+      astSwitchCaseArm         one or more label literals, then body statement sequence
       astCaseExpression        optional selector expression for simple case, case arms, final else expression
       astCaseArm               branch test expression, branch result expression
       astBinaryExpression      left operand, right operand, including relational operators

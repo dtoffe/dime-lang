@@ -834,7 +834,13 @@ function compileBlock (currentLevel: integer; followTokens: symbolSet;
                                 while elseBranchTarget^.nextSibling <> nil do
                                     elseBranchTarget := elseBranchTarget^.nextSibling;
                                 appendChild(elseBranchTarget,
-                                            compileSwitchLabel([thensym] + followTokens));
+                                            compileSwitchLabel([comma, thensym] + followTokens));
+                                while lexerCurrentToken = comma do
+                                begin
+                                    readNextToken(errorCount);
+                                    appendChild(elseBranchTarget,
+                                                compileSwitchLabel([comma, thensym] + followTokens))
+                                end;
                                 if lexerCurrentToken = thensym then
                                     readNextToken(errorCount)
                                 else

@@ -543,27 +543,29 @@ begin
   begin
     if switchCaseNode^.kind = astSwitchCaseArm then
     begin
+      bodyNode := switchCaseNode^.lastChild;
       labelNode := switchCaseNode^.firstChild;
-      bodyNode := nil;
-      if labelNode <> nil then
-        bodyNode := labelNode^.nextSibling;
-
-      selectorOperand := lowerIdentifierReference(selectorNode);
-      labelOperand := lowerExpression(labelNode, errorCount);
-      comparisonOperand := newTacTemporary(typeBoolean);
-      instruction := newTacInstruction(irBinaryOp);
-      instruction.resultOperand := comparisonOperand;
-      instruction.leftOperand := selectorOperand;
-      instruction.rightOperand := labelOperand;
-      instruction.operatorSymbol := eql;
-      appendTacInstruction(instruction);
-
       bodyLabelCount := bodyLabelCount + 1;
       bodyLabels[bodyLabelCount] := newTacLabel;
-      nextLabel := newTacLabel;
-      appendGotoIfZero(comparisonOperand, nextLabel);
-      appendGoto(bodyLabels[bodyLabelCount]);
-      appendLabel(nextLabel)
+
+      while (labelNode <> nil) and (labelNode <> bodyNode) do
+      begin
+        selectorOperand := lowerIdentifierReference(selectorNode);
+        labelOperand := lowerExpression(labelNode, errorCount);
+        comparisonOperand := newTacTemporary(typeBoolean);
+        instruction := newTacInstruction(irBinaryOp);
+        instruction.resultOperand := comparisonOperand;
+        instruction.leftOperand := selectorOperand;
+        instruction.rightOperand := labelOperand;
+        instruction.operatorSymbol := eql;
+        appendTacInstruction(instruction);
+
+        nextLabel := newTacLabel;
+        appendGotoIfZero(comparisonOperand, nextLabel);
+        appendGoto(bodyLabels[bodyLabelCount]);
+        appendLabel(nextLabel);
+        labelNode := labelNode^.nextSibling
+      end
     end;
     switchCaseNode := switchCaseNode^.nextSibling
   end;
@@ -578,10 +580,7 @@ begin
   begin
     if switchCaseNode^.kind = astSwitchCaseArm then
     begin
-      labelNode := switchCaseNode^.firstChild;
-      bodyNode := nil;
-      if labelNode <> nil then
-        bodyNode := labelNode^.nextSibling;
+      bodyNode := switchCaseNode^.lastChild;
       appendLabel(bodyLabels[bodyLabelCount]);
       bodyLabelCount := bodyLabelCount + 1;
       lowerStatement(bodyNode, errorCount);

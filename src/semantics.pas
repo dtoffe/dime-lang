@@ -840,12 +840,14 @@ begin
         begin
           if caseNode^.kind = astSwitchCaseArm then
           begin
+            bodyNode := caseNode^.lastChild;
             labelNode := caseNode^.firstChild;
-            bodyNode := nil;
-            if labelNode <> nil then
-              bodyNode := labelNode^.nextSibling;
-            analyzeExpression(labelNode, sema, errorCount);
-            requireMatchingSwitchLabelType(selectorNode, labelNode, errorCount);
+            while (labelNode <> nil) and (labelNode <> bodyNode) do
+            begin
+              analyzeExpression(labelNode, sema, errorCount);
+              requireMatchingSwitchLabelType(selectorNode, labelNode, errorCount);
+              labelNode := labelNode^.nextSibling
+            end;
             analyzeStatement(bodyNode, sema, errorCount)
           end
           else

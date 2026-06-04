@@ -14,6 +14,7 @@ and this project is expected to follow [Semantic Versioning](https://semver.org/
 
 ### [Changed]
 
+- Allow each `switch` arm to match one or more comma-separated literals.
 - Remove (`break` | `next`) finalizer from switch statement, now the statement sequence ends with `end`.
 
 ### [Fixed]

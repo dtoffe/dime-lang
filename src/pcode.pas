@@ -638,17 +638,19 @@ begin
         begin
           if switchCaseNode^.kind = astSwitchCaseArm then
           begin
+            thirdChildNode := switchCaseNode^.lastChild;
             secondChildNode := switchCaseNode^.firstChild;
-            thirdChildNode := nil;
-            if secondChildNode <> nil then
-              thirdChildNode := secondChildNode^.nextSibling;
-            generateExpression(firstChildNode, context, errorCount);
-            generateExpression(secondChildNode, context, errorCount);
-            emitBinaryOp(8);
-            conditionalJumpIndex := emitConditionalJump;
-            switchBodyJumpCount := switchBodyJumpCount + 1;
-            switchBodyJumpIndices[switchBodyJumpCount] := reserveJump(jmp);
-            patchJumpToCurrent(conditionalJumpIndex)
+            while (secondChildNode <> nil) and (secondChildNode <> thirdChildNode) do
+            begin
+              generateExpression(firstChildNode, context, errorCount);
+              generateExpression(secondChildNode, context, errorCount);
+              emitBinaryOp(8);
+              conditionalJumpIndex := emitConditionalJump;
+              switchBodyJumpCount := switchBodyJumpCount + 1;
+              switchBodyJumpIndices[switchBodyJumpCount] := reserveJump(jmp);
+              patchJumpToCurrent(conditionalJumpIndex);
+              secondChildNode := secondChildNode^.nextSibling
+            end
           end;
           switchCaseNode := switchCaseNode^.nextSibling
         end;
@@ -663,12 +665,14 @@ begin
         begin
           if switchCaseNode^.kind = astSwitchCaseArm then
           begin
+            thirdChildNode := switchCaseNode^.lastChild;
             secondChildNode := switchCaseNode^.firstChild;
-            thirdChildNode := nil;
-            if secondChildNode <> nil then
-              thirdChildNode := secondChildNode^.nextSibling;
-            patchJumpToCurrent(switchBodyJumpIndices[switchBodyJumpCount]);
-            switchBodyJumpCount := switchBodyJumpCount + 1;
+            while (secondChildNode <> nil) and (secondChildNode <> thirdChildNode) do
+            begin
+              patchJumpToCurrent(switchBodyJumpIndices[switchBodyJumpCount]);
+              switchBodyJumpCount := switchBodyJumpCount + 1;
+              secondChildNode := secondChildNode^.nextSibling
+            end;
             generateStatement(thirdChildNode, context, errorCount);
             switchEndJumpCount := switchEndJumpCount + 1;
             switchEndJumpIndices[switchEndJumpCount] := reserveJump(jmp)
