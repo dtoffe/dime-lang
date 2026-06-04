@@ -38,6 +38,7 @@ type
     currentRoutineKind: declarationKind;
     currentFunctionSymbol: symbolIndex;
     functionHasReturn: boolean;
+    currentLoopDepth: integer;
   end;
   semanticBinding = ^semanticBindingRecord;
   semanticBindingRecord = record
@@ -541,6 +542,7 @@ begin
         nestedContext.currentRoutineKind := proc;
         nestedContext.currentFunctionSymbol := 0;
         nestedContext.functionHasReturn := false;
+        nestedContext.currentLoopDepth := 0;
         if sema.currentLevel <> 0 then
         begin
           reportCompilerError(ERR_NESTED_PROCEDURES_NOT_SUPPORTED, nodeSourceContext(node), errorCount);
@@ -609,6 +611,7 @@ var
   resolvedSymbol: symbolIndex;
   builtinProc: builtinProcedure;
   actualArgumentCount, expectedArgumentCount, argumentIndex: integer;
+  nestedLoopSema: semanticContext;
 begin
   if node = nil then
     exit;
@@ -754,6 +757,12 @@ begin
                                 nodeSourceContext(valueNode), errorCount)
         end
       end;
+    astContinueStatement:
+      begin
+        if sema.currentLoopDepth = 0 then
+          reportCompilerError(ERR_CONTINUE_ONLY_ALLOWED_IN_LOOP,
+                              nodeSourceContext(node), errorCount)
+      end;
     astIfStatement:
       begin
         conditionNode := node^.firstChild;
@@ -776,7 +785,9 @@ begin
           thenOrBodyNode := conditionNode^.nextSibling;
         analyzeExpression(conditionNode, sema, errorCount);
         requireBooleanExpression(conditionNode, errorCount);
-        analyzeStatement(thenOrBodyNode, sema, errorCount)
+        nestedLoopSema := sema;
+        nestedLoopSema.currentLoopDepth := nestedLoopSema.currentLoopDepth + 1;
+        analyzeStatement(thenOrBodyNode, nestedLoopSema, errorCount)
       end;
     astRepeatStatement:
       begin
@@ -784,7 +795,9 @@ begin
         conditionNode := nil;
         if thenOrBodyNode <> nil then
           conditionNode := thenOrBodyNode^.nextSibling;
-        analyzeStatement(thenOrBodyNode, sema, errorCount);
+        nestedLoopSema := sema;
+        nestedLoopSema.currentLoopDepth := nestedLoopSema.currentLoopDepth + 1;
+        analyzeStatement(thenOrBodyNode, nestedLoopSema, errorCount);
         analyzeExpression(conditionNode, sema, errorCount);
         requireBooleanExpression(conditionNode, errorCount)
       end;
@@ -826,7 +839,9 @@ begin
         requireIntegerExpression(startNode, ERR_FOR_RANGE_MUST_BE_INTEGER, errorCount);
         requireIntegerExpression(endNode, ERR_FOR_RANGE_MUST_BE_INTEGER, errorCount);
         requireIntegerExpression(stepNode, ERR_FOR_RANGE_MUST_BE_INTEGER, errorCount);
-        analyzeStatement(bodyNode, sema, errorCount)
+        nestedLoopSema := sema;
+        nestedLoopSema.currentLoopDepth := nestedLoopSema.currentLoopDepth + 1;
+        analyzeStatement(bodyNode, nestedLoopSema, errorCount)
       end;
     astSwitchStatement:
       begin
@@ -910,6 +925,7 @@ begin
   sema.currentRoutineKind := proc;
   sema.currentFunctionSymbol := 0;
   sema.functionHasReturn := false;
+  sema.currentLoopDepth := 0;
 
   if rootNode^.kind = astProgram then
     analyzeBlock(rootNode^.firstChild, sema, errorCount)

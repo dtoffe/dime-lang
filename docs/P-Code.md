@@ -428,3 +428,11 @@ afterLoop:
 ```
 
 The boolean expression is re-evaluated before each iteration.
+
+### `continue`
+
+`continue` is valid only inside `while`, `repeat`, and `for`.
+
+- In a `while`, it jumps back to the loop-condition test.
+- In a `repeat`, it jumps to the point just before the final `until` condition is evaluated.
+- In a `for`, it jumps to the increment step, after which the range check runs again.

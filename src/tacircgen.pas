@@ -26,6 +26,8 @@ uses
 
 var
   currentLoweredFunctionSymbol: symbolIndex;
+  loopContinueLabels: array [1..maxTacInstructions] of tacLabelId;
+  loopContinueLabelCount: integer;
 
 function routineBlockNode(node: astNode): astNode;
 begin
@@ -80,6 +82,26 @@ begin
   instruction.leftOperand := conditionOperand;
   instruction.targetLabel := labelId;
   appendTacInstruction(instruction)
+end;
+
+procedure pushLoopContinueLabel(labelId: tacLabelId);
+begin
+  loopContinueLabelCount := loopContinueLabelCount + 1;
+  loopContinueLabels[loopContinueLabelCount] := labelId
+end;
+
+procedure popLoopContinueLabel;
+begin
+  if loopContinueLabelCount > 0 then
+    loopContinueLabelCount := loopContinueLabelCount - 1
+end;
+
+function currentLoopContinueLabel: tacLabelId;
+begin
+  if loopContinueLabelCount > 0 then
+    currentLoopContinueLabel := loopContinueLabels[loopContinueLabelCount]
+  else
+    currentLoopContinueLabel := 0
 end;
 
 function lowerExpression(node: astNode; var errorCount: integer): tacOperand; forward;
@@ -433,7 +455,9 @@ begin
   appendLabel(startLabel);
   conditionOperand := lowerExpression(conditionNode, errorCount);
   appendGotoIfZero(conditionOperand, exitLabel);
+  pushLoopContinueLabel(startLabel);
   lowerStatement(bodyNode, errorCount);
+  popLoopContinueLabel;
   appendGoto(startLabel);
   appendLabel(exitLabel)
 end;
@@ -441,7 +465,7 @@ end;
 procedure lowerRepeatStatement(node: astNode; var errorCount: integer);
 var
   bodyNode, conditionNode: astNode;
-  startLabel: tacLabelId;
+  startLabel, continueLabel: tacLabelId;
   conditionOperand: tacOperand;
 begin
   bodyNode := node^.firstChild;
@@ -450,8 +474,12 @@ begin
     conditionNode := bodyNode^.nextSibling;
 
   startLabel := newTacLabel;
+  continueLabel := newTacLabel;
   appendLabel(startLabel);
+  pushLoopContinueLabel(continueLabel);
   lowerStatement(bodyNode, errorCount);
+  popLoopContinueLabel;
+  appendLabel(continueLabel);
   conditionOperand := lowerExpression(conditionNode, errorCount);
   appendGotoIfZero(conditionOperand, startLabel)
 end;
@@ -461,7 +489,7 @@ var
   counterNode, startNode, endNode, stepNode, bodyNode: astNode;
   counterOperand, startOperand, endOperand, stepOperand: tacOperand;
   comparisonOperand, incrementOperand: tacOperand;
-  startLabel, exitLabel: tacLabelId;
+  startLabel, continueLabel, exitLabel: tacLabelId;
   instruction: tacInstruction;
 begin
   counterNode := node^.firstChild;
@@ -486,6 +514,7 @@ begin
   appendTacInstruction(instruction);
 
   startLabel := newTacLabel;
+  continueLabel := newTacLabel;
   exitLabel := newTacLabel;
   appendLabel(startLabel);
 
@@ -499,7 +528,10 @@ begin
   appendTacInstruction(instruction);
   appendGotoIfZero(comparisonOperand, exitLabel);
 
+  pushLoopContinueLabel(continueLabel);
   lowerStatement(bodyNode, errorCount);
+  popLoopContinueLabel;
+  appendLabel(continueLabel);
 
   stepOperand := lowerExpression(stepNode, errorCount);
   incrementOperand := newTacTemporary(typeInteger);
@@ -620,6 +652,8 @@ begin
       lowerCallStatement(node, errorCount);
     astReturnStatement:
       lowerReturnStatement(node, errorCount);
+    astContinueStatement:
+      appendGoto(currentLoopContinueLabel);
     astIfStatement:
       lowerIfStatement(node, errorCount);
     astWhileStatement:
@@ -679,6 +713,7 @@ begin
   begin
     if childNode^.kind in [astCompoundStatement, astAssignmentStatement,
                            astCallStatement, astReturnStatement,
+                           astContinueStatement,
                            astIfStatement, astWhileStatement,
                            astRepeatStatement, astForStatement, astSwitchStatement] then
       lowerStatement(childNode, errorCount);
@@ -718,6 +753,7 @@ begin
 
   initializeTacIr;
   currentLoweredFunctionSymbol := 0;
+  loopContinueLabelCount := 0;
   if rootNode^.kind = astProgram then
   begin
     appendTacProcedure(rootNode^.identifierText, 0);

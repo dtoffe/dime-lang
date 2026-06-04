@@ -46,6 +46,11 @@ var
   pCodeFile: Text;
   pCodeFileName: string;
   outputInstructionIndex: integer;
+  loopContinueCount: integer;
+  loopContinueTargetKnown: array [1..codeMaxIndex] of boolean;
+  loopContinueTargetAddress: array [1..codeMaxIndex] of integer;
+  loopContinuePendingCounts: array [1..codeMaxIndex] of integer;
+  loopContinuePendingJumps: array [1..codeMaxIndex, 1..codeMaxIndex] of integer;
 
 type
   pCodeContext = record
@@ -93,7 +98,8 @@ begin
   opcodeMnemonics[int] := 'INT  ';
   opcodeMnemonics[jmp] := 'JMP  ';
   opcodeMnemonics[jpc] := 'JPC  ';
-  codeIndex := 0
+  codeIndex := 0;
+  loopContinueCount := 0
 end;
 
 procedure cleanupPCode;
@@ -241,6 +247,63 @@ end;
 procedure patchJumpToCurrent(instructionIndex: integer);
 begin
   patchInstructionArgument(instructionIndex, currentCodeIndex)
+end;
+
+procedure pushLoopContinueTargetKnown(targetAddress: integer);
+begin
+  loopContinueCount := loopContinueCount + 1;
+  loopContinueTargetKnown[loopContinueCount] := true;
+  loopContinueTargetAddress[loopContinueCount] := targetAddress;
+  loopContinuePendingCounts[loopContinueCount] := 0
+end;
+
+procedure pushLoopContinueTargetPending;
+begin
+  loopContinueCount := loopContinueCount + 1;
+  loopContinueTargetKnown[loopContinueCount] := false;
+  loopContinueTargetAddress[loopContinueCount] := 0;
+  loopContinuePendingCounts[loopContinueCount] := 0
+end;
+
+procedure patchCurrentLoopContinueTarget(targetAddress: integer);
+var
+  pendingIndex: integer;
+begin
+  if loopContinueCount = 0 then
+    exit;
+
+  loopContinueTargetKnown[loopContinueCount] := true;
+  loopContinueTargetAddress[loopContinueCount] := targetAddress;
+  pendingIndex := 1;
+  while pendingIndex <= loopContinuePendingCounts[loopContinueCount] do
+  begin
+    patchInstructionArgument(loopContinuePendingJumps[loopContinueCount, pendingIndex],
+                             targetAddress);
+    pendingIndex := pendingIndex + 1
+  end;
+  loopContinuePendingCounts[loopContinueCount] := 0
+end;
+
+procedure popLoopContinueTarget;
+begin
+  if loopContinueCount > 0 then
+    loopContinueCount := loopContinueCount - 1
+end;
+
+procedure emitContinueJump;
+begin
+  if loopContinueCount = 0 then
+    exit;
+
+  if loopContinueTargetKnown[loopContinueCount] then
+    emitJump(loopContinueTargetAddress[loopContinueCount])
+  else
+  begin
+    loopContinuePendingCounts[loopContinueCount] :=
+      loopContinuePendingCounts[loopContinueCount] + 1;
+    loopContinuePendingJumps[loopContinueCount,
+                             loopContinuePendingCounts[loopContinueCount]] := reserveJump(jmp)
+  end
 end;
 
 function currentCodeIndex: integer;
@@ -531,6 +594,8 @@ begin
         generateExpression(firstChildNode, context, errorCount);
         emitReturnValue
       end;
+    astContinueStatement:
+      emitContinueJump;
     astIfStatement:
       begin
         firstChildNode := node^.firstChild;
@@ -562,7 +627,9 @@ begin
           secondChildNode := firstChildNode^.nextSibling;
         generateExpression(firstChildNode, context, errorCount);
         loopExitJumpIndex := emitConditionalJump;
+        pushLoopContinueTargetKnown(loopStartAddress);
         generateStatement(secondChildNode, context, errorCount);
+        popLoopContinueTarget;
         emitJump(loopStartAddress);
         patchJumpToCurrent(loopExitJumpIndex)
       end;
@@ -573,7 +640,10 @@ begin
         secondChildNode := nil;
         if firstChildNode <> nil then
           secondChildNode := firstChildNode^.nextSibling;
+        pushLoopContinueTargetPending;
         generateStatement(firstChildNode, context, errorCount);
+        patchCurrentLoopContinueTarget(currentCodeAddress);
+        popLoopContinueTarget;
         generateExpression(secondChildNode, context, errorCount);
         loopExitJumpIndex := emitConditionalJump;
         patchInstructionArgument(loopExitJumpIndex, loopStartAddress)
@@ -609,7 +679,10 @@ begin
         generateExpression(thirdChildNode, context, errorCount);
         emitBinaryOp(13);
         loopExitJumpIndex := emitConditionalJump;
+        pushLoopContinueTargetPending;
         generateStatement(fifthChildNode, context, errorCount);
+        patchCurrentLoopContinueTarget(currentCodeAddress);
+        popLoopContinueTarget;
         generateExpression(firstChildNode, context, errorCount);
         generateExpression(fourthChildNode, context, errorCount);
         emitBinaryOp(2);
@@ -752,6 +825,7 @@ begin
   begin
     if childNode^.kind in [astCompoundStatement, astAssignmentStatement,
                            astCallStatement, astReturnStatement,
+                           astContinueStatement,
                            astIfStatement, astWhileStatement,
                            astRepeatStatement, astForStatement, astSwitchStatement] then
       generateStatement(childNode, context, errorCount);

@@ -116,6 +116,7 @@ parameterDeclaration = ident ":" typeName ;
 
 statement = [ ident ( ":=" expression | "(" [ expression { "," expression } ] ")" )
             | "return" expression
+            | "continue"
             | "if" expression "then" statementSequence
               { "elsif" expression "then" statementSequence }
               [ "else" statementSequence ] "endif"
@@ -150,6 +151,11 @@ statementSequence = statement ";" { statement ";" } ;
 // The `for` loop is currently only the ascending `to` form. Semantic analysis
 // must ensure that the control variable denotes an integer variable, and that
 // the `start`, `end`, and `step` expressions all resolve to integer values.
+// `continue` is a statement form that is valid only inside `while`, `repeat`,
+// and `for`. It jumps to the end of the immediately enclosing loop: for
+// `while`, that means re-checking the condition; for `repeat`, it means
+// jumping just before the final condition check; and for `for`, it means
+// jumping to the step-and-range-check sequence.
 
 // `switch` is a statement form. It currently accepts only an identifier
 // selector and one-or-more literal branch labels per arm. Semantic analysis

@@ -28,7 +28,7 @@ implementation
 uses
   SysUtils;
 
-const reservedWordCount = 36;
+const reservedWordCount = 37;
     numberMaxDigits = 14;
 
 type sourceLineBuffer = array [1..81] of char;
@@ -59,6 +59,7 @@ const
     'case      ',
     'char      ',
     'const     ',
+    'continue  ',
     'do        ',
     'else      ',
     'elsif     ',
@@ -97,6 +98,7 @@ const
     casesym,
     charsym,
     constsym,
+    continuesym,
     dosym,
     elsesym,
     elsifsym,

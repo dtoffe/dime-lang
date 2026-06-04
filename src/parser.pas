@@ -36,7 +36,7 @@ uses
 
 const
   declarationStartTokens: symbolSet = [constsym, varsym, procsym, funcsym];
-  statementStartTokens: symbolSet = [forsym, ifsym, repeatsym, returnsym, switchsym, whilesym];
+  statementStartTokens: symbolSet = [continuesym, forsym, ifsym, repeatsym, returnsym, switchsym, whilesym];
   switchLabelStartTokens: symbolSet = [number, charlit, truesym, falsesym];
   factorStartTokens: symbolSet = [casesym, ident, number, charlit, truesym, falsesym, lparen, plus, minus, notsym];
   binaryOperatorTokens: symbolSet = [eql, neq, lss, leq, gtr, geq,
@@ -651,6 +651,13 @@ function compileBlock (currentLevel: integer; followTokens: symbolSet;
                     compileStatement := newReturnStatementNode(statementSource);
                     readNextToken(errorCount);
                     parseReturnStatement(compileStatement, followTokens)
+                end
+            else
+            if lexerCurrentToken = continuesym then
+                begin
+                    statementSource := lexerCurrentSourceContext;
+                    compileStatement := newContinueStatementNode(statementSource);
+                    readNextToken(errorCount)
                 end
             else
             if lexerCurrentToken = ifsym then
