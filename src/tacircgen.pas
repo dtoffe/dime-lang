@@ -26,6 +26,8 @@ uses
 
 var
   currentLoweredFunctionSymbol: symbolIndex;
+  loopBreakLabels: array [1..maxTacInstructions] of tacLabelId;
+  loopBreakLabelCount: integer;
   loopContinueLabels: array [1..maxTacInstructions] of tacLabelId;
   loopContinueLabelCount: integer;
 
@@ -82,6 +84,26 @@ begin
   instruction.leftOperand := conditionOperand;
   instruction.targetLabel := labelId;
   appendTacInstruction(instruction)
+end;
+
+procedure pushLoopBreakLabel(labelId: tacLabelId);
+begin
+  loopBreakLabelCount := loopBreakLabelCount + 1;
+  loopBreakLabels[loopBreakLabelCount] := labelId
+end;
+
+procedure popLoopBreakLabel;
+begin
+  if loopBreakLabelCount > 0 then
+    loopBreakLabelCount := loopBreakLabelCount - 1
+end;
+
+function currentLoopBreakLabel: tacLabelId;
+begin
+  if loopBreakLabelCount > 0 then
+    currentLoopBreakLabel := loopBreakLabels[loopBreakLabelCount]
+  else
+    currentLoopBreakLabel := 0
 end;
 
 procedure pushLoopContinueLabel(labelId: tacLabelId);
@@ -455,9 +477,11 @@ begin
   appendLabel(startLabel);
   conditionOperand := lowerExpression(conditionNode, errorCount);
   appendGotoIfZero(conditionOperand, exitLabel);
+  pushLoopBreakLabel(exitLabel);
   pushLoopContinueLabel(startLabel);
   lowerStatement(bodyNode, errorCount);
   popLoopContinueLabel;
+  popLoopBreakLabel;
   appendGoto(startLabel);
   appendLabel(exitLabel)
 end;
@@ -465,7 +489,7 @@ end;
 procedure lowerRepeatStatement(node: astNode; var errorCount: integer);
 var
   bodyNode, conditionNode: astNode;
-  startLabel, continueLabel: tacLabelId;
+  startLabel, continueLabel, exitLabel: tacLabelId;
   conditionOperand: tacOperand;
 begin
   bodyNode := node^.firstChild;
@@ -475,13 +499,17 @@ begin
 
   startLabel := newTacLabel;
   continueLabel := newTacLabel;
+  exitLabel := newTacLabel;
   appendLabel(startLabel);
+  pushLoopBreakLabel(exitLabel);
   pushLoopContinueLabel(continueLabel);
   lowerStatement(bodyNode, errorCount);
   popLoopContinueLabel;
   appendLabel(continueLabel);
   conditionOperand := lowerExpression(conditionNode, errorCount);
-  appendGotoIfZero(conditionOperand, startLabel)
+  popLoopBreakLabel;
+  appendGotoIfZero(conditionOperand, startLabel);
+  appendLabel(exitLabel)
 end;
 
 procedure lowerForStatement(node: astNode; var errorCount: integer);
@@ -528,9 +556,11 @@ begin
   appendTacInstruction(instruction);
   appendGotoIfZero(comparisonOperand, exitLabel);
 
+  pushLoopBreakLabel(exitLabel);
   pushLoopContinueLabel(continueLabel);
   lowerStatement(bodyNode, errorCount);
   popLoopContinueLabel;
+  popLoopBreakLabel;
   appendLabel(continueLabel);
 
   stepOperand := lowerExpression(stepNode, errorCount);
@@ -652,6 +682,8 @@ begin
       lowerCallStatement(node, errorCount);
     astReturnStatement:
       lowerReturnStatement(node, errorCount);
+    astBreakStatement:
+      appendGoto(currentLoopBreakLabel);
     astContinueStatement:
       appendGoto(currentLoopContinueLabel);
     astIfStatement:
@@ -713,6 +745,7 @@ begin
   begin
     if childNode^.kind in [astCompoundStatement, astAssignmentStatement,
                            astCallStatement, astReturnStatement,
+                           astBreakStatement,
                            astContinueStatement,
                            astIfStatement, astWhileStatement,
                            astRepeatStatement, astForStatement, astSwitchStatement] then
@@ -753,6 +786,7 @@ begin
 
   initializeTacIr;
   currentLoweredFunctionSymbol := 0;
+  loopBreakLabelCount := 0;
   loopContinueLabelCount := 0;
   if rootNode^.kind = astProgram then
   begin

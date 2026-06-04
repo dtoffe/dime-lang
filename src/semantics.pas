@@ -757,6 +757,12 @@ begin
                                 nodeSourceContext(valueNode), errorCount)
         end
       end;
+    astBreakStatement:
+      begin
+        if sema.currentLoopDepth = 0 then
+          reportCompilerError(ERR_BREAK_ONLY_ALLOWED_IN_LOOP,
+                              nodeSourceContext(node), errorCount)
+      end;
     astContinueStatement:
       begin
         if sema.currentLoopDepth = 0 then

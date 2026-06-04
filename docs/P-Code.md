@@ -436,3 +436,10 @@ The boolean expression is re-evaluated before each iteration.
 - In a `while`, it jumps back to the loop-condition test.
 - In a `repeat`, it jumps to the point just before the final `until` condition is evaluated.
 - In a `for`, it jumps to the increment step, after which the range check runs again.
+
+### `break`
+
+`break` is valid only inside `while`, `repeat`, and `for`.
+
+- It exits only the immediately enclosing loop.
+- Control resumes at the first statement after that loop.

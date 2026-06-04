@@ -38,6 +38,6 @@ This roadmap is intentionally conservative. The goal is to build the project in 
 
 - Add `function` construct.
 - Add `return` statement.
-- Possibly add some `break` and `continue` to adjust loops behaviour.
+- Explore whether loop control needs anything beyond the current `break` and `continue` statements.
 
 For older releases, see [CHANGELOG.md](./CHANGELOG.md).

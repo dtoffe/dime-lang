@@ -46,6 +46,11 @@ var
   pCodeFile: Text;
   pCodeFileName: string;
   outputInstructionIndex: integer;
+  loopBreakCount: integer;
+  loopBreakTargetKnown: array [1..codeMaxIndex] of boolean;
+  loopBreakTargetAddress: array [1..codeMaxIndex] of integer;
+  loopBreakPendingCounts: array [1..codeMaxIndex] of integer;
+  loopBreakPendingJumps: array [1..codeMaxIndex, 1..codeMaxIndex] of integer;
   loopContinueCount: integer;
   loopContinueTargetKnown: array [1..codeMaxIndex] of boolean;
   loopContinueTargetAddress: array [1..codeMaxIndex] of integer;
@@ -99,6 +104,7 @@ begin
   opcodeMnemonics[jmp] := 'JMP  ';
   opcodeMnemonics[jpc] := 'JPC  ';
   codeIndex := 0;
+  loopBreakCount := 0;
   loopContinueCount := 0
 end;
 
@@ -247,6 +253,63 @@ end;
 procedure patchJumpToCurrent(instructionIndex: integer);
 begin
   patchInstructionArgument(instructionIndex, currentCodeIndex)
+end;
+
+procedure pushLoopBreakTargetKnown(targetAddress: integer);
+begin
+  loopBreakCount := loopBreakCount + 1;
+  loopBreakTargetKnown[loopBreakCount] := true;
+  loopBreakTargetAddress[loopBreakCount] := targetAddress;
+  loopBreakPendingCounts[loopBreakCount] := 0
+end;
+
+procedure pushLoopBreakTargetPending;
+begin
+  loopBreakCount := loopBreakCount + 1;
+  loopBreakTargetKnown[loopBreakCount] := false;
+  loopBreakTargetAddress[loopBreakCount] := 0;
+  loopBreakPendingCounts[loopBreakCount] := 0
+end;
+
+procedure patchCurrentLoopBreakTarget(targetAddress: integer);
+var
+  pendingIndex: integer;
+begin
+  if loopBreakCount = 0 then
+    exit;
+
+  loopBreakTargetKnown[loopBreakCount] := true;
+  loopBreakTargetAddress[loopBreakCount] := targetAddress;
+  pendingIndex := 1;
+  while pendingIndex <= loopBreakPendingCounts[loopBreakCount] do
+  begin
+    patchInstructionArgument(loopBreakPendingJumps[loopBreakCount, pendingIndex],
+                             targetAddress);
+    pendingIndex := pendingIndex + 1
+  end;
+  loopBreakPendingCounts[loopBreakCount] := 0
+end;
+
+procedure popLoopBreakTarget;
+begin
+  if loopBreakCount > 0 then
+    loopBreakCount := loopBreakCount - 1
+end;
+
+procedure emitBreakJump;
+begin
+  if loopBreakCount = 0 then
+    exit;
+
+  if loopBreakTargetKnown[loopBreakCount] then
+    emitJump(loopBreakTargetAddress[loopBreakCount])
+  else
+  begin
+    loopBreakPendingCounts[loopBreakCount] :=
+      loopBreakPendingCounts[loopBreakCount] + 1;
+    loopBreakPendingJumps[loopBreakCount,
+                          loopBreakPendingCounts[loopBreakCount]] := reserveJump(jmp)
+  end
 end;
 
 procedure pushLoopContinueTargetKnown(targetAddress: integer);
@@ -594,6 +657,8 @@ begin
         generateExpression(firstChildNode, context, errorCount);
         emitReturnValue
       end;
+    astBreakStatement:
+      emitBreakJump;
     astContinueStatement:
       emitContinueJump;
     astIfStatement:
@@ -627,10 +692,13 @@ begin
           secondChildNode := firstChildNode^.nextSibling;
         generateExpression(firstChildNode, context, errorCount);
         loopExitJumpIndex := emitConditionalJump;
+        pushLoopBreakTargetPending;
         pushLoopContinueTargetKnown(loopStartAddress);
         generateStatement(secondChildNode, context, errorCount);
         popLoopContinueTarget;
         emitJump(loopStartAddress);
+        patchCurrentLoopBreakTarget(currentCodeAddress);
+        popLoopBreakTarget;
         patchJumpToCurrent(loopExitJumpIndex)
       end;
     astRepeatStatement:
@@ -640,13 +708,16 @@ begin
         secondChildNode := nil;
         if firstChildNode <> nil then
           secondChildNode := firstChildNode^.nextSibling;
+        pushLoopBreakTargetPending;
         pushLoopContinueTargetPending;
         generateStatement(firstChildNode, context, errorCount);
         patchCurrentLoopContinueTarget(currentCodeAddress);
         popLoopContinueTarget;
         generateExpression(secondChildNode, context, errorCount);
         loopExitJumpIndex := emitConditionalJump;
-        patchInstructionArgument(loopExitJumpIndex, loopStartAddress)
+        patchInstructionArgument(loopExitJumpIndex, loopStartAddress);
+        patchCurrentLoopBreakTarget(currentCodeAddress);
+        popLoopBreakTarget
       end;
     astForStatement:
       begin
@@ -679,6 +750,7 @@ begin
         generateExpression(thirdChildNode, context, errorCount);
         emitBinaryOp(13);
         loopExitJumpIndex := emitConditionalJump;
+        pushLoopBreakTargetPending;
         pushLoopContinueTargetPending;
         generateStatement(fifthChildNode, context, errorCount);
         patchCurrentLoopContinueTarget(currentCodeAddress);
@@ -695,6 +767,8 @@ begin
                        getAddress(resolvedSymbol))
         end;
         emitJump(loopStartAddress);
+        patchCurrentLoopBreakTarget(currentCodeAddress);
+        popLoopBreakTarget;
         patchJumpToCurrent(loopExitJumpIndex)
       end;
     astSwitchStatement:
@@ -825,6 +899,7 @@ begin
   begin
     if childNode^.kind in [astCompoundStatement, astAssignmentStatement,
                            astCallStatement, astReturnStatement,
+                           astBreakStatement,
                            astContinueStatement,
                            astIfStatement, astWhileStatement,
                            astRepeatStatement, astForStatement, astSwitchStatement] then

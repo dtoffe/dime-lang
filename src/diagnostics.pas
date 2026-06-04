@@ -110,6 +110,7 @@ const
     ERR_FUNCTION_RETURN_TYPE_MISMATCH = 94;
     ERR_FUNCTION_REQUIRES_AT_LEAST_ONE_RETURN = 95;
     ERR_CONTINUE_ONLY_ALLOWED_IN_LOOP = 96;
+    ERR_BREAK_ONLY_ALLOWED_IN_LOOP = 97;
 
     ERROR_PCODEINT_INVALID_L_VALUE = 'Error converting l-value';
     ERROR_PCODEINT_INVALID_A_VALUE = 'Error converting a-value';
@@ -298,6 +299,7 @@ begin
         ERR_FUNCTION_RETURN_TYPE_MISMATCH: compilerErrorMessage := 'Returned expression type must match the declared function result type.';
         ERR_FUNCTION_REQUIRES_AT_LEAST_ONE_RETURN: compilerErrorMessage := 'Function body must contain at least one return statement.';
         ERR_CONTINUE_ONLY_ALLOWED_IN_LOOP: compilerErrorMessage := '"continue" is only allowed inside a while, repeat, or for loop.';
+        ERR_BREAK_ONLY_ALLOWED_IN_LOOP: compilerErrorMessage := '"break" is only allowed inside a while, repeat, or for loop.';
     else
         compilerErrorMessage := 'Unknown compiler error.'
     end

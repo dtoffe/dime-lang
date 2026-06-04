@@ -9,7 +9,7 @@ and this project is expected to follow [Semantic Versioning](https://semver.org/
 
 ### [Added]
 
-- Add `continue` as a loop-only statement for `while`, `repeat`, and `for`.
+- Add `continue` and `break` as loop-only statements for `while`, `repeat`, and `for`.
 - Add support for functions returning a simple scalar value with a return statement.
 - Add support for procedure parameters, simple types and by value only for now.
 

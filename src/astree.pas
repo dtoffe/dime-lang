@@ -25,6 +25,7 @@ type
       astAssignmentStatement   target identifier, value expression
       astCallStatement         callee identifier reference, followed by zero or more argument expressions
       astReturnStatement       returned expression
+      astBreakStatement        no children
       astContinueStatement     no children
       astCallExpression        callee identifier reference, followed by zero or more argument expressions
       astIfStatement           condition, then-body statement sequence, optional else-body (including nested elsif as if-nodes)
@@ -49,6 +50,7 @@ type
     astAssignmentStatement,
     astCallStatement,
     astReturnStatement,
+    astBreakStatement,
     astContinueStatement,
     astIfStatement,
     astWhileStatement,
@@ -108,6 +110,7 @@ function newCompoundStatementNode(const source: sourceContext): astNode;
 function newAssignmentStatementNode(const source: sourceContext): astNode;
 function newCallStatementNode(const source: sourceContext): astNode;
 function newReturnStatementNode(const source: sourceContext): astNode;
+function newBreakStatementNode(const source: sourceContext): astNode;
 function newContinueStatementNode(const source: sourceContext): astNode;
 function newIfStatementNode(const source: sourceContext): astNode;
 function newWhileStatementNode(const source: sourceContext): astNode;
@@ -175,6 +178,7 @@ begin
     astAssignmentStatement: astNodeKindToString := 'AssignStmt';
     astCallStatement: astNodeKindToString := 'CallStmt';
     astReturnStatement: astNodeKindToString := 'ReturnStmt';
+    astBreakStatement: astNodeKindToString := 'BreakStmt';
     astContinueStatement: astNodeKindToString := 'ContinueStmt';
     astIfStatement: astNodeKindToString := 'IfStmt';
     astWhileStatement: astNodeKindToString := 'WhileStmt';
@@ -313,6 +317,11 @@ end;
 function newReturnStatementNode(const source: sourceContext): astNode;
 begin
   newReturnStatementNode := newAstNode(astReturnStatement, source)
+end;
+
+function newBreakStatementNode(const source: sourceContext): astNode;
+begin
+  newBreakStatementNode := newAstNode(astBreakStatement, source)
 end;
 
 function newContinueStatementNode(const source: sourceContext): astNode;
