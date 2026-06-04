@@ -24,7 +24,7 @@ type
       astFunctionDeclaration   zero or more parameter declarations, then nested block
       astAssignmentStatement   target identifier, value expression
       astCallStatement         callee identifier reference, followed by zero or more argument expressions
-      astReturnStatement       returned expression
+      astReturnStatement       optional returned expression
       astBreakStatement        no children
       astContinueStatement     no children
       astCallExpression        callee identifier reference, followed by zero or more argument expressions

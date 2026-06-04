@@ -36,6 +36,7 @@ type
     currentLevel: integer;
     nextAddress: integer;
     currentRoutineKind: declarationKind;
+    currentRoutineAllowsReturn: boolean;
     currentFunctionSymbol: symbolIndex;
     functionHasReturn: boolean;
     currentLoopDepth: integer;
@@ -540,6 +541,7 @@ begin
         nestedContext.currentLevel := sema.currentLevel + 1;
         nestedContext.nextAddress := 3;
         nestedContext.currentRoutineKind := proc;
+        nestedContext.currentRoutineAllowsReturn := true;
         nestedContext.currentFunctionSymbol := 0;
         nestedContext.functionHasReturn := false;
         nestedContext.currentLoopDepth := 0;
@@ -743,17 +745,26 @@ begin
       begin
         valueNode := node^.firstChild;
         analyzeExpression(valueNode, sema, errorCount);
-        if sema.currentRoutineKind <> func then
+        if not sema.currentRoutineAllowsReturn then
           reportCompilerError(ERR_RETURN_ONLY_ALLOWED_IN_FUNCTION,
                               nodeSourceContext(node), errorCount)
-        else
+        else if sema.currentRoutineKind = func then
         begin
           sema.functionHasReturn := true;
-          if (sema.currentFunctionSymbol <> 0) and
-             hasNodeType(valueNode) and
-             (getNodeType(valueNode) <>
-              getDeclarationType(sema.currentFunctionSymbol)) then
+          if valueNode = nil then
+            reportCompilerError(ERR_FUNCTION_RETURN_REQUIRES_VALUE,
+                                nodeSourceContext(node), errorCount)
+          else if (sema.currentFunctionSymbol <> 0) and
+                  hasNodeType(valueNode) and
+                  (getNodeType(valueNode) <>
+                   getDeclarationType(sema.currentFunctionSymbol)) then
             reportCompilerError(ERR_FUNCTION_RETURN_TYPE_MISMATCH,
+                                nodeSourceContext(valueNode), errorCount)
+        end
+        else
+        begin
+          if valueNode <> nil then
+            reportCompilerError(ERR_PROCEDURE_RETURN_MUST_NOT_HAVE_VALUE,
                                 nodeSourceContext(valueNode), errorCount)
         end
       end;
@@ -929,6 +940,7 @@ begin
   sema.currentLevel := 0;
   sema.nextAddress := 3;
   sema.currentRoutineKind := proc;
+  sema.currentRoutineAllowsReturn := false;
   sema.currentFunctionSymbol := 0;
   sema.functionHasReturn := false;
   sema.currentLoopDepth := 0;

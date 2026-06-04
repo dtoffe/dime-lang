@@ -654,8 +654,12 @@ begin
     astReturnStatement:
       begin
         firstChildNode := node^.firstChild;
-        generateExpression(firstChildNode, context, errorCount);
-        emitReturnValue
+        if firstChildNode <> nil then
+          generateExpression(firstChildNode, context, errorCount);
+        if (firstChildNode <> nil) and context.currentRoutineIsFunction then
+          emitReturnValue
+        else
+          emitReturn
       end;
     astBreakStatement:
       emitBreakJump;

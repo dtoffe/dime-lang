@@ -414,9 +414,11 @@ var
   instruction: tacInstruction;
 begin
   valueNode := node^.firstChild;
-  valueOperand := lowerExpression(valueNode, errorCount);
+  valueOperand := makeTacNoneOperand;
+  if valueNode <> nil then
+    valueOperand := lowerExpression(valueNode, errorCount);
 
-  if currentLoweredFunctionSymbol <> 0 then
+  if (currentLoweredFunctionSymbol <> 0) and (valueNode <> nil) then
   begin
     instruction := newTacInstruction(irStoreVar);
     instruction.resultOperand := makeTacSymbolOperand(currentLoweredFunctionSymbol,

@@ -111,6 +111,8 @@ const
     ERR_FUNCTION_REQUIRES_AT_LEAST_ONE_RETURN = 95;
     ERR_CONTINUE_ONLY_ALLOWED_IN_LOOP = 96;
     ERR_BREAK_ONLY_ALLOWED_IN_LOOP = 97;
+    ERR_PROCEDURE_RETURN_MUST_NOT_HAVE_VALUE = 98;
+    ERR_FUNCTION_RETURN_REQUIRES_VALUE = 99;
 
     ERROR_PCODEINT_INVALID_L_VALUE = 'Error converting l-value';
     ERROR_PCODEINT_INVALID_A_VALUE = 'Error converting a-value';
@@ -295,11 +297,13 @@ begin
         ERR_PROCEDURE_ARGUMENT_TYPE_MISMATCH: compilerErrorMessage := 'Procedure call argument type must match the declared parameter type.';
         ERR_FUNCTION_CALL_REQUIRES_RESULT_USE: compilerErrorMessage := 'Function identifiers must be used as calls whose returned value is consumed by an expression or assignment.';
         ERR_PROCEDURE_CALL_NOT_ALLOWED_IN_EXPRESSION: compilerErrorMessage := 'Expression calls must target a function, not a procedure.';
-        ERR_RETURN_ONLY_ALLOWED_IN_FUNCTION: compilerErrorMessage := '"return <expression>" is only allowed inside a function body.';
+        ERR_RETURN_ONLY_ALLOWED_IN_FUNCTION: compilerErrorMessage := '"return" is only allowed inside a procedure or function body.';
         ERR_FUNCTION_RETURN_TYPE_MISMATCH: compilerErrorMessage := 'Returned expression type must match the declared function result type.';
         ERR_FUNCTION_REQUIRES_AT_LEAST_ONE_RETURN: compilerErrorMessage := 'Function body must contain at least one return statement.';
         ERR_CONTINUE_ONLY_ALLOWED_IN_LOOP: compilerErrorMessage := '"continue" is only allowed inside a while, repeat, or for loop.';
         ERR_BREAK_ONLY_ALLOWED_IN_LOOP: compilerErrorMessage := '"break" is only allowed inside a while, repeat, or for loop.';
+        ERR_PROCEDURE_RETURN_MUST_NOT_HAVE_VALUE: compilerErrorMessage := 'Procedure return must not include an expression.';
+        ERR_FUNCTION_RETURN_REQUIRES_VALUE: compilerErrorMessage := 'Function return must include an expression.';
     else
         compilerErrorMessage := 'Unknown compiler error.'
     end

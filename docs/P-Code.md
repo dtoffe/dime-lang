@@ -443,3 +443,10 @@ The boolean expression is re-evaluated before each iteration.
 
 - It exits only the immediately enclosing loop.
 - Control resumes at the first statement after that loop.
+
+### `return`
+
+`return;` is valid in procedures and exits immediately back to the caller.
+
+`return expr;` is valid in functions and returns the computed value to the
+caller.

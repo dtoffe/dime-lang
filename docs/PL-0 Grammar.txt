@@ -115,7 +115,7 @@ parameterDeclaration = ident ":" typeName ;
 // - a routine may declare at most 8 parameters
 
 statement = [ ident ( ":=" expression | "(" [ expression { "," expression } ] ")" )
-            | "return" expression
+            | "return" [ expression ]
             | "break"
             | "continue"
             | "if" expression "then" statementSequence
@@ -182,11 +182,12 @@ statementSequence = statement ";" { statement ";" } ;
 // calls are valid only in expression position. Procedure calls remain
 // statement-only.
 //
-// Function bodies may use `return expr`. Semantic analysis must ensure that
-// the returned expression type matches the declared function result type. At
-// the current implementation stage, the compiler only requires at least one
-// return somewhere in the function body; it does not verify every execution
-// path.
+// Procedure bodies may use bare `return` to exit immediately back to the
+// caller. Function bodies must use `return expr`, and semantic analysis must
+// ensure that the returned expression type matches the declared function
+// result type. At the current implementation stage, the compiler only requires
+// at least one return somewhere in the function body; it does not verify every
+// execution path.
 //
 // Built-in procedures remain restricted to one argument:
 //

@@ -327,8 +327,9 @@ function compileBlock (currentLevel: integer; followTokens: symbolSet;
 
         procedure parseReturnStatement(targetReturnNode: astNode; returnFollowTokens: symbolSet);
         begin
-          appendExpressionChild(targetReturnNode,
-                                compileExpression(returnFollowTokens))
+          if lexerCurrentToken in factorStartTokens then
+            appendExpressionChild(targetReturnNode,
+                                  compileExpression(returnFollowTokens))
         end;
 
         function compileStatementSequence(statementFollowTokens: symbolSet;

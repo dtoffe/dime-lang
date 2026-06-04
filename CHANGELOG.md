@@ -9,6 +9,7 @@ and this project is expected to follow [Semantic Versioning](https://semver.org/
 
 ### [Added]
 
+- Allow bare `return;` in procedures, while functions still require `return <expr>;`.
 - Add `continue` and `break` as loop-only statements for `while`, `repeat`, and `for`.
 - Add support for functions returning a simple scalar value with a return statement.
 - Add support for procedure parameters, simple types and by value only for now.
