@@ -9,11 +9,13 @@ and this project is expected to follow [Semantic Versioning](https://semver.org/
 
 ### [Added]
 
+- Add frame layout model for TAC procedures.
+- Add explicit address operations to lowered TAC.
+- Implement precise TAC operand classification.
+
 ### [Changed]
 
-- Add explicit address operations to lowered TAC.
 - Lower TAC variable access into explicit loads and stores.
-- Implement precise TAC operand classification.
 - Properly split flat TAC into well defined basic blocks.
 - Restructure procedure-level TAC units making the procedure boundary explicit.
 

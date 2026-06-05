@@ -1,7 +1,7 @@
 tac program
 procedures 3
 proc 1 primes return=none params=0 locals=0 temps=0 blocks=1 labels=1 instructions=2
-  frame params=0 locals=0 temps=0
+  frame params=0 locals=0 temps=0 param_area=0 local_area=0 temp_area=0 frame_size=0
   block 1 label=L1 first=1 count=2
    1 call_proc target=proc[printprime]:address
    2 return
@@ -9,7 +9,25 @@ proc 1 primes return=none params=0 locals=0 temps=0 blocks=1 labels=1 instructio
 endproc
 proc 2 isprime return=none params=0 locals=1 temps=17 blocks=6 labels=4 instructions=26
   local 1 local[i]:integer/dword
-  frame params=0 locals=1 temps=17
+  frame params=0 locals=1 temps=17 param_area=0 local_area=4 temp_area=56 frame_size=60
+  frame_local 1 local[i]:integer/dword offset=-4 size=4
+  frame_temp 1 temp[t1]:boolean/byte offset=-5 size=1
+  frame_temp 2 temp[t2]:integer/dword offset=-9 size=4
+  frame_temp 3 temp[t3]:integer/dword offset=-13 size=4
+  frame_temp 4 temp[t4]:integer/dword offset=-17 size=4
+  frame_temp 5 temp[t5]:boolean/byte offset=-18 size=1
+  frame_temp 6 temp[t6]:integer/dword offset=-22 size=4
+  frame_temp 7 temp[t7]:integer/dword offset=-26 size=4
+  frame_temp 8 temp[t8]:integer/dword offset=-30 size=4
+  frame_temp 9 temp[t9]:integer/dword offset=-34 size=4
+  frame_temp 10 temp[t10]:integer/dword offset=-38 size=4
+  frame_temp 11 temp[t11]:integer/dword offset=-42 size=4
+  frame_temp 12 temp[t12]:boolean/byte offset=-43 size=1
+  frame_temp 13 temp[t13]:boolean/byte offset=-44 size=1
+  frame_temp 14 temp[t14]:integer/dword offset=-48 size=4
+  frame_temp 15 temp[t15]:integer/dword offset=-52 size=4
+  frame_temp 16 temp[t16]:integer/dword offset=-56 size=4
+  frame_temp 17 temp[t17]:integer/dword offset=-60 size=4
   block 1 label=L2 first=1 count=4
    1 load_const result=temp[t1]:boolean/byte left=imm(1):boolean/byte
    2 store result=global[ret]:boolean/byte left=temp[t1]:boolean/byte
@@ -47,7 +65,18 @@ proc 2 isprime return=none params=0 locals=1 temps=17 blocks=6 labels=4 instruct
   labelmap L4 block=6 first=26
 endproc
 proc 3 printprime return=none params=0 locals=0 temps=11 blocks=6 labels=5 instructions=19
-  frame params=0 locals=0 temps=11
+  frame params=0 locals=0 temps=11 param_area=0 local_area=0 temp_area=38 frame_size=38
+  frame_temp 1 temp[t18]:integer/dword offset=-4 size=4
+  frame_temp 2 temp[t19]:integer/dword offset=-8 size=4
+  frame_temp 3 temp[t20]:integer/dword offset=-12 size=4
+  frame_temp 4 temp[t21]:integer/dword offset=-16 size=4
+  frame_temp 5 temp[t22]:boolean/byte offset=-17 size=1
+  frame_temp 6 temp[t23]:integer/dword offset=-21 size=4
+  frame_temp 7 temp[t24]:boolean/byte offset=-22 size=1
+  frame_temp 8 temp[t25]:integer/dword offset=-26 size=4
+  frame_temp 9 temp[t26]:integer/dword offset=-30 size=4
+  frame_temp 10 temp[t27]:integer/dword offset=-34 size=4
+  frame_temp 11 temp[t28]:integer/dword offset=-38 size=4
   block 1 label=L6 first=1 count=2
    1 load_const result=temp[t18]:integer/dword left=imm(2):integer/dword
    2 store result=global[arg]:integer/dword left=temp[t18]:integer/dword

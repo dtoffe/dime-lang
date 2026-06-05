@@ -116,10 +116,23 @@ type
     size: tacOperandSize
   end;
 
+  tacFrameSlot = record
+    operand: tacOperand;
+    offset: integer;
+    sizeInBytes: integer
+  end;
+
   tacFrameInfo = record
     parameterCount: integer;
     localCount: integer;
-    temporaryCount: integer
+    temporaryCount: integer;
+    parameterAreaSize: integer;
+    localAreaSize: integer;
+    temporaryAreaSize: integer;
+    frameSize: integer;
+    parameters: array [1..maxProcedureParameters] of tacFrameSlot;
+    locals: array [1..symbolTableMax] of tacFrameSlot;
+    temporaries: array [1..maxTacInstructions] of tacFrameSlot
   end;
 
   tacProcedure = record
@@ -203,6 +216,22 @@ end;
 function currentProcedureHasOpenBlock: boolean;
 begin
   currentProcedureHasOpenBlock := (currentProcedure <> 0) and (currentBasicBlock <> 0)
+end;
+
+function operandSizeInBytes(size: tacOperandSize): integer;
+begin
+  case size of
+    irSizeByte:
+      operandSizeInBytes := 1;
+    irSizeWord:
+      operandSizeInBytes := 2;
+    irSizeDWord, irSizeAddress:
+      operandSizeInBytes := 4;
+    irSizeQWord:
+      operandSizeInBytes := 8;
+  else
+    operandSizeInBytes := 0
+  end
 end;
 
 function currentBlockInstructionCount: integer;
@@ -487,6 +516,60 @@ begin
                        getDeclarationLevel(routineSymbol) + 1
 end;
 
+procedure rebuildTacProcedureFrameLayout(procedureIndex: tacProcedureIndex);
+var
+  itemIndex, nextParameterOffset, nextStackOffset, slotSize: integer;
+begin
+  if (procedureIndex < 1) or (procedureIndex > currentProgram.procedureCount) then
+    exit;
+
+  with currentProgram.procedures[procedureIndex] do
+  begin
+    frameInfo.parameterCount := parameterCount;
+    frameInfo.localCount := localCount;
+
+    nextParameterOffset := 8;
+    frameInfo.parameterAreaSize := 0;
+    for itemIndex := 1 to parameterCount do
+    begin
+      slotSize := operandSizeInBytes(parameters[itemIndex].size);
+      frameInfo.parameters[itemIndex].operand := parameters[itemIndex];
+      frameInfo.parameters[itemIndex].offset := nextParameterOffset;
+      frameInfo.parameters[itemIndex].sizeInBytes := slotSize;
+      nextParameterOffset := nextParameterOffset + slotSize;
+      frameInfo.parameterAreaSize := frameInfo.parameterAreaSize + slotSize
+    end;
+
+    nextStackOffset := 0;
+    frameInfo.localAreaSize := 0;
+    for itemIndex := 1 to localCount do
+    begin
+      slotSize := operandSizeInBytes(locals[itemIndex].size);
+      nextStackOffset := nextStackOffset - slotSize;
+      frameInfo.locals[itemIndex].operand := locals[itemIndex];
+      frameInfo.locals[itemIndex].offset := nextStackOffset;
+      frameInfo.locals[itemIndex].sizeInBytes := slotSize;
+      frameInfo.localAreaSize := frameInfo.localAreaSize + slotSize
+    end;
+
+    frameInfo.temporaryAreaSize := 0;
+    for itemIndex := 1 to frameInfo.temporaryCount do
+    begin
+      slotSize := operandSizeInBytes(temporaries[itemIndex].size);
+      nextStackOffset := nextStackOffset - slotSize;
+      frameInfo.temporaries[itemIndex].operand :=
+        makeTacTempOperand(temporaries[itemIndex].temporaryId,
+                           temporaries[itemIndex].valueType);
+      frameInfo.temporaries[itemIndex].operand.size := temporaries[itemIndex].size;
+      frameInfo.temporaries[itemIndex].offset := nextStackOffset;
+      frameInfo.temporaries[itemIndex].sizeInBytes := slotSize;
+      frameInfo.temporaryAreaSize := frameInfo.temporaryAreaSize + slotSize
+    end;
+
+    frameInfo.frameSize := frameInfo.localAreaSize + frameInfo.temporaryAreaSize
+  end
+end;
+
 function classifySymbolOperand(symbol: symbolIndex): tacOperandKind;
 var
   routineSymbol: symbolIndex;
@@ -679,7 +762,8 @@ begin
       frameInfo.temporaryCount := frameInfo.temporaryCount + 1;
       temporaries[frameInfo.temporaryCount].temporaryId := currentProgram.temporaryCount;
       temporaries[frameInfo.temporaryCount].valueType := valueType;
-      temporaries[frameInfo.temporaryCount].size := typeToOperandSize(valueType)
+      temporaries[frameInfo.temporaryCount].size := typeToOperandSize(valueType);
+      rebuildTacProcedureFrameLayout(currentProcedure)
     end;
   newTacTemporary := makeTacTempOperand(currentProgram.temporaryCount, valueType)
 end;
@@ -707,7 +791,8 @@ begin
       frameInfo.temporaryCount := frameInfo.temporaryCount + 1;
       temporaries[frameInfo.temporaryCount].temporaryId := currentProgram.temporaryCount;
       temporaries[frameInfo.temporaryCount].valueType := typeInteger;
-      temporaries[frameInfo.temporaryCount].size := irSizeAddress
+      temporaries[frameInfo.temporaryCount].size := irSizeAddress;
+      rebuildTacProcedureFrameLayout(currentProcedure)
     end;
   newTacAddressTemporary := makeTacAddressTempOperand(currentProgram.temporaryCount)
 end;
@@ -771,7 +856,11 @@ begin
     labelCount := 0;
     frameInfo.parameterCount := 0;
     frameInfo.localCount := 0;
-    frameInfo.temporaryCount := 0
+    frameInfo.temporaryCount := 0;
+    frameInfo.parameterAreaSize := 0;
+    frameInfo.localAreaSize := 0;
+    frameInfo.temporaryAreaSize := 0;
+    frameInfo.frameSize := 0
   end
 end;
 
@@ -812,7 +901,8 @@ begin
       parameterSymbol,
       getDeclarationIdentifier(parameterSymbol),
       getDeclarationType(parameterSymbol));
-    frameInfo.parameterCount := parameterCount
+    frameInfo.parameterCount := parameterCount;
+    rebuildTacProcedureFrameLayout(procedureIndex)
   end
 end;
 
@@ -839,7 +929,8 @@ begin
       localSymbol,
       getDeclarationIdentifier(localSymbol),
       getDeclarationType(localSymbol));
-    frameInfo.localCount := localCount
+    frameInfo.localCount := localCount;
+    rebuildTacProcedureFrameLayout(procedureIndex)
   end
 end;
 
@@ -967,6 +1058,7 @@ begin
   for procedureIndex := 1 to currentProgram.procedureCount do
     with currentProgram.procedures[procedureIndex] do
     begin
+      rebuildTacProcedureFrameLayout(procedureIndex);
       writeln(outputFile, 'proc ', procedureIndex, ' ',
               identifierToString(name),
               ' return=', procedureReturnTypeToString(hasReturnValue, returnType),
@@ -984,7 +1076,26 @@ begin
                 operandToString(locals[itemIndex]));
       writeln(outputFile, '  frame params=', frameInfo.parameterCount,
               ' locals=', frameInfo.localCount,
-              ' temps=', frameInfo.temporaryCount);
+              ' temps=', frameInfo.temporaryCount,
+              ' param_area=', frameInfo.parameterAreaSize,
+              ' local_area=', frameInfo.localAreaSize,
+              ' temp_area=', frameInfo.temporaryAreaSize,
+              ' frame_size=', frameInfo.frameSize);
+      for itemIndex := 1 to frameInfo.parameterCount do
+        writeln(outputFile, '  frame_param ', itemIndex, ' ',
+                operandToString(frameInfo.parameters[itemIndex].operand),
+                ' offset=+', frameInfo.parameters[itemIndex].offset,
+                ' size=', frameInfo.parameters[itemIndex].sizeInBytes);
+      for itemIndex := 1 to frameInfo.localCount do
+        writeln(outputFile, '  frame_local ', itemIndex, ' ',
+                operandToString(frameInfo.locals[itemIndex].operand),
+                ' offset=', frameInfo.locals[itemIndex].offset,
+                ' size=', frameInfo.locals[itemIndex].sizeInBytes);
+      for itemIndex := 1 to frameInfo.temporaryCount do
+        writeln(outputFile, '  frame_temp ', itemIndex, ' ',
+                operandToString(frameInfo.temporaries[itemIndex].operand),
+                ' offset=', frameInfo.temporaries[itemIndex].offset,
+                ' size=', frameInfo.temporaries[itemIndex].sizeInBytes);
       for itemIndex := 1 to basicBlockCount do
         with basicBlocks[itemIndex] do
         begin
