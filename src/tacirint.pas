@@ -43,9 +43,14 @@ type
 
   tacRuntimeOperandKind = (
     rtOperandNone,
-    rtOperandConst,
-    rtOperandSymbol,
-    rtOperandTemp
+    rtOperandImmediate,
+    rtOperandLocal,
+    rtOperandParameter,
+    rtOperandTemporary,
+    rtOperandGlobal,
+    rtOperandLabel,
+    rtOperandProcedure,
+    rtOperandIntrinsic
   );
 
   tacRuntimeOperand = record
@@ -61,10 +66,8 @@ type
     resultOperand: tacRuntimeOperand;
     leftOperand: tacRuntimeOperand;
     rightOperand: tacRuntimeOperand;
+    targetOperand: tacRuntimeOperand;
     operatorText: string;
-    targetLabel: integer;
-    procedureName: string;
-    builtinName: string
   end;
 
   tacRuntimeProcedure = record
@@ -146,8 +149,8 @@ end;
 
 function parseOperand(const operandText: string): tacRuntimeOperand;
 var
-  separatorIndex: integer;
-  atomText, typeText: string;
+  separatorIndex, slashIndex, openIndex, closeIndex: integer;
+  atomText, typeText, payloadText: string;
 begin
   parseOperand := makeNoneOperand;
   if (operandText = '') or (operandText = '_') then
@@ -165,23 +168,69 @@ begin
     typeText := ''
   end;
 
+  slashIndex := Pos('/', typeText);
+  if slashIndex > 0 then
+    typeText := Copy(typeText, 1, slashIndex - 1);
   parseOperand.valueType := typeText;
-  if (atomText <> '') and (atomText[1] = '#') then
+
+  openIndex := Pos('[', atomText);
+  closeIndex := Pos(']', atomText);
+  if (openIndex = 0) or (closeIndex = 0) then
   begin
-    parseOperand.kind := rtOperandConst;
-    parseOperand.value := parseIntegerOrHalt(Copy(atomText, 2, Length(atomText)),
+    openIndex := Pos('(', atomText);
+    closeIndex := Pos(')', atomText)
+  end;
+  if (openIndex > 0) and (closeIndex > openIndex) then
+    payloadText := Copy(atomText, openIndex + 1, closeIndex - openIndex - 1)
+  else
+    payloadText := '';
+
+  if startsWith(atomText, 'imm(') then
+  begin
+    parseOperand.kind := rtOperandImmediate;
+    parseOperand.value := parseIntegerOrHalt(payloadText,
                                              'Invalid TAC constant operand.')
   end
-  else if (Length(atomText) > 1) and (atomText[1] = 't') and
-          (atomText[2] in ['0'..'9']) then
+  else if startsWith(atomText, 'temp[') and (Length(payloadText) > 1) and
+          (payloadText[1] = 't') then
   begin
-    parseOperand.kind := rtOperandTemp;
-    parseOperand.temporaryId := parseIntegerOrHalt(Copy(atomText, 2, Length(atomText)),
+    parseOperand.kind := rtOperandTemporary;
+    parseOperand.temporaryId := parseIntegerOrHalt(Copy(payloadText, 2, Length(payloadText)),
                                                    'Invalid TAC temporary operand.')
+  end
+  else if startsWith(atomText, 'local[') then
+  begin
+    parseOperand.kind := rtOperandLocal;
+    parseOperand.name := payloadText
+  end
+  else if startsWith(atomText, 'param[') then
+  begin
+    parseOperand.kind := rtOperandParameter;
+    parseOperand.name := payloadText
+  end
+  else if startsWith(atomText, 'global[') then
+  begin
+    parseOperand.kind := rtOperandGlobal;
+    parseOperand.name := payloadText
+  end
+  else if startsWith(atomText, 'label[') then
+  begin
+    parseOperand.kind := rtOperandLabel;
+    parseOperand.value := parseLabelId(payloadText)
+  end
+  else if startsWith(atomText, 'proc[') then
+  begin
+    parseOperand.kind := rtOperandProcedure;
+    parseOperand.name := payloadText
+  end
+  else if startsWith(atomText, 'intrinsic[') then
+  begin
+    parseOperand.kind := rtOperandIntrinsic;
+    parseOperand.name := payloadText
   end
   else
   begin
-    parseOperand.kind := rtOperandSymbol;
+    parseOperand.kind := rtOperandGlobal;
     parseOperand.name := atomText
   end
 end;
@@ -337,10 +386,8 @@ begin
   procedures[procedureIndex].instructions[instructionIndex].resultOperand := makeNoneOperand;
   procedures[procedureIndex].instructions[instructionIndex].leftOperand := makeNoneOperand;
   procedures[procedureIndex].instructions[instructionIndex].rightOperand := makeNoneOperand;
+  procedures[procedureIndex].instructions[instructionIndex].targetOperand := makeNoneOperand;
   procedures[procedureIndex].instructions[instructionIndex].operatorText := '';
-  procedures[procedureIndex].instructions[instructionIndex].targetLabel := 0;
-  procedures[procedureIndex].instructions[instructionIndex].procedureName := '';
-  procedures[procedureIndex].instructions[instructionIndex].builtinName := '';
 
   for tokenIndex := 2 to tokens.Count - 1 do
   begin
@@ -363,18 +410,10 @@ begin
     if valueText <> '' then
       procedures[procedureIndex].instructions[instructionIndex].operatorText := valueText;
 
-    valueText := tokenValue(tokens[tokenIndex], 'label');
+    valueText := tokenValue(tokens[tokenIndex], 'target');
     if valueText <> '' then
-      procedures[procedureIndex].instructions[instructionIndex].targetLabel :=
-        parseLabelId(valueText);
-
-    valueText := tokenValue(tokens[tokenIndex], 'proc');
-    if valueText <> '' then
-      procedures[procedureIndex].instructions[instructionIndex].procedureName := valueText;
-
-    valueText := tokenValue(tokens[tokenIndex], 'builtin');
-    if valueText <> '' then
-      procedures[procedureIndex].instructions[instructionIndex].builtinName := valueText
+      procedures[procedureIndex].instructions[instructionIndex].targetOperand :=
+        parseOperand(valueText)
   end;
 
 end;
@@ -455,11 +494,13 @@ var
   variableIndex: integer;
 begin
   case operand.kind of
-    rtOperandConst:
+    rtOperandImmediate:
       operandValue := operand.value;
-    rtOperandTemp:
+    rtOperandTemporary:
       operandValue := temporaries[operand.temporaryId];
-    rtOperandSymbol:
+    rtOperandLocal,
+    rtOperandParameter,
+    rtOperandGlobal:
       begin
         variableIndex := ensureVariable(operand.name);
         operandValue := variables[variableIndex].value
@@ -474,9 +515,11 @@ var
   variableIndex: integer;
 begin
   case operand.kind of
-    rtOperandTemp:
+    rtOperandTemporary:
       temporaries[operand.temporaryId] := value;
-    rtOperandSymbol:
+    rtOperandLocal,
+    rtOperandParameter,
+    rtOperandGlobal:
       begin
         variableIndex := ensureVariable(operand.name);
         variables[variableIndex].value := value
@@ -671,14 +714,14 @@ begin
   value := operandValue(instruction.leftOperand);
   if instruction.leftOperand.valueType = 'char' then
   begin
-    if instruction.builtinName = 'writeln' then
+    if instruction.targetOperand.name = 'writeln' then
       WriteLn(Chr(value))
     else
       Write(Chr(value))
   end
   else
   begin
-    if instruction.builtinName = 'writeln' then
+    if instruction.targetOperand.name = 'writeln' then
       WriteLn(value)
     else
       Write(value)
@@ -736,11 +779,11 @@ begin
           programCounter := programCounter + 1
         end;
       rtGoto:
-        programCounter := labelTarget(currentProcedureIndex, instruction.targetLabel);
+        programCounter := labelTarget(currentProcedureIndex, instruction.targetOperand.value);
       rtGotoIfZero:
         begin
           if operandValue(instruction.leftOperand) = 0 then
-            programCounter := labelTarget(currentProcedureIndex, instruction.targetLabel)
+            programCounter := labelTarget(currentProcedureIndex, instruction.targetOperand.value)
           else
             programCounter := programCounter + 1
         end;
@@ -759,7 +802,7 @@ begin
         end;
       rtCallProc:
         begin
-          calleeProcedureIndex := findProcedure(instruction.procedureName);
+          calleeProcedureIndex := findProcedure(instruction.targetOperand.name);
           if calleeProcedureIndex = 0 then
           begin
             reportRuntimeError('Unknown TAC procedure.');
@@ -780,7 +823,7 @@ begin
         begin
           assignOperand(instruction.resultOperand,
                         readValueByType(instruction.resultOperand.valueType,
-                                        instruction.builtinName));
+                                        instruction.targetOperand.name));
           programCounter := programCounter + 1
         end;
       rtBuiltinWrite:

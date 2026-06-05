@@ -104,7 +104,7 @@ var
   instruction: tacInstruction;
 begin
   instruction := newTacInstruction(irGoto);
-  instruction.targetLabel := labelId;
+  instruction.targetOperand := makeTacLabelOperand(labelId);
   appendTacInstruction(instruction)
 end;
 
@@ -114,7 +114,7 @@ var
 begin
   instruction := newTacInstruction(irGotoIfZero);
   instruction.leftOperand := conditionOperand;
-  instruction.targetLabel := labelId;
+  instruction.targetOperand := makeTacLabelOperand(labelId);
   appendTacInstruction(instruction)
 end;
 
@@ -399,22 +399,22 @@ begin
   begin
     argumentOperand := lowerExpression(argumentNode, errorCount);
     instruction := newTacInstruction(irBuiltinWrite);
-    instruction.builtinProcedureKind := procKind;
+    instruction.targetOperand := makeTacIntrinsicOperand(procKind);
     instruction.leftOperand := argumentOperand;
     appendTacInstruction(instruction)
   end
   else if procKind in [builtinRead, builtinReadLn] then
   begin
     instruction := newTacInstruction(irBuiltinRead);
-    instruction.builtinProcedureKind := procKind;
+    instruction.targetOperand := makeTacIntrinsicOperand(procKind);
     instruction.resultOperand := symbolOperandFromNode(argumentNode);
     appendTacInstruction(instruction)
   end
   else
   begin
     instruction := newTacInstruction(irCallProc);
-    instruction.procedureSymbol := resolvedSymbol;
-    instruction.procedureName := calleeNode^.identifierText;
+    instruction.targetOperand := makeTacProcedureOperand(resolvedSymbol,
+                                                         calleeNode^.identifierText);
     argumentIndex := 1;
     while argumentNode <> nil do
     begin

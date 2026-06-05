@@ -59,6 +59,7 @@ function getProcedureParameterType(index: symbolIndex;
                                    parameterIndex: integer): typeValue;
 function getProcedureParameterSymbol(index: symbolIndex;
                                      parameterIndex: integer): symbolIndex;
+function isProcedureParameterSymbol(index, parameterSymbol: symbolIndex): boolean;
 
 implementation
 
@@ -363,6 +364,22 @@ begin
     getProcedureParameterSymbol := 0
   else
     getProcedureParameterSymbol := entryProcedureParameterSymbols[index, parameterIndex]
+end;
+
+function isProcedureParameterSymbol(index, parameterSymbol: symbolIndex): boolean;
+var
+  parameterIndex: integer;
+begin
+  isProcedureParameterSymbol := false;
+  if (index = 0) or (parameterSymbol = 0) then
+    exit;
+
+  for parameterIndex := 1 to entryProcedureParameterCount[index] do
+    if entryProcedureParameterSymbols[index, parameterIndex] = parameterSymbol then
+    begin
+      isProcedureParameterSymbol := true;
+      exit
+    end
 end;
 
 end.

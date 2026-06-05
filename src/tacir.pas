@@ -47,27 +47,44 @@ type
     irReturn
   );
 
-  { TAC operands describe values only. Labels stay on branch/label
-    instructions so backend layout decisions remain separate. }
   tacOperandKind = (
     irOperandNone,
-    irOperandConst,
-    irOperandSymbol,
-    irOperandTemp
+    irOperandImmediate,
+    irOperandLocal,
+    irOperandParameter,
+    irOperandTemporary,
+    irOperandGlobal,
+    irOperandLabel,
+    irOperandProcedure,
+    irOperandIntrinsic
+  );
+
+  tacOperandSize = (
+    irSizeNone,
+    irSizeByte,
+    irSizeWord,
+    irSizeDWord,
+    irSizeQWord,
+    irSizeAddress
   );
 
   tacOperand = record
     kind: tacOperandKind;
     valueType: typeValue;
+    size: tacOperandSize;
+    symbol: symbolIndex;
+    name: identifier;
+    builtinProcedureKind: builtinProcedure;
     case tacOperandKind of
       irOperandNone:
         ();
-      irOperandConst:
+      irOperandImmediate:
         (constantValue: integer);
-      irOperandSymbol:
-        (symbol: symbolIndex; name: identifier);
-      irOperandTemp:
+      irOperandTemporary:
         (temporaryId: tacTemporaryId)
+      ;
+      irOperandLabel:
+        (labelId: tacLabelId)
   end;
 
   tacInstruction = record
@@ -75,11 +92,8 @@ type
     resultOperand: tacOperand;
     leftOperand: tacOperand;
     rightOperand: tacOperand;
+    targetOperand: tacOperand;
     operatorSymbol: symbol;
-    targetLabel: tacLabelId;
-    procedureSymbol: symbolIndex;
-    procedureName: identifier;
-    builtinProcedureKind: builtinProcedure;
     callArgumentCount: integer;
     callArguments: array [1..maxTacOperandsPerCall] of tacOperand
   end;
@@ -139,6 +153,9 @@ function makeTacConstOperand(const constantValue: integer; valueType: typeValue)
 function makeTacSymbolOperand(symbol: symbolIndex; const name: identifier;
                               valueType: typeValue): tacOperand;
 function makeTacTempOperand(temporaryId: tacTemporaryId; valueType: typeValue): tacOperand;
+function makeTacLabelOperand(labelId: tacLabelId): tacOperand;
+function makeTacProcedureOperand(symbol: symbolIndex; const name: identifier): tacOperand;
+function makeTacIntrinsicOperand(procKind: builtinProcedure): tacOperand;
 
 function newTacTemporary(valueType: typeValue): tacOperand;
 function newTacLabel: tacLabelId;
@@ -271,6 +288,29 @@ begin
   end
 end;
 
+function typeToOperandSize(valueType: typeValue): tacOperandSize;
+begin
+  case valueType of
+    typeBoolean, typeChar:
+      typeToOperandSize := irSizeByte;
+    typeInteger:
+      typeToOperandSize := irSizeDWord
+  end
+end;
+
+function operandSizeToString(size: tacOperandSize): string;
+begin
+  case size of
+    irSizeByte: operandSizeToString := 'byte';
+    irSizeWord: operandSizeToString := 'word';
+    irSizeDWord: operandSizeToString := 'dword';
+    irSizeQWord: operandSizeToString := 'qword';
+    irSizeAddress: operandSizeToString := 'address';
+  else
+    operandSizeToString := 'none'
+  end
+end;
+
 function procedureReturnTypeToString(hasReturnValue: boolean;
                                      returnType: typeValue): string;
 begin
@@ -313,20 +353,90 @@ begin
   end
 end;
 
+function routineOwnsSymbol(routineSymbol, operandSymbol: symbolIndex): boolean;
+begin
+  routineOwnsSymbol := false;
+  if (routineSymbol = 0) or (operandSymbol = 0) then
+    exit;
+  if getDeclarationKind(operandSymbol) <> variable then
+    exit;
+
+  routineOwnsSymbol := getDeclarationLevel(operandSymbol) =
+                       getDeclarationLevel(routineSymbol) + 1
+end;
+
+function classifySymbolOperand(symbol: symbolIndex): tacOperandKind;
+var
+  routineSymbol: symbolIndex;
+begin
+  classifySymbolOperand := irOperandGlobal;
+  if symbol = 0 then
+    exit;
+
+  case getDeclarationKind(symbol) of
+    constant:
+      classifySymbolOperand := irOperandImmediate;
+    variable:
+      begin
+        if getDeclarationLevel(symbol) = 0 then
+          classifySymbolOperand := irOperandGlobal
+        else
+        begin
+          routineSymbol := 0;
+          if currentProcedure <> 0 then
+            routineSymbol := currentProgram.procedures[currentProcedure].symbol;
+          if routineOwnsSymbol(routineSymbol, symbol) and
+             isProcedureParameterSymbol(routineSymbol, symbol) then
+            classifySymbolOperand := irOperandParameter
+          else
+            classifySymbolOperand := irOperandLocal
+        end
+      end;
+    func:
+      classifySymbolOperand := irOperandGlobal;
+    proc:
+      if getBuiltinProcedure(symbol) <> builtinNone then
+        classifySymbolOperand := irOperandIntrinsic
+      else
+        classifySymbolOperand := irOperandProcedure
+  end
+end;
+
 function operandToString(const operand: tacOperand): string;
 begin
   case operand.kind of
     irOperandNone:
       operandToString := '_';
-    irOperandConst:
-      operandToString := '#' + IntToStr(operand.constantValue) + ':' +
-                         typeToString(operand.valueType);
-    irOperandSymbol:
-      operandToString := identifierToString(operand.name) + ':' +
-                         typeToString(operand.valueType);
-    irOperandTemp:
-      operandToString := 't' + IntToStr(operand.temporaryId) + ':' +
-                         typeToString(operand.valueType)
+    irOperandImmediate:
+      operandToString := 'imm(' + IntToStr(operand.constantValue) + '):' +
+                         typeToString(operand.valueType) + '/' +
+                         operandSizeToString(operand.size);
+    irOperandLocal:
+      operandToString := 'local[' + identifierToString(operand.name) + ']:' +
+                         typeToString(operand.valueType) + '/' +
+                         operandSizeToString(operand.size);
+    irOperandParameter:
+      operandToString := 'param[' + identifierToString(operand.name) + ']:' +
+                         typeToString(operand.valueType) + '/' +
+                         operandSizeToString(operand.size);
+    irOperandTemporary:
+      operandToString := 'temp[t' + IntToStr(operand.temporaryId) + ']:' +
+                         typeToString(operand.valueType) + '/' +
+                         operandSizeToString(operand.size);
+    irOperandGlobal:
+      operandToString := 'global[' + identifierToString(operand.name) + ']:' +
+                         typeToString(operand.valueType) + '/' +
+                         operandSizeToString(operand.size);
+    irOperandLabel:
+      operandToString := 'label[L' + IntToStr(operand.labelId) + ']:' +
+                         operandSizeToString(operand.size);
+    irOperandProcedure:
+      operandToString := 'proc[' + identifierToString(operand.name) + ']:' +
+                         operandSizeToString(operand.size);
+    irOperandIntrinsic:
+      operandToString := 'intrinsic[' +
+                         builtinProcedureToString(operand.builtinProcedureKind) + ']:' +
+                         operandSizeToString(operand.size)
   end
 end;
 
@@ -351,14 +461,18 @@ function makeTacNoneOperand: tacOperand;
 begin
   FillChar(makeTacNoneOperand, SizeOf(makeTacNoneOperand), 0);
   makeTacNoneOperand.kind := irOperandNone;
-  makeTacNoneOperand.valueType := typeInteger
+  makeTacNoneOperand.valueType := typeInteger;
+  makeTacNoneOperand.size := irSizeNone;
+  makeTacNoneOperand.builtinProcedureKind := builtinNone
 end;
 
 function makeTacConstOperand(const constantValue: integer; valueType: typeValue): tacOperand;
 begin
   FillChar(makeTacConstOperand, SizeOf(makeTacConstOperand), 0);
-  makeTacConstOperand.kind := irOperandConst;
+  makeTacConstOperand.kind := irOperandImmediate;
   makeTacConstOperand.valueType := valueType;
+  makeTacConstOperand.size := typeToOperandSize(valueType);
+  makeTacConstOperand.builtinProcedureKind := builtinNone;
   makeTacConstOperand.constantValue := constantValue
 end;
 
@@ -366,18 +480,52 @@ function makeTacSymbolOperand(symbol: symbolIndex; const name: identifier;
                               valueType: typeValue): tacOperand;
 begin
   FillChar(makeTacSymbolOperand, SizeOf(makeTacSymbolOperand), 0);
-  makeTacSymbolOperand.kind := irOperandSymbol;
+  makeTacSymbolOperand.kind := classifySymbolOperand(symbol);
   makeTacSymbolOperand.valueType := valueType;
+  makeTacSymbolOperand.size := typeToOperandSize(valueType);
   makeTacSymbolOperand.symbol := symbol;
-  makeTacSymbolOperand.name := name
+  makeTacSymbolOperand.name := name;
+  makeTacSymbolOperand.builtinProcedureKind := builtinNone
 end;
 
 function makeTacTempOperand(temporaryId: tacTemporaryId; valueType: typeValue): tacOperand;
 begin
   FillChar(makeTacTempOperand, SizeOf(makeTacTempOperand), 0);
-  makeTacTempOperand.kind := irOperandTemp;
+  makeTacTempOperand.kind := irOperandTemporary;
   makeTacTempOperand.valueType := valueType;
+  makeTacTempOperand.size := typeToOperandSize(valueType);
+  makeTacTempOperand.builtinProcedureKind := builtinNone;
   makeTacTempOperand.temporaryId := temporaryId
+end;
+
+function makeTacLabelOperand(labelId: tacLabelId): tacOperand;
+begin
+  FillChar(makeTacLabelOperand, SizeOf(makeTacLabelOperand), 0);
+  makeTacLabelOperand.kind := irOperandLabel;
+  makeTacLabelOperand.valueType := typeInteger;
+  makeTacLabelOperand.size := irSizeAddress;
+  makeTacLabelOperand.builtinProcedureKind := builtinNone;
+  makeTacLabelOperand.labelId := labelId
+end;
+
+function makeTacProcedureOperand(symbol: symbolIndex; const name: identifier): tacOperand;
+begin
+  FillChar(makeTacProcedureOperand, SizeOf(makeTacProcedureOperand), 0);
+  makeTacProcedureOperand.kind := irOperandProcedure;
+  makeTacProcedureOperand.valueType := typeInteger;
+  makeTacProcedureOperand.size := irSizeAddress;
+  makeTacProcedureOperand.symbol := symbol;
+  makeTacProcedureOperand.name := name;
+  makeTacProcedureOperand.builtinProcedureKind := builtinNone
+end;
+
+function makeTacIntrinsicOperand(procKind: builtinProcedure): tacOperand;
+begin
+  FillChar(makeTacIntrinsicOperand, SizeOf(makeTacIntrinsicOperand), 0);
+  makeTacIntrinsicOperand.kind := irOperandIntrinsic;
+  makeTacIntrinsicOperand.valueType := typeInteger;
+  makeTacIntrinsicOperand.size := irSizeAddress;
+  makeTacIntrinsicOperand.builtinProcedureKind := procKind
 end;
 
 function newTacTemporary(valueType: typeValue): tacOperand;
@@ -432,11 +580,8 @@ begin
   newTacInstruction.resultOperand := makeTacNoneOperand;
   newTacInstruction.leftOperand := makeTacNoneOperand;
   newTacInstruction.rightOperand := makeTacNoneOperand;
+  newTacInstruction.targetOperand := makeTacNoneOperand;
   newTacInstruction.operatorSymbol := nul;
-  newTacInstruction.targetLabel := 0;
-  newTacInstruction.procedureSymbol := 0;
-  FillChar(newTacInstruction.procedureName, SizeOf(newTacInstruction.procedureName), ' ');
-  newTacInstruction.builtinProcedureKind := builtinNone;
   newTacInstruction.callArgumentCount := 0;
   for argumentIndex := 1 to maxTacOperandsPerCall do
     newTacInstruction.callArguments[argumentIndex] := makeTacNoneOperand
@@ -637,14 +782,10 @@ begin
     write(outputFile, ' left=', operandToString(instruction.leftOperand));
   if instruction.rightOperand.kind <> irOperandNone then
     write(outputFile, ' right=', operandToString(instruction.rightOperand));
+  if instruction.targetOperand.kind <> irOperandNone then
+    write(outputFile, ' target=', operandToString(instruction.targetOperand));
   if instruction.operatorSymbol <> nul then
     write(outputFile, ' op=', operatorToString(instruction.operatorSymbol));
-  if instruction.targetLabel <> 0 then
-    write(outputFile, ' label=L', instruction.targetLabel);
-  if instruction.procedureSymbol <> 0 then
-    write(outputFile, ' proc=', identifierToString(instruction.procedureName));
-  if instruction.builtinProcedureKind <> builtinNone then
-    write(outputFile, ' builtin=', builtinProcedureToString(instruction.builtinProcedureKind));
   for argumentIndex := 1 to instruction.callArgumentCount do
     write(outputFile, ' arg', argumentIndex, '=',
           operandToString(instruction.callArguments[argumentIndex]));

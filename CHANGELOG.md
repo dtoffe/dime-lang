@@ -11,6 +11,7 @@ and this project is expected to follow [Semantic Versioning](https://semver.org/
 
 ### [Changed]
 
+- Implemented precise TAC operand classification.
 - Properly split flat TAC into well defined basic blocks.
 - Restructured procedure-level TAC units making the procedure boundary explicit.
 
