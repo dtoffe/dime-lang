@@ -47,14 +47,21 @@ begin
     nodeValueType := typeInteger
 end;
 
-function symbolOperandFromNode(node: astNode): tacOperand;
+function storageOperandFromNode(node: astNode): tacOperand;
+var
+  resolvedSymbol: symbolIndex;
 begin
-  if (node <> nil) and hasResolvedSymbol(node) then
-    symbolOperandFromNode := makeTacSymbolOperand(resolvedSymbolOf(node),
+  storageOperandFromNode := makeTacNoneOperand;
+  if (node = nil) or not hasResolvedSymbol(node) then
+    exit;
+
+  resolvedSymbol := resolvedSymbolOf(node);
+  if not (getDeclarationKind(resolvedSymbol) in [variable, func]) then
+    exit;
+
+  storageOperandFromNode := makeTacSymbolOperand(resolvedSymbol,
                                                  node^.identifierText,
                                                  nodeValueType(node))
-  else
-    symbolOperandFromNode := makeTacNoneOperand
 end;
 
 procedure recordBlockLocals(blockNode: astNode; procedureIndex: tacProcedureIndex);
@@ -363,7 +370,7 @@ begin
 
   valueOperand := lowerExpression(valueNode, errorCount);
   instruction := newTacInstruction(irStoreVar);
-  instruction.resultOperand := symbolOperandFromNode(targetNode);
+  instruction.resultOperand := storageOperandFromNode(targetNode);
   instruction.leftOperand := valueOperand;
   appendTacInstruction(instruction)
 end;
@@ -407,7 +414,7 @@ begin
   begin
     instruction := newTacInstruction(irBuiltinRead);
     instruction.targetOperand := makeTacIntrinsicOperand(procKind);
-    instruction.resultOperand := symbolOperandFromNode(argumentNode);
+    instruction.resultOperand := storageOperandFromNode(argumentNode);
     appendTacInstruction(instruction)
   end
   else
@@ -568,7 +575,7 @@ begin
   if stepNode <> nil then
     bodyNode := stepNode^.nextSibling;
 
-  counterOperand := symbolOperandFromNode(counterNode);
+  counterOperand := storageOperandFromNode(counterNode);
   startOperand := lowerExpression(startNode, errorCount);
   instruction := newTacInstruction(irStoreVar);
   instruction.resultOperand := counterOperand;

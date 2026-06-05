@@ -205,6 +205,85 @@ begin
     currentBlockInstructionCount := 0
 end;
 
+function isStorageOperandKind(kind: tacOperandKind): boolean;
+begin
+  isStorageOperandKind := kind in [irOperandLocal, irOperandParameter, irOperandGlobal]
+end;
+
+function isValueOperandKind(kind: tacOperandKind): boolean;
+begin
+  isValueOperandKind := kind in [irOperandImmediate, irOperandTemporary]
+end;
+
+function isValueOrNoneOperandKind(kind: tacOperandKind): boolean;
+begin
+  isValueOrNoneOperandKind := (kind = irOperandNone) or isValueOperandKind(kind)
+end;
+
+function instructionUsesStorageOperands(kind: tacInstructionKind): boolean;
+begin
+  instructionUsesStorageOperands := kind in [irLoadVar, irStoreVar, irBuiltinRead]
+end;
+
+function validateTacInstruction(const instruction: tacInstruction): boolean;
+var
+  argumentIndex: integer;
+begin
+  validateTacInstruction := true;
+  case instruction.kind of
+    irLoadConst:
+      validateTacInstruction := (instruction.resultOperand.kind = irOperandTemporary) and
+                                (instruction.leftOperand.kind = irOperandImmediate);
+    irCopy,
+    irUnaryOp:
+      validateTacInstruction := (instruction.resultOperand.kind = irOperandTemporary) and
+                                isValueOperandKind(instruction.leftOperand.kind) and
+                                (instruction.rightOperand.kind = irOperandNone);
+    irBinaryOp:
+      validateTacInstruction := (instruction.resultOperand.kind = irOperandTemporary) and
+                                isValueOperandKind(instruction.leftOperand.kind) and
+                                isValueOperandKind(instruction.rightOperand.kind);
+    irGoto:
+      validateTacInstruction := instruction.targetOperand.kind = irOperandLabel;
+    irGotoIfZero:
+      validateTacInstruction := isValueOperandKind(instruction.leftOperand.kind) and
+                                (instruction.targetOperand.kind = irOperandLabel);
+    irLoadVar:
+      validateTacInstruction := (instruction.resultOperand.kind = irOperandTemporary) and
+                                isStorageOperandKind(instruction.leftOperand.kind);
+    irStoreVar:
+      validateTacInstruction := isStorageOperandKind(instruction.resultOperand.kind) and
+                                isValueOperandKind(instruction.leftOperand.kind);
+    irCallProc:
+      begin
+        validateTacInstruction := instruction.targetOperand.kind = irOperandProcedure;
+        if validateTacInstruction then
+          for argumentIndex := 1 to instruction.callArgumentCount do
+            if not isValueOperandKind(instruction.callArguments[argumentIndex].kind) then
+            begin
+              validateTacInstruction := false;
+              break
+            end
+      end;
+    irBuiltinRead:
+      validateTacInstruction := (instruction.targetOperand.kind = irOperandIntrinsic) and
+                                isStorageOperandKind(instruction.resultOperand.kind);
+    irBuiltinWrite:
+      validateTacInstruction := (instruction.targetOperand.kind = irOperandIntrinsic) and
+                                isValueOperandKind(instruction.leftOperand.kind);
+    irReturn,
+    irNoOp,
+    irLabel:
+      validateTacInstruction := true
+  end;
+
+  if validateTacInstruction then
+    if not instructionUsesStorageOperands(instruction.kind) then
+      validateTacInstruction := not isStorageOperandKind(instruction.leftOperand.kind) and
+                                not isStorageOperandKind(instruction.rightOperand.kind) and
+                                not isStorageOperandKind(instruction.targetOperand.kind)
+end;
+
 procedure bindLabelToCurrentBlock(labelId: tacLabelId);
 begin
   if (labelId = 0) or not currentProcedureHasOpenBlock then
@@ -270,8 +349,8 @@ begin
     irGoto: instructionKindToString := 'goto';
     irGotoIfZero: instructionKindToString := 'goto_if_zero';
     irLabel: instructionKindToString := 'label';
-    irLoadVar: instructionKindToString := 'load_var';
-    irStoreVar: instructionKindToString := 'store_var';
+    irLoadVar: instructionKindToString := 'load';
+    irStoreVar: instructionKindToString := 'store';
     irCallProc: instructionKindToString := 'call_proc';
     irBuiltinRead: instructionKindToString := 'builtin_read';
     irBuiltinWrite: instructionKindToString := 'builtin_write';
@@ -728,6 +807,12 @@ begin
   if not currentProcedureHasOpenBlock then
     if createTacBasicBlock(0) = 0 then
       exit;
+
+  if not validateTacInstruction(instruction) then
+  begin
+    currentProgram.overflow := true;
+    exit
+  end;
 
   with currentProgram.procedures[currentProcedure] do
   begin

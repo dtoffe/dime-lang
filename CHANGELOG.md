@@ -11,9 +11,10 @@ and this project is expected to follow [Semantic Versioning](https://semver.org/
 
 ### [Changed]
 
-- Implemented precise TAC operand classification.
+- Lower TAC variable access into explicit loads and stores.
+- Implement precise TAC operand classification.
 - Properly split flat TAC into well defined basic blocks.
-- Restructured procedure-level TAC units making the procedure boundary explicit.
+- Restructure procedure-level TAC units making the procedure boundary explicit.
 
 ## [v0.0.10] - 2026-06-04
 

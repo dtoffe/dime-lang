@@ -251,9 +251,9 @@ begin
     instructionKindFromText := rtGotoIfZero
   else if kindText = 'label' then
     instructionKindFromText := rtLabel
-  else if kindText = 'load_var' then
+  else if (kindText = 'load') or (kindText = 'load_var') then
     instructionKindFromText := rtLoadVar
-  else if kindText = 'store_var' then
+  else if (kindText = 'store') or (kindText = 'store_var') then
     instructionKindFromText := rtStoreVar
   else if kindText = 'call_proc' then
     instructionKindFromText := rtCallProc
