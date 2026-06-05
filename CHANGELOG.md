@@ -16,6 +16,7 @@ and this project is expected to follow [Semantic Versioning](https://semver.org/
 
 ### [Changed]
 
+- Added a conservative syntactic control-flow analysis check to verify if all syntactic paths return a value.
 - Allow each `switch` arm to match one or more comma-separated literals.
 - Remove (`break` | `next`) finalizer from switch statement, now the statement sequence ends with `end`.
 

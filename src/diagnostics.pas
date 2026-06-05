@@ -299,7 +299,7 @@ begin
         ERR_PROCEDURE_CALL_NOT_ALLOWED_IN_EXPRESSION: compilerErrorMessage := 'Expression calls must target a function, not a procedure.';
         ERR_RETURN_ONLY_ALLOWED_IN_FUNCTION: compilerErrorMessage := '"return" is only allowed inside a procedure or function body.';
         ERR_FUNCTION_RETURN_TYPE_MISMATCH: compilerErrorMessage := 'Returned expression type must match the declared function result type.';
-        ERR_FUNCTION_REQUIRES_AT_LEAST_ONE_RETURN: compilerErrorMessage := 'Function body must contain at least one return statement.';
+        ERR_FUNCTION_REQUIRES_AT_LEAST_ONE_RETURN: compilerErrorMessage := 'Function body must not allow control to reach the end without returning a value.';
         ERR_CONTINUE_ONLY_ALLOWED_IN_LOOP: compilerErrorMessage := '"continue" is only allowed inside a while, repeat, or for loop.';
         ERR_BREAK_ONLY_ALLOWED_IN_LOOP: compilerErrorMessage := '"break" is only allowed inside a while, repeat, or for loop.';
         ERR_PROCEDURE_RETURN_MUST_NOT_HAVE_VALUE: compilerErrorMessage := 'Procedure return must not include an expression.';

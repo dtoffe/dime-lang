@@ -38,7 +38,6 @@ type
     currentRoutineKind: declarationKind;
     currentRoutineAllowsReturn: boolean;
     currentFunctionSymbol: symbolIndex;
-    functionHasReturn: boolean;
     currentLoopDepth: integer;
   end;
   semanticBinding = ^semanticBindingRecord;
@@ -250,6 +249,93 @@ procedure analyzeDeclaration(node: astNode; var sema: semanticContext; var error
 procedure analyzeExpression(node: astNode; var sema: semanticContext; var errorCount: integer); forward;
 procedure analyzeStatement(node: astNode; var sema: semanticContext; var errorCount: integer); forward;
 procedure analyzeBlock(node: astNode; var sema: semanticContext; var errorCount: integer); forward;
+function statementCanFallThrough(node: astNode): boolean; forward;
+
+function switchStatementCanFallThrough(node: astNode): boolean;
+var
+  caseNode, bodyNode: astNode;
+  hasElseBranch: boolean;
+begin
+  switchStatementCanFallThrough := true;
+  if node = nil then
+    exit;
+
+  caseNode := node^.firstChild;
+  if caseNode <> nil then
+    caseNode := caseNode^.nextSibling;
+
+  hasElseBranch := (node^.lastChild <> nil) and (node^.lastChild^.kind <> astSwitchCaseArm);
+  if not hasElseBranch then
+    exit;
+
+  while caseNode <> nil do
+  begin
+    if caseNode^.kind = astSwitchCaseArm then
+      bodyNode := caseNode^.lastChild
+    else
+      bodyNode := caseNode;
+    if statementCanFallThrough(bodyNode) then
+      exit;
+    caseNode := caseNode^.nextSibling
+  end;
+
+  switchStatementCanFallThrough := false
+end;
+
+function statementCanFallThrough(node: astNode): boolean;
+var
+  childNode, conditionNode, thenNode, elseNode: astNode;
+begin
+  if node = nil then
+  begin
+    statementCanFallThrough := true;
+    exit
+  end;
+
+  case node^.kind of
+    astCompoundStatement:
+      begin
+        childNode := node^.firstChild;
+        while childNode <> nil do
+        begin
+          if not statementCanFallThrough(childNode) then
+          begin
+            statementCanFallThrough := false;
+            exit
+          end;
+          childNode := childNode^.nextSibling
+        end;
+        statementCanFallThrough := true
+      end;
+    astReturnStatement,
+    astBreakStatement,
+    astContinueStatement:
+      statementCanFallThrough := false;
+    astIfStatement:
+      begin
+        conditionNode := node^.firstChild;
+        thenNode := nil;
+        elseNode := nil;
+        if conditionNode <> nil then
+          thenNode := conditionNode^.nextSibling;
+        if thenNode <> nil then
+          elseNode := thenNode^.nextSibling;
+        if elseNode = nil then
+          statementCanFallThrough := true
+        else
+          statementCanFallThrough := statementCanFallThrough(thenNode) or
+                                     statementCanFallThrough(elseNode)
+      end;
+    astWhileStatement,
+    astRepeatStatement,
+    astForStatement:
+      statementCanFallThrough := true;
+    astSwitchStatement:
+      statementCanFallThrough := switchStatementCanFallThrough(node)
+  else
+    statementCanFallThrough := true
+  end
+end;
 
 function callArgumentCount(callNode: astNode): integer;
 var
@@ -543,7 +629,6 @@ begin
         nestedContext.currentRoutineKind := proc;
         nestedContext.currentRoutineAllowsReturn := true;
         nestedContext.currentFunctionSymbol := 0;
-        nestedContext.functionHasReturn := false;
         nestedContext.currentLoopDepth := 0;
         if sema.currentLevel <> 0 then
         begin
@@ -597,7 +682,7 @@ begin
         if blockNode <> nil then
           analyzeBlock(blockNode, nestedContext, errorCount);
         if (node^.kind = astFunctionDeclaration) and
-           not nestedContext.functionHasReturn then
+           ((blockNode = nil) or statementCanFallThrough(blockNode^.lastChild)) then
           reportCompilerError(ERR_FUNCTION_REQUIRES_AT_LEAST_ONE_RETURN,
                               nodeSourceContext(node), errorCount);
         restoreScope(procedureScopeMarker)
@@ -750,7 +835,6 @@ begin
                               nodeSourceContext(node), errorCount)
         else if sema.currentRoutineKind = func then
         begin
-          sema.functionHasReturn := true;
           if valueNode = nil then
             reportCompilerError(ERR_FUNCTION_RETURN_REQUIRES_VALUE,
                                 nodeSourceContext(node), errorCount)
@@ -942,7 +1026,6 @@ begin
   sema.currentRoutineKind := proc;
   sema.currentRoutineAllowsReturn := false;
   sema.currentFunctionSymbol := 0;
-  sema.functionHasReturn := false;
   sema.currentLoopDepth := 0;
 
   if rootNode^.kind = astProgram then
