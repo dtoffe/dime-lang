@@ -36,6 +36,12 @@ type
     irCopy,
     irUnaryOp,
     irBinaryOp,
+    irAddrLocal,
+    irAddrParam,
+    irFieldAddr,
+    irIndexAddr,
+    irLoadAddr,
+    irStoreAddr,
     irGoto,
     irGotoIfZero,
     irLabel,
@@ -106,7 +112,8 @@ type
 
   tacTemporaryInfo = record
     temporaryId: tacTemporaryId;
-    valueType: typeValue
+    valueType: typeValue;
+    size: tacOperandSize
   end;
 
   tacFrameInfo = record
@@ -156,8 +163,10 @@ function makeTacTempOperand(temporaryId: tacTemporaryId; valueType: typeValue): 
 function makeTacLabelOperand(labelId: tacLabelId): tacOperand;
 function makeTacProcedureOperand(symbol: symbolIndex; const name: identifier): tacOperand;
 function makeTacIntrinsicOperand(procKind: builtinProcedure): tacOperand;
+function makeTacAddressTempOperand(temporaryId: tacTemporaryId): tacOperand;
 
 function newTacTemporary(valueType: typeValue): tacOperand;
+function newTacAddressTemporary: tacOperand;
 function newTacLabel: tacLabelId;
 
 function newTacInstruction(kind: tacInstructionKind): tacInstruction;
@@ -215,6 +224,12 @@ begin
   isValueOperandKind := kind in [irOperandImmediate, irOperandTemporary]
 end;
 
+function isAddressValueOperand(const operand: tacOperand): boolean;
+begin
+  isAddressValueOperand := (operand.kind = irOperandTemporary) and
+                           (operand.size = irSizeAddress)
+end;
+
 function isValueOrNoneOperandKind(kind: tacOperandKind): boolean;
 begin
   isValueOrNoneOperandKind := (kind = irOperandNone) or isValueOperandKind(kind)
@@ -222,7 +237,8 @@ end;
 
 function instructionUsesStorageOperands(kind: tacInstructionKind): boolean;
 begin
-  instructionUsesStorageOperands := kind in [irLoadVar, irStoreVar, irBuiltinRead]
+  instructionUsesStorageOperands := kind in [irAddrLocal, irAddrParam,
+                                             irLoadVar, irStoreVar, irBuiltinRead]
 end;
 
 function validateTacInstruction(const instruction: tacInstruction): boolean;
@@ -243,6 +259,27 @@ begin
       validateTacInstruction := (instruction.resultOperand.kind = irOperandTemporary) and
                                 isValueOperandKind(instruction.leftOperand.kind) and
                                 isValueOperandKind(instruction.rightOperand.kind);
+    irAddrLocal:
+      validateTacInstruction := isAddressValueOperand(instruction.resultOperand) and
+                                (instruction.leftOperand.kind = irOperandLocal);
+    irAddrParam:
+      validateTacInstruction := isAddressValueOperand(instruction.resultOperand) and
+                                (instruction.leftOperand.kind = irOperandParameter);
+    irFieldAddr:
+      validateTacInstruction := isAddressValueOperand(instruction.resultOperand) and
+                                isAddressValueOperand(instruction.leftOperand) and
+                                isValueOperandKind(instruction.rightOperand.kind);
+    irIndexAddr:
+      validateTacInstruction := isAddressValueOperand(instruction.resultOperand) and
+                                isAddressValueOperand(instruction.leftOperand) and
+                                isValueOperandKind(instruction.rightOperand.kind) and
+                                isValueOperandKind(instruction.targetOperand.kind);
+    irLoadAddr:
+      validateTacInstruction := (instruction.resultOperand.kind = irOperandTemporary) and
+                                isAddressValueOperand(instruction.leftOperand);
+    irStoreAddr:
+      validateTacInstruction := isAddressValueOperand(instruction.resultOperand) and
+                                isValueOperandKind(instruction.leftOperand.kind);
     irGoto:
       validateTacInstruction := instruction.targetOperand.kind = irOperandLabel;
     irGotoIfZero:
@@ -346,6 +383,12 @@ begin
     irCopy: instructionKindToString := 'copy';
     irUnaryOp: instructionKindToString := 'unary';
     irBinaryOp: instructionKindToString := 'binary';
+    irAddrLocal: instructionKindToString := 'addr_local';
+    irAddrParam: instructionKindToString := 'addr_param';
+    irFieldAddr: instructionKindToString := 'field_addr';
+    irIndexAddr: instructionKindToString := 'index_addr';
+    irLoadAddr: instructionKindToString := 'load_addr';
+    irStoreAddr: instructionKindToString := 'store_addr';
     irGoto: instructionKindToString := 'goto';
     irGotoIfZero: instructionKindToString := 'goto_if_zero';
     irLabel: instructionKindToString := 'label';
@@ -577,6 +620,12 @@ begin
   makeTacTempOperand.temporaryId := temporaryId
 end;
 
+function makeTacAddressTempOperand(temporaryId: tacTemporaryId): tacOperand;
+begin
+  makeTacAddressTempOperand := makeTacTempOperand(temporaryId, typeInteger);
+  makeTacAddressTempOperand.size := irSizeAddress
+end;
+
 function makeTacLabelOperand(labelId: tacLabelId): tacOperand;
 begin
   FillChar(makeTacLabelOperand, SizeOf(makeTacLabelOperand), 0);
@@ -629,9 +678,38 @@ begin
 
       frameInfo.temporaryCount := frameInfo.temporaryCount + 1;
       temporaries[frameInfo.temporaryCount].temporaryId := currentProgram.temporaryCount;
-      temporaries[frameInfo.temporaryCount].valueType := valueType
+      temporaries[frameInfo.temporaryCount].valueType := valueType;
+      temporaries[frameInfo.temporaryCount].size := typeToOperandSize(valueType)
     end;
   newTacTemporary := makeTacTempOperand(currentProgram.temporaryCount, valueType)
+end;
+
+function newTacAddressTemporary: tacOperand;
+begin
+  if currentProgram.temporaryCount >= maxTacInstructions then
+  begin
+    currentProgram.overflow := true;
+    newTacAddressTemporary := makeTacNoneOperand;
+    exit
+  end;
+
+  currentProgram.temporaryCount := currentProgram.temporaryCount + 1;
+  if currentProcedure <> 0 then
+    with currentProgram.procedures[currentProcedure] do
+    begin
+      if frameInfo.temporaryCount >= maxTacInstructions then
+      begin
+        currentProgram.overflow := true;
+        newTacAddressTemporary := makeTacNoneOperand;
+        exit
+      end;
+
+      frameInfo.temporaryCount := frameInfo.temporaryCount + 1;
+      temporaries[frameInfo.temporaryCount].temporaryId := currentProgram.temporaryCount;
+      temporaries[frameInfo.temporaryCount].valueType := typeInteger;
+      temporaries[frameInfo.temporaryCount].size := irSizeAddress
+    end;
+  newTacAddressTemporary := makeTacAddressTempOperand(currentProgram.temporaryCount)
 end;
 
 function newTacLabel: tacLabelId;

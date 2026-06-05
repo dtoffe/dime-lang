@@ -21,6 +21,7 @@ const
   maxTacLabels = 500;
   maxTacTemporaries = 500;
   maxTacVariables = 200;
+  maxTacMemoryCells = 1000;
   maxCallDepth = 64;
 
 type
@@ -30,6 +31,12 @@ type
     rtCopy,
     rtUnaryOp,
     rtBinaryOp,
+    rtAddrLocal,
+    rtAddrParam,
+    rtFieldAddr,
+    rtIndexAddr,
+    rtLoadAddr,
+    rtStoreAddr,
     rtGoto,
     rtGotoIfZero,
     rtLabel,
@@ -79,6 +86,12 @@ type
 
   tacRuntimeVariable = record
     name: string;
+    address: integer;
+    value: integer
+  end;
+
+  tacRuntimeMemoryCell = record
+    address: integer;
     value: integer
   end;
 
@@ -95,6 +108,9 @@ var
   procedureCount: integer;
   variables: array [1..maxTacVariables] of tacRuntimeVariable;
   variableCount: integer;
+  nextVariableAddress: integer;
+  memoryCells: array [1..maxTacMemoryCells] of tacRuntimeMemoryCell;
+  memoryCellCount: integer;
   temporaries: array [1..maxTacTemporaries] of integer;
   returnStack: array [1..maxCallDepth] of tacReturnAddress;
   returnStackTop: integer;
@@ -245,6 +261,18 @@ begin
     instructionKindFromText := rtUnaryOp
   else if kindText = 'binary' then
     instructionKindFromText := rtBinaryOp
+  else if kindText = 'addr_local' then
+    instructionKindFromText := rtAddrLocal
+  else if kindText = 'addr_param' then
+    instructionKindFromText := rtAddrParam
+  else if kindText = 'field_addr' then
+    instructionKindFromText := rtFieldAddr
+  else if kindText = 'index_addr' then
+    instructionKindFromText := rtIndexAddr
+  else if kindText = 'load_addr' then
+    instructionKindFromText := rtLoadAddr
+  else if kindText = 'store_addr' then
+    instructionKindFromText := rtStoreAddr
   else if kindText = 'goto' then
     instructionKindFromText := rtGoto
   else if kindText = 'goto_if_zero' then
@@ -485,8 +513,72 @@ begin
 
   variableCount := variableCount + 1;
   variables[variableCount].name := variableName;
+  variables[variableCount].address := nextVariableAddress;
   variables[variableCount].value := 0;
+  nextVariableAddress := nextVariableAddress + 1;
   ensureVariable := variableCount
+end;
+
+function findMemoryCell(address: integer): integer;
+var
+  memoryIndex: integer;
+begin
+  findMemoryCell := 0;
+  for memoryIndex := 1 to memoryCellCount do
+    if memoryCells[memoryIndex].address = address then
+    begin
+      findMemoryCell := memoryIndex;
+      exit
+    end
+end;
+
+function ensureMemoryCell(address: integer): integer;
+begin
+  ensureMemoryCell := findMemoryCell(address);
+  if ensureMemoryCell <> 0 then
+    exit;
+
+  if memoryCellCount >= maxTacMemoryCells then
+  begin
+    reportRuntimeError('Too many TAC runtime memory cells.');
+    halt(1)
+  end;
+
+  memoryCellCount := memoryCellCount + 1;
+  memoryCells[memoryCellCount].address := address;
+  memoryCells[memoryCellCount].value := 0;
+  ensureMemoryCell := memoryCellCount
+end;
+
+function addressValue(const operand: tacRuntimeOperand): integer;
+var
+  variableIndex: integer;
+begin
+  case operand.kind of
+    rtOperandImmediate:
+      addressValue := operand.value;
+    rtOperandTemporary:
+      addressValue := temporaries[operand.temporaryId];
+    rtOperandLocal,
+    rtOperandParameter,
+    rtOperandGlobal:
+      begin
+        variableIndex := ensureVariable(operand.name);
+        addressValue := variables[variableIndex].address
+      end
+  else
+    addressValue := 0
+  end
+end;
+
+function loadMemory(address: integer): integer;
+begin
+  loadMemory := memoryCells[ensureMemoryCell(address)].value
+end;
+
+procedure storeMemory(address, value: integer);
+begin
+  memoryCells[ensureMemoryCell(address)].value := value
 end;
 
 function operandValue(const operand: tacRuntimeOperand): integer;
@@ -503,7 +595,8 @@ begin
     rtOperandGlobal:
       begin
         variableIndex := ensureVariable(operand.name);
-        operandValue := variables[variableIndex].value
+        operandValue := loadMemory(variables[variableIndex].address);
+        variables[variableIndex].value := operandValue
       end
   else
     operandValue := 0
@@ -522,9 +615,19 @@ begin
     rtOperandGlobal:
       begin
         variableIndex := ensureVariable(operand.name);
-        variables[variableIndex].value := value
+        variables[variableIndex].value := value;
+        storeMemory(variables[variableIndex].address, value)
       end
   end
+end;
+
+procedure initializeRuntimeState;
+begin
+  variableCount := 0;
+  nextVariableAddress := 1;
+  memoryCellCount := 0;
+  FillChar(temporaries, SizeOf(temporaries), 0);
+  returnStackTop := 0
 end;
 
 function findProcedure(const procedureName: string): integer;
@@ -734,9 +837,7 @@ var
   instruction: tacRuntimeInstruction;
 begin
   emitDiagnostic(status, STATUS_PCODEINT_START);
-  variableCount := 0;
-  FillChar(temporaries, SizeOf(temporaries), 0);
-  returnStackTop := 0;
+  initializeRuntimeState;
   if procedureCount = 0 then
     exit;
 
@@ -776,6 +877,39 @@ begin
                         applyBinaryOperator(instruction.operatorText,
                                             operandValue(instruction.leftOperand),
                                             operandValue(instruction.rightOperand)));
+          programCounter := programCounter + 1
+        end;
+      rtAddrLocal,
+      rtAddrParam:
+        begin
+          assignOperand(instruction.resultOperand, addressValue(instruction.leftOperand));
+          programCounter := programCounter + 1
+        end;
+      rtFieldAddr:
+        begin
+          assignOperand(instruction.resultOperand,
+                        addressValue(instruction.leftOperand) +
+                        operandValue(instruction.rightOperand));
+          programCounter := programCounter + 1
+        end;
+      rtIndexAddr:
+        begin
+          assignOperand(instruction.resultOperand,
+                        addressValue(instruction.leftOperand) +
+                        operandValue(instruction.rightOperand) *
+                        operandValue(instruction.targetOperand));
+          programCounter := programCounter + 1
+        end;
+      rtLoadAddr:
+        begin
+          assignOperand(instruction.resultOperand,
+                        loadMemory(addressValue(instruction.leftOperand)));
+          programCounter := programCounter + 1
+        end;
+      rtStoreAddr:
+        begin
+          storeMemory(addressValue(instruction.resultOperand),
+                      operandValue(instruction.leftOperand));
           programCounter := programCounter + 1
         end;
       rtGoto:
