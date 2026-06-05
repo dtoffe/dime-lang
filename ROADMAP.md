@@ -33,11 +33,6 @@ This roadmap is intentionally conservative. The goal is to build the project in 
 - Define an explicit call and return convention in the IR.
 - Introduce a target-neutral intrinsic layer for read, readln, write, and writeln.
 - Stress test TAC with more examples so it becomes stable and solid before moving on to assembler generation.
-
-### v0.0.10 - Add function and return
-
-- Add `function` construct.
-- Add `return` statement.
-- Explore whether loop control needs anything beyond the current `break` and `continue` statements.
+- Start working on master language reference guide.
 
 For older releases, see [CHANGELOG.md](./CHANGELOG.md).

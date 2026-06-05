@@ -1,12 +1,12 @@
 { Copyright (c) 2026 Alejandro Daniel Toffetti
   License: MIT. See LICENSE in the project root.
-  Date: 2026-05-31
+  Date: 2026-06-05
 
   TAC IR interpreter. This standalone program reads the textual .tac image
-  dumped by tacir, reconstructs the flat symbolic instruction stream, and
-  executes it directly. It is intentionally close to the staged TAC model:
-  variables remain symbolic, temporaries are numeric slots, labels are symbolic
-  jump targets, and procedure calls use a small return-address stack. }
+  dumped by tacir, reconstructs procedure-scoped TAC units, and executes them
+  directly. It stays intentionally close to the staged TAC model: variables
+  remain symbolic, temporaries are numeric slots, labels are symbolic jump
+  targets, and procedure calls use a small return-address stack. }
 program tacirint;
 
 {$mode objfpc}
@@ -69,8 +69,9 @@ type
 
   tacRuntimeProcedure = record
     name: string;
-    firstInstruction: integer;
-    instructionCount: integer
+    instructionCount: integer;
+    instructions: array [1..maxTacInstructions] of tacRuntimeInstruction;
+    labelTargets: array [1..maxTacLabels] of integer
   end;
 
   tacRuntimeVariable = record
@@ -78,19 +79,21 @@ type
     value: integer
   end;
 
+  tacReturnAddress = record
+    procedureIndex: integer;
+    instructionIndex: integer
+  end;
+
 var
   tacFile: Text;
   tacFileName: string;
   verbosity: diagnosticVerbosity;
-  instructions: array [1..maxTacInstructions] of tacRuntimeInstruction;
-  instructionCount: integer;
   procedures: array [1..maxTacProcedures] of tacRuntimeProcedure;
   procedureCount: integer;
-  labelTargets: array [1..maxTacLabels] of integer;
-  temporaries: array [1..maxTacTemporaries] of integer;
   variables: array [1..maxTacVariables] of tacRuntimeVariable;
   variableCount: integer;
-  returnStack: array [1..maxCallDepth] of integer;
+  temporaries: array [1..maxTacTemporaries] of integer;
+  returnStack: array [1..maxCallDepth] of tacReturnAddress;
   returnStackTop: integer;
 
 function makeNoneOperand: tacRuntimeOperand;
@@ -215,28 +218,39 @@ begin
     instructionKindFromText := rtNoOp
 end;
 
-procedure readProcedureSummary(const tokens: TStrings);
+function beginProcedure(const tokens: TStrings): integer;
 begin
   if procedureCount >= maxTacProcedures then
   begin
     reportRuntimeError('Too many TAC procedures.');
     halt(1)
   end;
+  if tokens.Count < 3 then
+  begin
+    reportRuntimeError('Invalid TAC procedure header.');
+    halt(1)
+  end;
 
   procedureCount := procedureCount + 1;
   procedures[procedureCount].name := tokens[2];
-  procedures[procedureCount].instructionCount :=
-    parseIntegerOrHalt(tokenValue(tokens[4], 'instructions'),
-                       'Invalid TAC procedure instruction count.')
+  procedures[procedureCount].instructionCount := 0;
+  FillChar(procedures[procedureCount].labelTargets,
+           SizeOf(procedures[procedureCount].labelTargets), 0);
+  beginProcedure := procedureCount
 end;
 
-procedure parseInstructionLine(const tokens: TStrings);
+procedure parseInstructionLine(procedureIndex: integer; const tokens: TStrings);
 var
   tokenIndex, instructionIndex, labelId: integer;
   valueText: string;
 begin
   if tokens.Count < 2 then
     exit;
+  if (procedureIndex < 1) or (procedureIndex > procedureCount) then
+  begin
+    reportRuntimeError('TAC instruction found outside procedure.');
+    halt(1)
+  end;
 
   instructionIndex := parseIntegerOrHalt(tokens[0], 'Invalid TAC instruction index.');
   if (instructionIndex < 1) or (instructionIndex > maxTacInstructions) then
@@ -245,66 +259,59 @@ begin
     halt(1)
   end;
 
-  if instructionIndex > instructionCount then
-    instructionCount := instructionIndex;
+  if instructionIndex > procedures[procedureIndex].instructionCount then
+    procedures[procedureIndex].instructionCount := instructionIndex;
 
-  instructions[instructionIndex].kind := instructionKindFromText(tokens[1]);
-  instructions[instructionIndex].resultOperand := makeNoneOperand;
-  instructions[instructionIndex].leftOperand := makeNoneOperand;
-  instructions[instructionIndex].rightOperand := makeNoneOperand;
-  instructions[instructionIndex].operatorText := '';
-  instructions[instructionIndex].targetLabel := 0;
-  instructions[instructionIndex].procedureName := '';
-  instructions[instructionIndex].builtinName := '';
+  procedures[procedureIndex].instructions[instructionIndex].kind :=
+    instructionKindFromText(tokens[1]);
+  procedures[procedureIndex].instructions[instructionIndex].resultOperand := makeNoneOperand;
+  procedures[procedureIndex].instructions[instructionIndex].leftOperand := makeNoneOperand;
+  procedures[procedureIndex].instructions[instructionIndex].rightOperand := makeNoneOperand;
+  procedures[procedureIndex].instructions[instructionIndex].operatorText := '';
+  procedures[procedureIndex].instructions[instructionIndex].targetLabel := 0;
+  procedures[procedureIndex].instructions[instructionIndex].procedureName := '';
+  procedures[procedureIndex].instructions[instructionIndex].builtinName := '';
 
   for tokenIndex := 2 to tokens.Count - 1 do
   begin
     valueText := tokenValue(tokens[tokenIndex], 'result');
     if valueText <> '' then
-      instructions[instructionIndex].resultOperand := parseOperand(valueText);
+      procedures[procedureIndex].instructions[instructionIndex].resultOperand :=
+        parseOperand(valueText);
 
     valueText := tokenValue(tokens[tokenIndex], 'left');
     if valueText <> '' then
-      instructions[instructionIndex].leftOperand := parseOperand(valueText);
+      procedures[procedureIndex].instructions[instructionIndex].leftOperand :=
+        parseOperand(valueText);
 
     valueText := tokenValue(tokens[tokenIndex], 'right');
     if valueText <> '' then
-      instructions[instructionIndex].rightOperand := parseOperand(valueText);
+      procedures[procedureIndex].instructions[instructionIndex].rightOperand :=
+        parseOperand(valueText);
 
     valueText := tokenValue(tokens[tokenIndex], 'op');
     if valueText <> '' then
-      instructions[instructionIndex].operatorText := valueText;
+      procedures[procedureIndex].instructions[instructionIndex].operatorText := valueText;
 
     valueText := tokenValue(tokens[tokenIndex], 'label');
     if valueText <> '' then
-      instructions[instructionIndex].targetLabel := parseLabelId(valueText);
+      procedures[procedureIndex].instructions[instructionIndex].targetLabel :=
+        parseLabelId(valueText);
 
     valueText := tokenValue(tokens[tokenIndex], 'proc');
     if valueText <> '' then
-      instructions[instructionIndex].procedureName := valueText;
+      procedures[procedureIndex].instructions[instructionIndex].procedureName := valueText;
 
     valueText := tokenValue(tokens[tokenIndex], 'builtin');
     if valueText <> '' then
-      instructions[instructionIndex].builtinName := valueText
+      procedures[procedureIndex].instructions[instructionIndex].builtinName := valueText
   end;
 
-  if instructions[instructionIndex].kind = rtLabel then
+  if procedures[procedureIndex].instructions[instructionIndex].kind = rtLabel then
   begin
-    labelId := instructions[instructionIndex].targetLabel;
+    labelId := procedures[procedureIndex].instructions[instructionIndex].targetLabel;
     if (labelId >= 1) and (labelId <= maxTacLabels) then
-      labelTargets[labelId] := instructionIndex
-  end
-end;
-
-procedure assignProcedureStarts;
-var
-  procedureIndex, nextInstruction: integer;
-begin
-  nextInstruction := 1;
-  for procedureIndex := 1 to procedureCount do
-  begin
-    procedures[procedureIndex].firstInstruction := nextInstruction;
-    nextInstruction := nextInstruction + procedures[procedureIndex].instructionCount
+      procedures[procedureIndex].labelTargets[labelId] := instructionIndex
   end
 end;
 
@@ -312,7 +319,11 @@ procedure loadTacFile;
 var
   tacLine: string;
   tokens: TStringList;
+  currentProcedureIndex: integer;
+  instructionTotal: integer;
 begin
+  currentProcedureIndex := 0;
+  instructionTotal := 0;
   tokens := TStringList.Create;
   try
     while not EOF(tacFile) do
@@ -323,17 +334,21 @@ begin
         continue;
 
       if tokens[0] = 'proc' then
-        readProcedureSummary(tokens)
+        currentProcedureIndex := beginProcedure(tokens)
+      else if tokens[0] = 'endproc' then
+        currentProcedureIndex := 0
       else if tokens[0][1] in ['0'..'9'] then
-        parseInstructionLine(tokens)
+      begin
+        parseInstructionLine(currentProcedureIndex, tokens);
+        instructionTotal := instructionTotal + 1
+      end
     end
   finally
     tokens.Free
   end;
 
   Close(tacFile);
-  assignProcedureStarts;
-  emitDiagnostic(status, STATUS_PCODE_READING_COMPLETE + IntToStr(instructionCount))
+  emitDiagnostic(status, STATUS_PCODE_READING_COMPLETE + IntToStr(instructionTotal))
 end;
 
 function findVariable(variableName: string): integer;
@@ -414,10 +429,12 @@ begin
     end
 end;
 
-function labelTarget(labelId: integer): integer;
+function labelTarget(procedureIndex, labelId: integer): integer;
 begin
-  if (labelId >= 1) and (labelId <= maxTacLabels) then
-    labelTarget := labelTargets[labelId]
+  if (procedureIndex < 1) or (procedureIndex > procedureCount) then
+    labelTarget := 0
+  else if (labelId >= 1) and (labelId <= maxTacLabels) then
+    labelTarget := procedures[procedureIndex].labelTargets[labelId]
   else
     labelTarget := 0;
 
@@ -602,7 +619,7 @@ end;
 
 procedure executeTac;
 var
-  programCounter, procedureIndex: integer;
+  currentProcedureIndex, programCounter, calleeProcedureIndex: integer;
   instruction: tacRuntimeInstruction;
 begin
   emitDiagnostic(status, STATUS_PCODEINT_START);
@@ -612,10 +629,18 @@ begin
   if procedureCount = 0 then
     exit;
 
-  programCounter := procedures[1].firstInstruction;
-  while programCounter <> 0 do
+  currentProcedureIndex := 1;
+  programCounter := 1;
+  while (currentProcedureIndex <> 0) and (programCounter <> 0) do
   begin
-    instruction := instructions[programCounter];
+    if (programCounter < 1) or
+       (programCounter > procedures[currentProcedureIndex].instructionCount) then
+    begin
+      reportRuntimeError('TAC instruction pointer out of range.');
+      halt(1)
+    end;
+
+    instruction := procedures[currentProcedureIndex].instructions[programCounter];
     case instruction.kind of
       rtLoadConst:
         begin
@@ -643,11 +668,11 @@ begin
           programCounter := programCounter + 1
         end;
       rtGoto:
-        programCounter := labelTarget(instruction.targetLabel);
+        programCounter := labelTarget(currentProcedureIndex, instruction.targetLabel);
       rtGotoIfZero:
         begin
           if operandValue(instruction.leftOperand) = 0 then
-            programCounter := labelTarget(instruction.targetLabel)
+            programCounter := labelTarget(currentProcedureIndex, instruction.targetLabel)
           else
             programCounter := programCounter + 1
         end;
@@ -666,8 +691,8 @@ begin
         end;
       rtCallProc:
         begin
-          procedureIndex := findProcedure(instruction.procedureName);
-          if procedureIndex = 0 then
+          calleeProcedureIndex := findProcedure(instruction.procedureName);
+          if calleeProcedureIndex = 0 then
           begin
             reportRuntimeError('Unknown TAC procedure.');
             halt(1)
@@ -678,8 +703,10 @@ begin
             halt(1)
           end;
           returnStackTop := returnStackTop + 1;
-          returnStack[returnStackTop] := programCounter + 1;
-          programCounter := procedures[procedureIndex].firstInstruction
+          returnStack[returnStackTop].procedureIndex := currentProcedureIndex;
+          returnStack[returnStackTop].instructionIndex := programCounter + 1;
+          currentProcedureIndex := calleeProcedureIndex;
+          programCounter := 1
         end;
       rtBuiltinRead:
         begin
@@ -696,10 +723,14 @@ begin
       rtReturn:
         begin
           if returnStackTop = 0 then
+          begin
+            currentProcedureIndex := 0;
             programCounter := 0
+          end
           else
           begin
-            programCounter := returnStack[returnStackTop];
+            currentProcedureIndex := returnStack[returnStackTop].procedureIndex;
+            programCounter := returnStack[returnStackTop].instructionIndex;
             returnStackTop := returnStackTop - 1
           end
         end

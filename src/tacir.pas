@@ -1,6 +1,6 @@
 { Copyright (c) 2026 Alejandro Daniel Toffetti
   License: MIT. See LICENSE in the project root.
-  Date: 2026-05-31
+  Date: 2026-06-05
 
   Three-address-code intermediate representation definitions and low-level
   state management. This unit owns the current TAC image, issues temporary and
@@ -90,14 +90,32 @@ type
     instructionCount: integer
   end;
 
+  tacTemporaryInfo = record
+    temporaryId: tacTemporaryId;
+    valueType: typeValue
+  end;
+
+  tacFrameInfo = record
+    parameterCount: integer;
+    localCount: integer;
+    temporaryCount: integer
+  end;
+
   tacProcedure = record
     name: identifier;
     symbol: symbolIndex;
-    firstBasicBlock: tacBasicBlockIndex;
+    hasReturnValue: boolean;
+    returnType: typeValue;
+    parameterCount: integer;
+    parameters: array [1..maxProcedureParameters] of tacOperand;
+    localCount: integer;
+    locals: array [1..symbolTableMax] of tacOperand;
+    temporaries: array [1..maxTacInstructions] of tacTemporaryInfo;
+    frameInfo: tacFrameInfo;
     basicBlockCount: integer;
-    firstInstruction: tacInstructionIndex;
+    basicBlocks: array [1..maxTacBasicBlocks] of tacBasicBlock;
     instructionCount: integer;
-    temporaryCount: integer;
+    instructions: array [1..maxTacInstructions] of tacInstruction;
     labelCount: integer
   end;
 
@@ -105,9 +123,7 @@ type
     procedureCount: integer;
     procedures: array [1..maxTacProcedures] of tacProcedure;
     basicBlockCount: integer;
-    basicBlocks: array [1..maxTacBasicBlocks] of tacBasicBlock;
     instructionCount: integer;
-    instructions: array [1..maxTacInstructions] of tacInstruction;
     temporaryCount: integer;
     labelCount: integer;
     overflow: boolean
@@ -129,6 +145,13 @@ function newTacLabel: tacLabelId;
 function newTacInstruction(kind: tacInstructionKind): tacInstruction;
 function appendTacProcedure(const procedureName: identifier;
                             procedureSymbol: symbolIndex): tacProcedureIndex;
+procedure setTacProcedureReturnType(procedureIndex: tacProcedureIndex;
+                                    valueType: typeValue;
+                                    hasReturnValue: boolean);
+procedure addTacProcedureParameter(procedureIndex: tacProcedureIndex;
+                                   parameterSymbol: symbolIndex);
+procedure addTacProcedureLocal(procedureIndex: tacProcedureIndex;
+                               localSymbol: symbolIndex);
 function appendTacBasicBlock(blockLabelId: tacLabelId): tacBasicBlockIndex;
 function appendTacInstruction(const instruction: tacInstruction): tacInstructionIndex;
 procedure setTacCallArgument(var instruction: tacInstruction; argumentIndex: integer;
@@ -182,6 +205,15 @@ begin
     typeBoolean: typeToString := 'boolean';
     typeChar: typeToString := 'char'
   end
+end;
+
+function procedureReturnTypeToString(hasReturnValue: boolean;
+                                     returnType: typeValue): string;
+begin
+  if hasReturnValue then
+    procedureReturnTypeToString := typeToString(returnType)
+  else
+    procedureReturnTypeToString := 'none'
 end;
 
 function operatorToString(operatorSymbol: symbol): string;
@@ -295,8 +327,19 @@ begin
 
   currentProgram.temporaryCount := currentProgram.temporaryCount + 1;
   if currentProcedure <> 0 then
-    currentProgram.procedures[currentProcedure].temporaryCount :=
-      currentProgram.procedures[currentProcedure].temporaryCount + 1;
+    with currentProgram.procedures[currentProcedure] do
+    begin
+      if frameInfo.temporaryCount >= maxTacInstructions then
+      begin
+        currentProgram.overflow := true;
+        newTacTemporary := makeTacNoneOperand;
+        exit
+      end;
+
+      frameInfo.temporaryCount := frameInfo.temporaryCount + 1;
+      temporaries[frameInfo.temporaryCount].temporaryId := currentProgram.temporaryCount;
+      temporaries[frameInfo.temporaryCount].valueType := valueType
+    end;
   newTacTemporary := makeTacTempOperand(currentProgram.temporaryCount, valueType)
 end;
 
@@ -353,66 +396,153 @@ begin
   begin
     name := procedureName;
     symbol := procedureSymbol;
-    firstBasicBlock := 0;
+    hasReturnValue := false;
+    returnType := typeInteger;
+    parameterCount := 0;
+    localCount := 0;
     basicBlockCount := 0;
-    firstInstruction := 0;
     instructionCount := 0;
-    temporaryCount := 0;
-    labelCount := 0
+    labelCount := 0;
+    frameInfo.parameterCount := 0;
+    frameInfo.localCount := 0;
+    frameInfo.temporaryCount := 0
+  end
+end;
+
+procedure setTacProcedureReturnType(procedureIndex: tacProcedureIndex;
+                                    valueType: typeValue;
+                                    hasReturnValue: boolean);
+begin
+  if (procedureIndex < 1) or (procedureIndex > currentProgram.procedureCount) then
+  begin
+    currentProgram.overflow := true;
+    exit
+  end;
+
+  currentProgram.procedures[procedureIndex].returnType := valueType;
+  currentProgram.procedures[procedureIndex].hasReturnValue := hasReturnValue
+end;
+
+procedure addTacProcedureParameter(procedureIndex: tacProcedureIndex;
+                                   parameterSymbol: symbolIndex);
+begin
+  if (procedureIndex < 1) or (procedureIndex > currentProgram.procedureCount) or
+     (parameterSymbol = 0) then
+  begin
+    currentProgram.overflow := true;
+    exit
+  end;
+
+  with currentProgram.procedures[procedureIndex] do
+  begin
+    if parameterCount >= maxProcedureParameters then
+    begin
+      currentProgram.overflow := true;
+      exit
+    end;
+
+    parameterCount := parameterCount + 1;
+    parameters[parameterCount] := makeTacSymbolOperand(
+      parameterSymbol,
+      getDeclarationIdentifier(parameterSymbol),
+      getDeclarationType(parameterSymbol));
+    frameInfo.parameterCount := parameterCount
+  end
+end;
+
+procedure addTacProcedureLocal(procedureIndex: tacProcedureIndex;
+                               localSymbol: symbolIndex);
+begin
+  if (procedureIndex < 1) or (procedureIndex > currentProgram.procedureCount) or
+     (localSymbol = 0) then
+  begin
+    currentProgram.overflow := true;
+    exit
+  end;
+
+  with currentProgram.procedures[procedureIndex] do
+  begin
+    if localCount >= symbolTableMax then
+    begin
+      currentProgram.overflow := true;
+      exit
+    end;
+
+    localCount := localCount + 1;
+    locals[localCount] := makeTacSymbolOperand(
+      localSymbol,
+      getDeclarationIdentifier(localSymbol),
+      getDeclarationType(localSymbol));
+    frameInfo.localCount := localCount
   end
 end;
 
 function appendTacBasicBlock(blockLabelId: tacLabelId): tacBasicBlockIndex;
 begin
   appendTacBasicBlock := 0;
+  if currentProcedure = 0 then
+  begin
+    currentProgram.overflow := true;
+    exit
+  end;
+
   if currentProgram.basicBlockCount >= maxTacBasicBlocks then
   begin
     currentProgram.overflow := true;
     exit
   end;
 
-  currentProgram.basicBlockCount := currentProgram.basicBlockCount + 1;
-  appendTacBasicBlock := currentProgram.basicBlockCount;
-  currentBasicBlock := appendTacBasicBlock;
-  with currentProgram.basicBlocks[currentBasicBlock] do
+  with currentProgram.procedures[currentProcedure] do
   begin
-    labelId := blockLabelId;
-    firstInstruction := 0;
-    instructionCount := 0
+    if basicBlockCount >= maxTacBasicBlocks then
+    begin
+      currentProgram.overflow := true;
+      exit
+    end;
+
+    basicBlockCount := basicBlockCount + 1;
+    appendTacBasicBlock := basicBlockCount;
+    currentBasicBlock := appendTacBasicBlock;
+    basicBlocks[currentBasicBlock].labelId := blockLabelId;
+    basicBlocks[currentBasicBlock].firstInstruction := 0;
+    basicBlocks[currentBasicBlock].instructionCount := 0
   end;
 
-  if currentProcedure <> 0 then
-    with currentProgram.procedures[currentProcedure] do
-    begin
-      if firstBasicBlock = 0 then
-        firstBasicBlock := currentBasicBlock;
-      basicBlockCount := basicBlockCount + 1
-    end
+  currentProgram.basicBlockCount := currentProgram.basicBlockCount + 1
 end;
 
 function appendTacInstruction(const instruction: tacInstruction): tacInstructionIndex;
 begin
   appendTacInstruction := 0;
+  if currentProcedure = 0 then
+  begin
+    currentProgram.overflow := true;
+    exit
+  end;
+
   if currentProgram.instructionCount >= maxTacInstructions then
   begin
     currentProgram.overflow := true;
     exit
   end;
 
-  currentProgram.instructionCount := currentProgram.instructionCount + 1;
-  appendTacInstruction := currentProgram.instructionCount;
-  currentProgram.instructions[appendTacInstruction] := instruction;
-
-  if currentProcedure <> 0 then
-    with currentProgram.procedures[currentProcedure] do
+  with currentProgram.procedures[currentProcedure] do
+  begin
+    if instructionCount >= maxTacInstructions then
     begin
-      if firstInstruction = 0 then
-        firstInstruction := appendTacInstruction;
-      instructionCount := instructionCount + 1
+      currentProgram.overflow := true;
+      exit
     end;
 
+    instructionCount := instructionCount + 1;
+    appendTacInstruction := instructionCount;
+    instructions[appendTacInstruction] := instruction
+  end;
+
+  currentProgram.instructionCount := currentProgram.instructionCount + 1;
+
   if currentBasicBlock <> 0 then
-    with currentProgram.basicBlocks[currentBasicBlock] do
+    with currentProgram.procedures[currentProcedure].basicBlocks[currentBasicBlock] do
     begin
       if firstInstruction = 0 then
         firstInstruction := appendTacInstruction;
@@ -463,7 +593,7 @@ end;
 procedure dumpTacIr(const outputFileName: string);
 var
   outputFile: Text;
-  procedureIndex, blockIndex, instructionIndex: integer;
+  procedureIndex, itemIndex: integer;
 begin
   Assign(outputFile, outputFileName);
   Rewrite(outputFile);
@@ -471,25 +601,35 @@ begin
   writeln(outputFile, 'procedures ', currentProgram.procedureCount);
   for procedureIndex := 1 to currentProgram.procedureCount do
     with currentProgram.procedures[procedureIndex] do
-      writeln(outputFile, '  proc ', procedureIndex, ' ',
+    begin
+      writeln(outputFile, 'proc ', procedureIndex, ' ',
               identifierToString(name),
+              ' return=', procedureReturnTypeToString(hasReturnValue, returnType),
+              ' params=', parameterCount,
+              ' locals=', localCount,
+              ' temps=', frameInfo.temporaryCount,
               ' blocks=', basicBlockCount,
-              ' instructions=', instructionCount,
-              ' temps=', temporaryCount,
-              ' labels=', labelCount);
-
-  writeln(outputFile, 'blocks ', currentProgram.basicBlockCount);
-  for blockIndex := 1 to currentProgram.basicBlockCount do
-    with currentProgram.basicBlocks[blockIndex] do
-      writeln(outputFile, '  block ', blockIndex,
-              ' label=L', labelId,
-              ' first=', firstInstruction,
-              ' count=', instructionCount);
-
-  writeln(outputFile, 'instructions ', currentProgram.instructionCount);
-  for instructionIndex := 1 to currentProgram.instructionCount do
-    dumpTacInstruction(outputFile, instructionIndex,
-                       currentProgram.instructions[instructionIndex]);
+              ' labels=', labelCount,
+              ' instructions=', instructionCount);
+      for itemIndex := 1 to parameterCount do
+        writeln(outputFile, '  param ', itemIndex, ' ',
+                operandToString(parameters[itemIndex]));
+      for itemIndex := 1 to localCount do
+        writeln(outputFile, '  local ', itemIndex, ' ',
+                operandToString(locals[itemIndex]));
+      writeln(outputFile, '  frame params=', frameInfo.parameterCount,
+              ' locals=', frameInfo.localCount,
+              ' temps=', frameInfo.temporaryCount);
+      for itemIndex := 1 to basicBlockCount do
+        with basicBlocks[itemIndex] do
+          writeln(outputFile, '  block ', itemIndex,
+                  ' label=L', labelId,
+                  ' first=', firstInstruction,
+                  ' count=', instructionCount);
+      for itemIndex := 1 to instructionCount do
+        dumpTacInstruction(outputFile, itemIndex, instructions[itemIndex]);
+      writeln(outputFile, 'endproc')
+    end;
   Close(outputFile)
 end;
 

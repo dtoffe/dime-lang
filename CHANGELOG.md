@@ -5,10 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project is expected to follow [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+### [Added]
+
+### [Changed]
+
+- Restructured procedure-level TAC units making the procedure boundary explicit.
+
 ## [v0.0.10] - 2026-06-04
 
 ### [Added]
 
+- Add a conservative syntactic control-flow analysis check to verify if all syntactic paths return a value.
 - Allow bare `return;` in procedures, while functions still require `return <expr>;`.
 - Add `continue` and `break` as loop-only statements for `while`, `repeat`, and `for`.
 - Add support for functions returning a simple scalar value with a return statement.
@@ -16,7 +25,6 @@ and this project is expected to follow [Semantic Versioning](https://semver.org/
 
 ### [Changed]
 
-- Added a conservative syntactic control-flow analysis check to verify if all syntactic paths return a value.
 - Allow each `switch` arm to match one or more comma-separated literals.
 - Remove (`break` | `next`) finalizer from switch statement, now the statement sequence ends with `end`.
 

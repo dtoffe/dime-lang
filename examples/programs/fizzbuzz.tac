@@ -1,19 +1,17 @@
 tac program
 procedures 2
-  proc 1 fizzbuzz blocks=9 instructions=85 temps=48 labels=9
-  proc 2 printsumma blocks=1 instructions=28 temps=13 labels=1
-blocks 10
+proc 1 fizzbuzz return=none params=0 locals=0 temps=48 blocks=10 labels=10 instructions=86
+  frame params=0 locals=0 temps=48
   block 1 label=L1 first=1 count=13
   block 2 label=L2 first=14 count=34
-  block 3 label=L4 first=48 count=10
-  block 4 label=L6 first=58 count=10
-  block 5 label=L8 first=68 count=7
-  block 6 label=L9 first=75 count=1
-  block 7 label=L7 first=76 count=1
-  block 8 label=L5 first=77 count=6
-  block 9 label=L3 first=83 count=3
-  block 10 label=L10 first=86 count=28
-instructions 113
+  block 3 label=L5 first=48 count=10
+  block 4 label=L7 first=58 count=10
+  block 5 label=L9 first=68 count=7
+  block 6 label=L10 first=75 count=1
+  block 7 label=L8 first=76 count=1
+  block 8 label=L6 first=77 count=1
+  block 9 label=L3 first=78 count=6
+  block 10 label=L4 first=84 count=3
    1 label label=L1
    2 load_const result=t1:integer left=#0:integer
    3 store_var result=cnorm:integer left=t1:integer
@@ -31,7 +29,7 @@ instructions 113
   15 load_const result=t7:integer left=#100:integer
   16 load_var result=t9:integer left=n:integer
   17 binary result=t8:boolean left=t9:integer right=t7:integer op=<=
-  18 goto_if_zero left=t8:boolean label=L3
+  18 goto_if_zero left=t8:boolean label=L4
   19 load_var result=t10:integer left=n:integer
   20 load_const result=t11:integer left=#3:integer
   21 binary result=t12:integer left=t10:integer right=t11:integer op=/
@@ -51,7 +49,7 @@ instructions 113
   35 load_var result=t24:boolean left=fizz:boolean
   36 load_var result=t25:boolean left=buzz:boolean
   37 binary result=t26:boolean left=t24:boolean right=t25:boolean op=and
-  38 goto_if_zero left=t26:boolean label=L4
+  38 goto_if_zero left=t26:boolean label=L5
   39 load_const result=t27:char left=#70:char
   40 builtin_write left=t27:char builtin=write
   41 load_const result=t28:char left=#66:char
@@ -60,70 +58,76 @@ instructions 113
   44 load_const result=t30:integer left=#1:integer
   45 binary result=t31:integer left=t29:integer right=t30:integer op=+
   46 store_var result=cfb:integer left=t31:integer
-  47 goto label=L5
-  48 label label=L4
+  47 goto label=L6
+  48 label label=L5
   49 load_var result=t32:boolean left=fizz:boolean
-  50 goto_if_zero left=t32:boolean label=L6
+  50 goto_if_zero left=t32:boolean label=L7
   51 load_const result=t33:char left=#70:char
   52 builtin_write left=t33:char builtin=writeln
   53 load_var result=t34:integer left=cfizz:integer
   54 load_const result=t35:integer left=#1:integer
   55 binary result=t36:integer left=t34:integer right=t35:integer op=+
   56 store_var result=cfizz:integer left=t36:integer
-  57 goto label=L7
-  58 label label=L6
+  57 goto label=L8
+  58 label label=L7
   59 load_var result=t37:boolean left=buzz:boolean
-  60 goto_if_zero left=t37:boolean label=L8
+  60 goto_if_zero left=t37:boolean label=L9
   61 load_const result=t38:char left=#66:char
   62 builtin_write left=t38:char builtin=writeln
   63 load_var result=t39:integer left=cbuzz:integer
   64 load_const result=t40:integer left=#1:integer
   65 binary result=t41:integer left=t39:integer right=t40:integer op=+
   66 store_var result=cbuzz:integer left=t41:integer
-  67 goto label=L9
-  68 label label=L8
+  67 goto label=L10
+  68 label label=L9
   69 load_var result=t42:integer left=n:integer
   70 builtin_write left=t42:integer builtin=writeln
   71 load_var result=t43:integer left=cnorm:integer
   72 load_const result=t44:integer left=#1:integer
   73 binary result=t45:integer left=t43:integer right=t44:integer op=+
   74 store_var result=cnorm:integer left=t45:integer
-  75 label label=L9
-  76 label label=L7
-  77 label label=L5
-  78 load_const result=t46:integer left=#1:integer
-  79 load_var result=t48:integer left=n:integer
-  80 binary result=t47:integer left=t48:integer right=t46:integer op=+
-  81 store_var result=n:integer left=t47:integer
-  82 goto label=L2
-  83 label label=L3
-  84 call_proc proc=printsumma
-  85 return
-  86 label label=L10
-  87 load_const result=t49:char left=#78:char
-  88 builtin_write left=t49:char builtin=write
-  89 load_const result=t50:char left=#58:char
-  90 builtin_write left=t50:char builtin=write
-  91 load_var result=t51:integer left=cnorm:integer
-  92 builtin_write left=t51:integer builtin=writeln
-  93 load_const result=t52:char left=#70:char
-  94 builtin_write left=t52:char builtin=write
-  95 load_const result=t53:char left=#58:char
-  96 builtin_write left=t53:char builtin=write
-  97 load_var result=t54:integer left=cfizz:integer
-  98 builtin_write left=t54:integer builtin=writeln
-  99 load_const result=t55:char left=#66:char
- 100 builtin_write left=t55:char builtin=write
- 101 load_const result=t56:char left=#58:char
- 102 builtin_write left=t56:char builtin=write
- 103 load_var result=t57:integer left=cbuzz:integer
- 104 builtin_write left=t57:integer builtin=writeln
- 105 load_const result=t58:char left=#70:char
- 106 builtin_write left=t58:char builtin=write
- 107 load_const result=t59:char left=#66:char
- 108 builtin_write left=t59:char builtin=write
- 109 load_const result=t60:char left=#58:char
- 110 builtin_write left=t60:char builtin=write
- 111 load_var result=t61:integer left=cfb:integer
- 112 builtin_write left=t61:integer builtin=writeln
- 113 return
+  75 label label=L10
+  76 label label=L8
+  77 label label=L6
+  78 label label=L3
+  79 load_const result=t46:integer left=#1:integer
+  80 load_var result=t48:integer left=n:integer
+  81 binary result=t47:integer left=t48:integer right=t46:integer op=+
+  82 store_var result=n:integer left=t47:integer
+  83 goto label=L2
+  84 label label=L4
+  85 call_proc proc=printsumma
+  86 return
+endproc
+proc 2 printsumma return=none params=0 locals=0 temps=13 blocks=1 labels=1 instructions=28
+  frame params=0 locals=0 temps=13
+  block 1 label=L11 first=1 count=28
+   1 label label=L11
+   2 load_const result=t49:char left=#78:char
+   3 builtin_write left=t49:char builtin=write
+   4 load_const result=t50:char left=#58:char
+   5 builtin_write left=t50:char builtin=write
+   6 load_var result=t51:integer left=cnorm:integer
+   7 builtin_write left=t51:integer builtin=writeln
+   8 load_const result=t52:char left=#70:char
+   9 builtin_write left=t52:char builtin=write
+  10 load_const result=t53:char left=#58:char
+  11 builtin_write left=t53:char builtin=write
+  12 load_var result=t54:integer left=cfizz:integer
+  13 builtin_write left=t54:integer builtin=writeln
+  14 load_const result=t55:char left=#66:char
+  15 builtin_write left=t55:char builtin=write
+  16 load_const result=t56:char left=#58:char
+  17 builtin_write left=t56:char builtin=write
+  18 load_var result=t57:integer left=cbuzz:integer
+  19 builtin_write left=t57:integer builtin=writeln
+  20 load_const result=t58:char left=#70:char
+  21 builtin_write left=t58:char builtin=write
+  22 load_const result=t59:char left=#66:char
+  23 builtin_write left=t59:char builtin=write
+  24 load_const result=t60:char left=#58:char
+  25 builtin_write left=t60:char builtin=write
+  26 load_var result=t61:integer left=cfb:integer
+  27 builtin_write left=t61:integer builtin=writeln
+  28 return
+endproc

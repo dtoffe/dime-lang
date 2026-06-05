@@ -57,6 +57,43 @@ begin
     symbolOperandFromNode := makeTacNoneOperand
 end;
 
+procedure recordBlockLocals(blockNode: astNode; procedureIndex: tacProcedureIndex);
+var
+  childNode: astNode;
+begin
+  if blockNode = nil then
+    exit;
+
+  childNode := blockNode^.firstChild;
+  while (childNode <> nil) and (childNode^.kind = astVarDeclaration) do
+  begin
+    if hasResolvedSymbol(childNode) then
+      addTacProcedureLocal(procedureIndex, resolvedSymbolOf(childNode));
+    childNode := childNode^.nextSibling
+  end
+end;
+
+procedure describeTacProcedure(procedureIndex: tacProcedureIndex; routineNode: astNode;
+                               hasReturnValue: boolean; returnType: typeValue);
+var
+  childNode, blockNode: astNode;
+begin
+  if (routineNode = nil) or (procedureIndex = 0) then
+    exit;
+
+  setTacProcedureReturnType(procedureIndex, returnType, hasReturnValue);
+  childNode := routineNode^.firstChild;
+  while (childNode <> nil) and (childNode^.kind = astVarDeclaration) do
+  begin
+    if hasResolvedSymbol(childNode) then
+      addTacProcedureParameter(procedureIndex, resolvedSymbolOf(childNode));
+    childNode := childNode^.nextSibling
+  end;
+
+  blockNode := routineBlockNode(routineNode);
+  recordBlockLocals(blockNode, procedureIndex)
+end;
+
 procedure appendLabel(labelId: tacLabelId);
 var
   instruction: tacInstruction;
@@ -704,6 +741,7 @@ end;
 procedure lowerProcedureDeclaration(node: astNode; var errorCount: integer);
 var
   procedureSymbol: symbolIndex;
+  procedureIndex: tacProcedureIndex;
 begin
   if node = nil then
     exit;
@@ -711,7 +749,8 @@ begin
   procedureSymbol := 0;
   if hasResolvedSymbol(node) then
     procedureSymbol := resolvedSymbolOf(node);
-  appendTacProcedure(node^.identifierText, procedureSymbol);
+  procedureIndex := appendTacProcedure(node^.identifierText, procedureSymbol);
+  describeTacProcedure(procedureIndex, node, false, typeInteger);
   appendLabel(newTacLabel);
   currentLoweredFunctionSymbol := 0;
   lowerBlock(routineBlockNode(node), errorCount)
@@ -720,14 +759,21 @@ end;
 procedure lowerFunctionDeclaration(node: astNode; var errorCount: integer);
 var
   functionSymbol: symbolIndex;
+  procedureIndex: tacProcedureIndex;
+  returnType: typeValue;
 begin
   if node = nil then
     exit;
 
   functionSymbol := 0;
+  returnType := typeInteger;
   if hasResolvedSymbol(node) then
+  begin
     functionSymbol := resolvedSymbolOf(node);
-  appendTacProcedure(node^.identifierText, functionSymbol);
+    returnType := getDeclarationType(functionSymbol)
+  end;
+  procedureIndex := appendTacProcedure(node^.identifierText, functionSymbol);
+  describeTacProcedure(procedureIndex, node, true, returnType);
   appendLabel(newTacLabel);
   currentLoweredFunctionSymbol := functionSymbol;
   lowerBlock(routineBlockNode(node), errorCount);
@@ -782,6 +828,7 @@ end;
 procedure generateTacIrProgram(rootNode: astNode; var errorCount: integer);
 var
   programBlock: astNode;
+  procedureIndex: tacProcedureIndex;
 begin
   if rootNode = nil then
     exit;
@@ -792,16 +839,16 @@ begin
   loopContinueLabelCount := 0;
   if rootNode^.kind = astProgram then
   begin
-    appendTacProcedure(rootNode^.identifierText, 0);
-    appendLabel(newTacLabel);
     programBlock := rootNode^.firstChild
   end
   else
-  begin
-    appendTacProcedure(rootNode^.identifierText, 0);
-    appendLabel(newTacLabel);
     programBlock := rootNode
-  end;
+  ;
+
+  procedureIndex := appendTacProcedure(rootNode^.identifierText, 0);
+  setTacProcedureReturnType(procedureIndex, typeInteger, false);
+  recordBlockLocals(programBlock, procedureIndex);
+  appendLabel(newTacLabel);
 
   lowerBlock(programBlock, errorCount)
 end;
