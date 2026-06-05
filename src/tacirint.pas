@@ -239,9 +239,79 @@ begin
   beginProcedure := procedureCount
 end;
 
+procedure readLabelMap(procedureIndex: integer; const tokens: TStrings);
+var
+  tokenIndex, labelId, firstInstruction: integer;
+  valueText: string;
+begin
+  if (procedureIndex < 1) or (procedureIndex > procedureCount) then
+    exit;
+  if tokens.Count < 3 then
+    exit;
+
+  labelId := 0;
+  firstInstruction := 0;
+  if (Length(tokens[1]) > 1) and (tokens[1][1] = 'L') then
+    labelId := parseLabelId(tokens[1]);
+  for tokenIndex := 2 to tokens.Count - 1 do
+  begin
+    valueText := tokenValue(tokens[tokenIndex], 'first');
+    if valueText <> '' then
+      firstInstruction := parseIntegerOrHalt(valueText,
+                                             'Invalid TAC label map first instruction.')
+  end;
+
+  if (labelId >= 1) and (labelId <= maxTacLabels) then
+    procedures[procedureIndex].labelTargets[labelId] := firstInstruction
+end;
+
+procedure readBlockSummary(procedureIndex: integer; const tokens: TStrings);
+var
+  tokenIndex, firstInstruction: integer;
+  valueText: string;
+  blockLabels: array [1..maxTacLabels] of integer;
+  blockLabelCount: integer;
+begin
+  if (procedureIndex < 1) or (procedureIndex > procedureCount) then
+  begin
+    reportRuntimeError('TAC block found outside procedure.');
+    halt(1)
+  end;
+  if tokens.Count < 3 then
+    exit;
+
+  firstInstruction := 0;
+  blockLabelCount := 0;
+  for tokenIndex := 2 to tokens.Count - 1 do
+  begin
+    valueText := tokenValue(tokens[tokenIndex], 'label');
+    if valueText <> '' then
+    begin
+      blockLabelCount := blockLabelCount + 1;
+      blockLabels[blockLabelCount] := parseLabelId(valueText)
+    end;
+
+    valueText := tokenValue(tokens[tokenIndex], 'alias');
+    if valueText <> '' then
+    begin
+      blockLabelCount := blockLabelCount + 1;
+      blockLabels[blockLabelCount] := parseLabelId(valueText)
+    end;
+
+    valueText := tokenValue(tokens[tokenIndex], 'first');
+    if valueText <> '' then
+      firstInstruction := parseIntegerOrHalt(valueText,
+                                             'Invalid TAC block first instruction.')
+  end;
+
+  for tokenIndex := 1 to blockLabelCount do
+    if (blockLabels[tokenIndex] >= 1) and (blockLabels[tokenIndex] <= maxTacLabels) then
+      procedures[procedureIndex].labelTargets[blockLabels[tokenIndex]] := firstInstruction
+end;
+
 procedure parseInstructionLine(procedureIndex: integer; const tokens: TStrings);
 var
-  tokenIndex, instructionIndex, labelId: integer;
+  tokenIndex, instructionIndex: integer;
   valueText: string;
 begin
   if tokens.Count < 2 then
@@ -307,12 +377,6 @@ begin
       procedures[procedureIndex].instructions[instructionIndex].builtinName := valueText
   end;
 
-  if procedures[procedureIndex].instructions[instructionIndex].kind = rtLabel then
-  begin
-    labelId := procedures[procedureIndex].instructions[instructionIndex].targetLabel;
-    if (labelId >= 1) and (labelId <= maxTacLabels) then
-      procedures[procedureIndex].labelTargets[labelId] := instructionIndex
-  end
 end;
 
 procedure loadTacFile;
@@ -335,6 +399,10 @@ begin
 
       if tokens[0] = 'proc' then
         currentProcedureIndex := beginProcedure(tokens)
+      else if tokens[0] = 'block' then
+        readBlockSummary(currentProcedureIndex, tokens)
+      else if tokens[0] = 'labelmap' then
+        readLabelMap(currentProcedureIndex, tokens)
       else if tokens[0] = 'endproc' then
         currentProcedureIndex := 0
       else if tokens[0][1] in ['0'..'9'] then

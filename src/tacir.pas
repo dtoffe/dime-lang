@@ -114,6 +114,7 @@ type
     frameInfo: tacFrameInfo;
     basicBlockCount: integer;
     basicBlocks: array [1..maxTacBasicBlocks] of tacBasicBlock;
+    labelBlockIndex: array [1..maxTacInstructions] of tacBasicBlockIndex;
     instructionCount: integer;
     instructions: array [1..maxTacInstructions] of tacInstruction;
     labelCount: integer
@@ -167,6 +168,69 @@ var
   currentProgram: tacProgram;
   currentProcedure: tacProcedureIndex;
   currentBasicBlock: tacBasicBlockIndex;
+
+function instructionEndsBasicBlock(kind: tacInstructionKind): boolean;
+begin
+  instructionEndsBasicBlock := kind in [irGoto, irGotoIfZero, irReturn]
+end;
+
+function currentProcedureHasOpenBlock: boolean;
+begin
+  currentProcedureHasOpenBlock := (currentProcedure <> 0) and (currentBasicBlock <> 0)
+end;
+
+function currentBlockInstructionCount: integer;
+begin
+  if currentProcedureHasOpenBlock then
+    currentBlockInstructionCount :=
+      currentProgram.procedures[currentProcedure].basicBlocks[currentBasicBlock].instructionCount
+  else
+    currentBlockInstructionCount := 0
+end;
+
+procedure bindLabelToCurrentBlock(labelId: tacLabelId);
+begin
+  if (labelId = 0) or not currentProcedureHasOpenBlock then
+    exit;
+
+  currentProgram.procedures[currentProcedure].labelBlockIndex[labelId] := currentBasicBlock;
+  if currentProgram.procedures[currentProcedure].basicBlocks[currentBasicBlock].labelId = 0 then
+    currentProgram.procedures[currentProcedure].basicBlocks[currentBasicBlock].labelId := labelId
+end;
+
+function createTacBasicBlock(blockLabelId: tacLabelId): tacBasicBlockIndex;
+begin
+  createTacBasicBlock := 0;
+  if currentProcedure = 0 then
+  begin
+    currentProgram.overflow := true;
+    exit
+  end;
+
+  if currentProgram.basicBlockCount >= maxTacBasicBlocks then
+  begin
+    currentProgram.overflow := true;
+    exit
+  end;
+
+  with currentProgram.procedures[currentProcedure] do
+  begin
+    if basicBlockCount >= maxTacBasicBlocks then
+    begin
+      currentProgram.overflow := true;
+      exit
+    end;
+
+    basicBlockCount := basicBlockCount + 1;
+    createTacBasicBlock := basicBlockCount;
+    basicBlocks[createTacBasicBlock].labelId := blockLabelId;
+    basicBlocks[createTacBasicBlock].firstInstruction := 0;
+    basicBlocks[createTacBasicBlock].instructionCount := 0
+  end;
+
+  currentProgram.basicBlockCount := currentProgram.basicBlockCount + 1;
+  currentBasicBlock := createTacBasicBlock
+end;
 
 function identifierToString(const identifierName: identifier): string;
 var
@@ -479,36 +543,26 @@ end;
 
 function appendTacBasicBlock(blockLabelId: tacLabelId): tacBasicBlockIndex;
 begin
-  appendTacBasicBlock := 0;
   if currentProcedure = 0 then
   begin
     currentProgram.overflow := true;
+    appendTacBasicBlock := 0;
     exit
   end;
 
-  if currentProgram.basicBlockCount >= maxTacBasicBlocks then
+  if currentProcedureHasOpenBlock then
   begin
-    currentProgram.overflow := true;
-    exit
-  end;
-
-  with currentProgram.procedures[currentProcedure] do
-  begin
-    if basicBlockCount >= maxTacBasicBlocks then
+    if currentBlockInstructionCount = 0 then
     begin
-      currentProgram.overflow := true;
+      bindLabelToCurrentBlock(blockLabelId);
+      appendTacBasicBlock := currentBasicBlock;
       exit
     end;
-
-    basicBlockCount := basicBlockCount + 1;
-    appendTacBasicBlock := basicBlockCount;
-    currentBasicBlock := appendTacBasicBlock;
-    basicBlocks[currentBasicBlock].labelId := blockLabelId;
-    basicBlocks[currentBasicBlock].firstInstruction := 0;
-    basicBlocks[currentBasicBlock].instructionCount := 0
+    currentBasicBlock := 0
   end;
 
-  currentProgram.basicBlockCount := currentProgram.basicBlockCount + 1
+  appendTacBasicBlock := createTacBasicBlock(0);
+  bindLabelToCurrentBlock(blockLabelId)
 end;
 
 function appendTacInstruction(const instruction: tacInstruction): tacInstructionIndex;
@@ -525,6 +579,10 @@ begin
     currentProgram.overflow := true;
     exit
   end;
+
+  if not currentProcedureHasOpenBlock then
+    if createTacBasicBlock(0) = 0 then
+      exit;
 
   with currentProgram.procedures[currentProcedure] do
   begin
@@ -547,7 +605,10 @@ begin
       if firstInstruction = 0 then
         firstInstruction := appendTacInstruction;
       instructionCount := instructionCount + 1
-    end
+    end;
+
+  if instructionEndsBasicBlock(instruction.kind) then
+    currentBasicBlock := 0
 end;
 
 procedure setTacCallArgument(var instruction: tacInstruction; argumentIndex: integer;
@@ -593,7 +654,7 @@ end;
 procedure dumpTacIr(const outputFileName: string);
 var
   outputFile: Text;
-  procedureIndex, itemIndex: integer;
+  procedureIndex, itemIndex, instructionIndex, blockLastInstruction, labelIndex: integer;
 begin
   Assign(outputFile, outputFileName);
   Rewrite(outputFile);
@@ -622,12 +683,37 @@ begin
               ' temps=', frameInfo.temporaryCount);
       for itemIndex := 1 to basicBlockCount do
         with basicBlocks[itemIndex] do
-          writeln(outputFile, '  block ', itemIndex,
-                  ' label=L', labelId,
-                  ' first=', firstInstruction,
-                  ' count=', instructionCount);
-      for itemIndex := 1 to instructionCount do
-        dumpTacInstruction(outputFile, itemIndex, instructions[itemIndex]);
+        begin
+          if labelId <> 0 then
+          begin
+            write(outputFile, '  block ', itemIndex,
+                  ' label=L', labelId);
+            for labelIndex := 1 to labelCount do
+              if (labelIndex <> labelId) and
+                 (labelBlockIndex[labelIndex] = itemIndex) then
+                write(outputFile, ' alias=L', labelIndex);
+            writeln(outputFile,
+                    ' first=', firstInstruction,
+                    ' count=', instructionCount)
+          end
+          else
+            writeln(outputFile, '  block ', itemIndex,
+                    ' first=', firstInstruction,
+                    ' count=', instructionCount);
+          if instructionCount > 0 then
+          begin
+            blockLastInstruction := firstInstruction + instructionCount - 1;
+            for instructionIndex := firstInstruction to blockLastInstruction do
+              dumpTacInstruction(outputFile, instructionIndex,
+                                 instructions[instructionIndex])
+          end
+        end;
+      for labelIndex := 1 to labelCount do
+        if labelBlockIndex[labelIndex] <> 0 then
+          writeln(outputFile, '  labelmap L', labelIndex,
+                  ' block=', labelBlockIndex[labelIndex],
+                  ' first=',
+                  basicBlocks[labelBlockIndex[labelIndex]].firstInstruction);
       writeln(outputFile, 'endproc')
     end;
   Close(outputFile)

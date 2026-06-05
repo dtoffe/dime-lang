@@ -17,7 +17,7 @@ begin
     endwhile;
 end;
 
-procedure primes;
+procedure printprimes;
 begin
     for arg := 2 to max - 1 by 1 do
         isprime();
@@ -28,5 +28,5 @@ begin
 end;
 
 begin
-    primes();
+    printprimes();
 end.

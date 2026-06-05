@@ -95,13 +95,8 @@ begin
 end;
 
 procedure appendLabel(labelId: tacLabelId);
-var
-  instruction: tacInstruction;
 begin
-  appendTacBasicBlock(labelId);
-  instruction := newTacInstruction(irLabel);
-  instruction.targetLabel := labelId;
-  appendTacInstruction(instruction)
+  appendTacBasicBlock(labelId)
 end;
 
 procedure appendGoto(labelId: tacLabelId);
