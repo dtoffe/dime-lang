@@ -68,7 +68,7 @@ proc 2 isprime return=none params=0 locals=1 temps=17 blocks=6 labels=4 instruct
   labelmap L3 block=2 first=6
   labelmap L4 block=6 first=27
 endproc
-proc 3 printprime return=none params=0 locals=0 temps=11 blocks=6 labels=5 instructions=21
+proc 3 printprime return=none params=0 locals=0 temps=11 blocks=6 labels=5 instructions=22
   frame params=0 locals=0 temps=11 param_area=0 local_area=0 temp_area=38 frame_size=38
   frame_temp 1 temp[t18]:integer/dword offset=-4 size=4
   frame_temp 2 temp[t19]:integer/dword offset=-8 size=4
@@ -96,16 +96,17 @@ proc 3 printprime return=none params=0 locals=0 temps=11 blocks=6 labels=5 instr
   10 call target=proc[isprime]:address
   11 load result=temp[t24]:boolean/byte left=global[ret]:boolean/byte
   12 goto_if_zero left=temp[t24]:boolean/byte target=label[L10]:address
-  block 4 first=13 count=2
+  block 4 first=13 count=3
   13 load result=temp[t25]:integer/dword left=global[arg]:integer/dword
-  14 builtin_write left=temp[t25]:integer/dword target=intrinsic[writeln]:address
-  block 5 label=L10 first=15 count=5
-  15 load_const result=temp[t26]:integer/dword left=imm(1):integer/dword
-  16 load result=temp[t28]:integer/dword left=global[arg]:integer/dword
-  17 binary result=temp[t27]:integer/dword left=temp[t28]:integer/dword right=temp[t26]:integer/dword op=+
-  18 store result=global[arg]:integer/dword left=temp[t27]:integer/dword
-  19 goto target=label[L7]:address
-  block 6 label=L9 first=20 count=2
-  20 leave
-  21 return
+  14 call target=intrinsic[write_int]:address arg1=temp[t25]:integer/dword
+  15 call target=intrinsic[writeln]:address
+  block 5 label=L10 first=16 count=5
+  16 load_const result=temp[t26]:integer/dword left=imm(1):integer/dword
+  17 load result=temp[t28]:integer/dword left=global[arg]:integer/dword
+  18 binary result=temp[t27]:integer/dword left=temp[t28]:integer/dword right=temp[t26]:integer/dword op=+
+  19 store result=global[arg]:integer/dword left=temp[t27]:integer/dword
+  20 goto target=label[L7]:address
+  block 6 label=L9 first=21 count=2
+  21 leave
+  22 return
 endproc

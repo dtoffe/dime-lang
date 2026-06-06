@@ -857,17 +857,17 @@ begin
   end
 end;
 
-function readValueByType(const valueType, builtinName: string): integer;
+function readValueByIntrinsic(const intrinsicName, valueType: string): integer;
 var
   consumeLineRemainder: boolean;
 begin
-  consumeLineRemainder := builtinName = 'readln';
-  if valueType = 'char' then
-    readValueByType := readCharacterValueOrHalt(consumeLineRemainder)
+  consumeLineRemainder := intrinsicName = 'readln';
+  if intrinsicName = 'read_char' then
+    readValueByIntrinsic := readCharacterValueOrHalt(consumeLineRemainder)
   else if valueType = 'boolean' then
-    readValueByType := readBooleanValueOrHalt(consumeLineRemainder)
+    readValueByIntrinsic := readBooleanValueOrHalt(consumeLineRemainder)
   else
-    readValueByType := readIntegerValueOrHalt(consumeLineRemainder)
+    readValueByIntrinsic := readIntegerValueOrHalt(consumeLineRemainder)
 end;
 
 procedure executeBuiltinWrite(const instruction: tacRuntimeInstruction);
@@ -888,6 +888,44 @@ begin
       WriteLn(value)
     else
       Write(value)
+  end
+end;
+
+procedure executeIntrinsicCall(const instruction: tacRuntimeInstruction);
+var
+  value: integer;
+begin
+  if instruction.targetOperand.name = 'read_int' then
+    assignOperand(instruction.resultOperand,
+                  readValueByIntrinsic(instruction.targetOperand.name,
+                                       instruction.resultOperand.valueType))
+  else if instruction.targetOperand.name = 'read_char' then
+    assignOperand(instruction.resultOperand,
+                  readValueByIntrinsic(instruction.targetOperand.name,
+                                       instruction.resultOperand.valueType))
+  else if instruction.targetOperand.name = 'write_int' then
+  begin
+    value := operandValue(instruction.callArguments[1]);
+    Write(value)
+  end
+  else if instruction.targetOperand.name = 'write_char' then
+  begin
+    value := operandValue(instruction.callArguments[1]);
+    Write(Chr(value))
+  end
+  else if instruction.targetOperand.name = 'write_string' then
+  begin
+    reportRuntimeError('TAC write_string intrinsic is not implemented yet.');
+    halt(1)
+  end
+  else if instruction.targetOperand.name = 'writeln' then
+    WriteLn
+  else if instruction.targetOperand.name = 'readln' then
+    consumeInputLineRemainder
+  else
+  begin
+    reportRuntimeError('Unknown TAC intrinsic call.');
+    halt(1)
   end
 end;
 
@@ -998,6 +1036,12 @@ begin
         end;
       rtCallProc:
         begin
+          if instruction.targetOperand.kind = rtOperandIntrinsic then
+          begin
+            executeIntrinsicCall(instruction);
+            programCounter := programCounter + 1;
+            continue
+          end;
           calleeProcedureIndex := findProcedure(instruction.targetOperand.name);
           if calleeProcedureIndex = 0 then
           begin
@@ -1028,8 +1072,8 @@ begin
       rtBuiltinRead:
         begin
           assignOperand(instruction.resultOperand,
-                        readValueByType(instruction.resultOperand.valueType,
-                                        instruction.targetOperand.name));
+                        readValueByIntrinsic(instruction.targetOperand.name,
+                                             instruction.resultOperand.valueType));
           programCounter := programCounter + 1
         end;
       rtBuiltinWrite:

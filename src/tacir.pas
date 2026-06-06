@@ -29,6 +29,20 @@ type
   tacProcedureIndex = 0..maxTacProcedures;
   tacTemporaryId = 0..maxTacInstructions;
   tacLabelId = 0..maxTacInstructions;
+  tacIntrinsicKind = (
+    irIntrinsicNone,
+    irIntrinsicReadInt,
+    irIntrinsicReadChar,
+    irIntrinsicWriteInt,
+    irIntrinsicWriteChar,
+    irIntrinsicWriteString,
+    irIntrinsicWriteLn,
+    irIntrinsicReadLn
+  );
+  tacIntrinsicSideEffect = (
+    irSideEffectNone,
+    irSideEffectIO
+  );
 
   tacInstructionKind = (
     irNoOp,
@@ -82,7 +96,7 @@ type
     size: tacOperandSize;
     symbol: symbolIndex;
     name: identifier;
-    builtinProcedureKind: builtinProcedure;
+    intrinsicKind: tacIntrinsicKind;
     case tacOperandKind of
       irOperandNone:
         ();
@@ -178,8 +192,10 @@ function makeTacSymbolOperand(symbol: symbolIndex; const name: identifier;
 function makeTacTempOperand(temporaryId: tacTemporaryId; valueType: typeValue): tacOperand;
 function makeTacLabelOperand(labelId: tacLabelId): tacOperand;
 function makeTacProcedureOperand(symbol: symbolIndex; const name: identifier): tacOperand;
-function makeTacIntrinsicOperand(procKind: builtinProcedure): tacOperand;
+function makeTacIntrinsicOperand(intrinsicKind: tacIntrinsicKind): tacOperand;
 function makeTacAddressTempOperand(temporaryId: tacTemporaryId): tacOperand;
+function tacIntrinsicForReadType(valueType: typeValue): tacIntrinsicKind;
+function tacIntrinsicForWriteType(valueType: typeValue): tacIntrinsicKind;
 
 function newTacTemporary(valueType: typeValue): tacOperand;
 function newTacAddressTemporary: tacOperand;
@@ -268,6 +284,115 @@ begin
   isValueOrNoneOperandKind := (kind = irOperandNone) or isValueOperandKind(kind)
 end;
 
+function intrinsicParameterCount(kind: tacIntrinsicKind): integer;
+begin
+  case kind of
+    irIntrinsicWriteInt,
+    irIntrinsicWriteChar,
+    irIntrinsicWriteString:
+      intrinsicParameterCount := 1;
+  else
+    intrinsicParameterCount := 0
+  end
+end;
+
+function intrinsicHasReturnValue(kind: tacIntrinsicKind): boolean;
+begin
+  intrinsicHasReturnValue := kind in [irIntrinsicReadInt, irIntrinsicReadChar]
+end;
+
+function intrinsicReturnType(kind: tacIntrinsicKind): typeValue;
+begin
+  case kind of
+    irIntrinsicReadChar:
+      intrinsicReturnType := typeChar;
+  else
+    intrinsicReturnType := typeInteger
+  end
+end;
+
+function intrinsicSideEffect(kind: tacIntrinsicKind): tacIntrinsicSideEffect;
+begin
+  if kind = irIntrinsicNone then
+    intrinsicSideEffect := irSideEffectNone
+  else
+    intrinsicSideEffect := irSideEffectIO
+end;
+
+function intrinsicParameterType(kind: tacIntrinsicKind; parameterIndex: integer): typeValue;
+begin
+  intrinsicParameterType := typeInteger;
+  if parameterIndex <> 1 then
+    exit;
+
+  case kind of
+    irIntrinsicWriteChar:
+      intrinsicParameterType := typeChar;
+    irIntrinsicWriteString:
+      intrinsicParameterType := typeChar;
+  else
+    intrinsicParameterType := typeInteger
+  end
+end;
+
+function intrinsicAcceptsValueType(kind: tacIntrinsicKind; valueType: typeValue): boolean;
+begin
+  case kind of
+    irIntrinsicWriteInt:
+      intrinsicAcceptsValueType := valueType in [typeInteger, typeBoolean];
+    irIntrinsicWriteChar:
+      intrinsicAcceptsValueType := valueType = typeChar;
+    irIntrinsicWriteString:
+      intrinsicAcceptsValueType := valueType = typeChar;
+  else
+    intrinsicAcceptsValueType := true
+  end
+end;
+
+function validateTacIntrinsicCall(const instruction: tacInstruction): boolean;
+var
+  argumentIndex, expectedCount: integer;
+  kind: tacIntrinsicKind;
+begin
+  kind := instruction.targetOperand.intrinsicKind;
+  validateTacIntrinsicCall := (kind <> irIntrinsicNone) and
+                              (intrinsicSideEffect(kind) = irSideEffectIO);
+  if not validateTacIntrinsicCall then
+    exit;
+
+  expectedCount := intrinsicParameterCount(kind);
+  validateTacIntrinsicCall := instruction.callArgumentCount = expectedCount;
+  if not validateTacIntrinsicCall then
+    exit;
+
+  if intrinsicHasReturnValue(kind) then
+    validateTacIntrinsicCall := instruction.resultOperand.kind = irOperandTemporary
+  else
+    validateTacIntrinsicCall := instruction.resultOperand.kind = irOperandNone;
+  if not validateTacIntrinsicCall then
+    exit;
+
+  if intrinsicHasReturnValue(kind) and
+     (instruction.resultOperand.valueType <> intrinsicReturnType(kind)) then
+  begin
+    validateTacIntrinsicCall := false;
+    exit
+  end;
+
+  for argumentIndex := 1 to instruction.callArgumentCount do
+  begin
+    validateTacIntrinsicCall := isValueOperandKind(instruction.callArguments[argumentIndex].kind);
+    if not validateTacIntrinsicCall then
+      exit;
+    if not intrinsicAcceptsValueType(kind,
+                                     instruction.callArguments[argumentIndex].valueType) then
+    begin
+      validateTacIntrinsicCall := false;
+      exit
+    end
+  end
+end;
+
 procedure syncTacProcedurePrologue(procedureIndex: tacProcedureIndex);
 var
   prologueIndex: tacInstructionIndex;
@@ -348,9 +473,14 @@ begin
                                 isValueOperandKind(instruction.leftOperand.kind);
     irCallProc:
       begin
-        validateTacInstruction := instruction.targetOperand.kind = irOperandProcedure;
+        validateTacInstruction := instruction.targetOperand.kind in [irOperandProcedure,
+                                                                     irOperandIntrinsic];
+        if validateTacInstruction and
+           (instruction.targetOperand.kind = irOperandIntrinsic) then
+          validateTacInstruction := validateTacIntrinsicCall(instruction);
         if validateTacInstruction then
-          validateTacInstruction := isValueOrNoneOperandKind(instruction.resultOperand.kind);
+          if instruction.targetOperand.kind = irOperandProcedure then
+            validateTacInstruction := isValueOrNoneOperandKind(instruction.resultOperand.kind);
         if validateTacInstruction then
           for argumentIndex := 1 to instruction.callArgumentCount do
             if not isValueOperandKind(instruction.callArguments[argumentIndex].kind) then
@@ -528,15 +658,35 @@ begin
   end
 end;
 
-function builtinProcedureToString(procKind: builtinProcedure): string;
+function intrinsicKindToString(kind: tacIntrinsicKind): string;
 begin
-  case procKind of
-    builtinNone: builtinProcedureToString := 'none';
-    builtinRead: builtinProcedureToString := 'read';
-    builtinReadLn: builtinProcedureToString := 'readln';
-    builtinWrite: builtinProcedureToString := 'write';
-    builtinWriteLn: builtinProcedureToString := 'writeln'
+  case kind of
+    irIntrinsicReadInt: intrinsicKindToString := 'read_int';
+    irIntrinsicReadChar: intrinsicKindToString := 'read_char';
+    irIntrinsicWriteInt: intrinsicKindToString := 'write_int';
+    irIntrinsicWriteChar: intrinsicKindToString := 'write_char';
+    irIntrinsicWriteString: intrinsicKindToString := 'write_string';
+    irIntrinsicWriteLn: intrinsicKindToString := 'writeln';
+    irIntrinsicReadLn: intrinsicKindToString := 'readln';
+  else
+    intrinsicKindToString := 'none'
   end
+end;
+
+function tacIntrinsicForReadType(valueType: typeValue): tacIntrinsicKind;
+begin
+  if valueType = typeChar then
+    tacIntrinsicForReadType := irIntrinsicReadChar
+  else
+    tacIntrinsicForReadType := irIntrinsicReadInt
+end;
+
+function tacIntrinsicForWriteType(valueType: typeValue): tacIntrinsicKind;
+begin
+  if valueType = typeChar then
+    tacIntrinsicForWriteType := irIntrinsicWriteChar
+  else
+    tacIntrinsicForWriteType := irIntrinsicWriteInt
 end;
 
 function routineOwnsSymbol(routineSymbol, operandSymbol: symbolIndex): boolean;
@@ -676,7 +826,7 @@ begin
                          operandSizeToString(operand.size);
     irOperandIntrinsic:
       operandToString := 'intrinsic[' +
-                         builtinProcedureToString(operand.builtinProcedureKind) + ']:' +
+                         intrinsicKindToString(operand.intrinsicKind) + ']:' +
                          operandSizeToString(operand.size)
   end
 end;
@@ -704,7 +854,7 @@ begin
   makeTacNoneOperand.kind := irOperandNone;
   makeTacNoneOperand.valueType := typeInteger;
   makeTacNoneOperand.size := irSizeNone;
-  makeTacNoneOperand.builtinProcedureKind := builtinNone
+  makeTacNoneOperand.intrinsicKind := irIntrinsicNone
 end;
 
 function makeTacConstOperand(const constantValue: integer; valueType: typeValue): tacOperand;
@@ -713,7 +863,7 @@ begin
   makeTacConstOperand.kind := irOperandImmediate;
   makeTacConstOperand.valueType := valueType;
   makeTacConstOperand.size := typeToOperandSize(valueType);
-  makeTacConstOperand.builtinProcedureKind := builtinNone;
+  makeTacConstOperand.intrinsicKind := irIntrinsicNone;
   makeTacConstOperand.constantValue := constantValue
 end;
 
@@ -726,7 +876,7 @@ begin
   makeTacSymbolOperand.size := typeToOperandSize(valueType);
   makeTacSymbolOperand.symbol := symbol;
   makeTacSymbolOperand.name := name;
-  makeTacSymbolOperand.builtinProcedureKind := builtinNone
+  makeTacSymbolOperand.intrinsicKind := irIntrinsicNone
 end;
 
 function makeTacTempOperand(temporaryId: tacTemporaryId; valueType: typeValue): tacOperand;
@@ -735,7 +885,7 @@ begin
   makeTacTempOperand.kind := irOperandTemporary;
   makeTacTempOperand.valueType := valueType;
   makeTacTempOperand.size := typeToOperandSize(valueType);
-  makeTacTempOperand.builtinProcedureKind := builtinNone;
+  makeTacTempOperand.intrinsicKind := irIntrinsicNone;
   makeTacTempOperand.temporaryId := temporaryId
 end;
 
@@ -751,7 +901,7 @@ begin
   makeTacLabelOperand.kind := irOperandLabel;
   makeTacLabelOperand.valueType := typeInteger;
   makeTacLabelOperand.size := irSizeAddress;
-  makeTacLabelOperand.builtinProcedureKind := builtinNone;
+  makeTacLabelOperand.intrinsicKind := irIntrinsicNone;
   makeTacLabelOperand.labelId := labelId
 end;
 
@@ -763,16 +913,16 @@ begin
   makeTacProcedureOperand.size := irSizeAddress;
   makeTacProcedureOperand.symbol := symbol;
   makeTacProcedureOperand.name := name;
-  makeTacProcedureOperand.builtinProcedureKind := builtinNone
+  makeTacProcedureOperand.intrinsicKind := irIntrinsicNone
 end;
 
-function makeTacIntrinsicOperand(procKind: builtinProcedure): tacOperand;
+function makeTacIntrinsicOperand(intrinsicKind: tacIntrinsicKind): tacOperand;
 begin
   FillChar(makeTacIntrinsicOperand, SizeOf(makeTacIntrinsicOperand), 0);
   makeTacIntrinsicOperand.kind := irOperandIntrinsic;
   makeTacIntrinsicOperand.valueType := typeInteger;
   makeTacIntrinsicOperand.size := irSizeAddress;
-  makeTacIntrinsicOperand.builtinProcedureKind := procKind
+  makeTacIntrinsicOperand.intrinsicKind := intrinsicKind
 end;
 
 function newTacTemporary(valueType: typeValue): tacOperand;

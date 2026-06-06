@@ -144,6 +144,29 @@ begin
   appendTacInstruction(instruction)
 end;
 
+function appendIntrinsicCall(intrinsicKind: tacIntrinsicKind;
+                             const resultOperand: tacOperand): tacOperand;
+var
+  instruction: tacInstruction;
+begin
+  appendIntrinsicCall := resultOperand;
+  instruction := newTacInstruction(irCallProc);
+  instruction.targetOperand := makeTacIntrinsicOperand(intrinsicKind);
+  instruction.resultOperand := resultOperand;
+  appendTacInstruction(instruction)
+end;
+
+procedure appendIntrinsicCallArgument(intrinsicKind: tacIntrinsicKind;
+                                      const argumentOperand: tacOperand);
+var
+  instruction: tacInstruction;
+begin
+  instruction := newTacInstruction(irCallProc);
+  instruction.targetOperand := makeTacIntrinsicOperand(intrinsicKind);
+  setTacCallArgument(instruction, 1, argumentOperand);
+  appendTacInstruction(instruction)
+end;
+
 procedure pushLoopBreakLabel(labelId: tacLabelId);
 begin
   loopBreakLabelCount := loopBreakLabelCount + 1;
@@ -388,8 +411,9 @@ var
   argumentOperand: tacOperand;
   resolvedSymbol: symbolIndex;
   procKind: builtinProcedure;
-  instruction: tacInstruction;
+  instruction, storeInstruction: tacInstruction;
   argumentIndex: integer;
+  readResult: tacOperand;
 begin
   lowerCall := makeTacNoneOperand;
   calleeNode := node^.firstChild;
@@ -410,18 +434,29 @@ begin
     procKind := builtinNone;
   if procKind in [builtinWrite, builtinWriteLn] then
   begin
-    argumentOperand := lowerExpression(argumentNode, errorCount);
-    instruction := newTacInstruction(irBuiltinWrite);
-    instruction.targetOperand := makeTacIntrinsicOperand(procKind);
-    instruction.leftOperand := argumentOperand;
-    appendTacInstruction(instruction)
+    if argumentNode <> nil then
+    begin
+      argumentOperand := lowerExpression(argumentNode, errorCount);
+      appendIntrinsicCallArgument(tacIntrinsicForWriteType(argumentOperand.valueType),
+                                  argumentOperand)
+    end;
+    if procKind = builtinWriteLn then
+      appendIntrinsicCall(irIntrinsicWriteLn, makeTacNoneOperand)
   end
   else if procKind in [builtinRead, builtinReadLn] then
   begin
-    instruction := newTacInstruction(irBuiltinRead);
-    instruction.targetOperand := makeTacIntrinsicOperand(procKind);
-    instruction.resultOperand := storageOperandFromNode(argumentNode);
-    appendTacInstruction(instruction)
+    if argumentNode <> nil then
+    begin
+      readResult := newTacTemporary(nodeValueType(argumentNode));
+      appendIntrinsicCall(tacIntrinsicForReadType(nodeValueType(argumentNode)),
+                          readResult);
+      storeInstruction := newTacInstruction(irStoreVar);
+      storeInstruction.resultOperand := storageOperandFromNode(argumentNode);
+      storeInstruction.leftOperand := readResult;
+      appendTacInstruction(storeInstruction)
+    end;
+    if procKind = builtinReadLn then
+      appendIntrinsicCall(irIntrinsicReadLn, makeTacNoneOperand)
   end
   else
   begin

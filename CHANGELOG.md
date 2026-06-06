@@ -17,6 +17,7 @@ and this project is expected to follow [Semantic Versioning](https://semver.org/
 
 ### [Changed]
 
+- Replace read/write builtins with explicit intrinsic calls in TAC.
 - Lower TAC variable access into explicit loads and stores.
 - Properly split flat TAC into well defined basic blocks.
 - Restructure procedure-level TAC units making the procedure boundary explicit.
