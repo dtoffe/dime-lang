@@ -3,7 +3,7 @@ procedures 3
 proc 1 primes return=none params=0 locals=0 temps=0 blocks=1 labels=1 instructions=2
   frame params=0 locals=0 temps=0 param_area=0 local_area=0 temp_area=0 frame_size=0
   block 1 label=L1 first=1 count=2
-   1 call_proc target=proc[printprime]:address
+   1 call target=proc[printprime]:address
    2 return
   labelmap L1 block=1 first=1
 endproc
@@ -88,7 +88,7 @@ proc 3 printprime return=none params=0 locals=0 temps=11 blocks=6 labels=5 instr
    7 binary result=temp[t22]:boolean/byte left=temp[t23]:integer/dword right=temp[t21]:integer/dword op=<=
    8 goto_if_zero left=temp[t22]:boolean/byte target=label[L9]:address
   block 3 first=9 count=3
-   9 call_proc target=proc[isprime]:address
+   9 call target=proc[isprime]:address
   10 load result=temp[t24]:boolean/byte left=global[ret]:boolean/byte
   11 goto_if_zero left=temp[t24]:boolean/byte target=label[L10]:address
   block 4 first=12 count=2

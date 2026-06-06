@@ -324,6 +324,8 @@ begin
       begin
         validateTacInstruction := instruction.targetOperand.kind = irOperandProcedure;
         if validateTacInstruction then
+          validateTacInstruction := isValueOrNoneOperandKind(instruction.resultOperand.kind);
+        if validateTacInstruction then
           for argumentIndex := 1 to instruction.callArgumentCount do
             if not isValueOperandKind(instruction.callArguments[argumentIndex].kind) then
             begin
@@ -423,7 +425,7 @@ begin
     irLabel: instructionKindToString := 'label';
     irLoadVar: instructionKindToString := 'load';
     irStoreVar: instructionKindToString := 'store';
-    irCallProc: instructionKindToString := 'call_proc';
+    irCallProc: instructionKindToString := 'call';
     irBuiltinRead: instructionKindToString := 'builtin_read';
     irBuiltinWrite: instructionKindToString := 'builtin_write';
     irReturn: instructionKindToString := 'return'

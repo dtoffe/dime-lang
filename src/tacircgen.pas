@@ -166,6 +166,7 @@ begin
 end;
 
 function lowerExpression(node: astNode; var errorCount: integer): tacOperand; forward;
+function lowerCall(node: astNode; var errorCount: integer): tacOperand; forward;
 procedure lowerCallStatement(node: astNode; var errorCount: integer); forward;
 procedure lowerStatement(node: astNode; var errorCount: integer); forward;
 procedure lowerBlock(node: astNode; var errorCount: integer); forward;
@@ -319,8 +320,6 @@ begin
 end;
 
 function lowerExpression(node: astNode; var errorCount: integer): tacOperand;
-var
-  instruction: tacInstruction;
 begin
   lowerExpression := makeTacNoneOperand;
   if node = nil then
@@ -339,18 +338,7 @@ begin
       lowerExpression := lowerBinaryExpression(node, errorCount);
     astCallExpression:
       begin
-        lowerCallStatement(node, errorCount);
-        if hasResolvedSymbol(node^.firstChild) then
-        begin
-          lowerExpression := newTacTemporary(nodeValueType(node));
-          instruction := newTacInstruction(irLoadVar);
-          instruction.resultOperand := lowerExpression;
-          instruction.leftOperand := makeTacSymbolOperand(
-            resolvedSymbolOf(node^.firstChild),
-            node^.firstChild^.identifierText,
-            nodeValueType(node));
-          appendTacInstruction(instruction)
-        end
+        lowerExpression := lowerCall(node, errorCount)
       end;
     astCaseExpression:
       lowerExpression := lowerCaseExpression(node, errorCount)
@@ -375,17 +363,16 @@ begin
   appendTacInstruction(instruction)
 end;
 
-procedure lowerCallStatement(node: astNode; var errorCount: integer);
+function lowerCall(node: astNode; var errorCount: integer): tacOperand;
 var
   calleeNode, argumentNode: astNode;
   argumentOperand: tacOperand;
-  parameterOperand: tacOperand;
   resolvedSymbol: symbolIndex;
   procKind: builtinProcedure;
-  instruction, storeInstruction: tacInstruction;
+  instruction: tacInstruction;
   argumentIndex: integer;
-  parameterSymbol: symbolIndex;
 begin
+  lowerCall := makeTacNoneOperand;
   calleeNode := node^.firstChild;
   argumentNode := nil;
   if calleeNode <> nil then
@@ -422,28 +409,27 @@ begin
     instruction := newTacInstruction(irCallProc);
     instruction.targetOperand := makeTacProcedureOperand(resolvedSymbol,
                                                          calleeNode^.identifierText);
+    if getDeclarationKind(resolvedSymbol) = func then
+    begin
+      lowerCall := newTacTemporary(nodeValueType(node));
+      instruction.resultOperand := lowerCall
+    end;
+
     argumentIndex := 1;
     while argumentNode <> nil do
     begin
       argumentOperand := lowerExpression(argumentNode, errorCount);
-      parameterSymbol := getProcedureParameterSymbol(resolvedSymbol, argumentIndex);
-      if parameterSymbol <> 0 then
-      begin
-        parameterOperand := makeTacSymbolOperand(
-          parameterSymbol,
-          getDeclarationIdentifier(parameterSymbol),
-          getProcedureParameterType(resolvedSymbol, argumentIndex));
-        storeInstruction := newTacInstruction(irStoreVar);
-        storeInstruction.resultOperand := parameterOperand;
-        storeInstruction.leftOperand := argumentOperand;
-        appendTacInstruction(storeInstruction)
-      end;
       setTacCallArgument(instruction, argumentIndex, argumentOperand);
       argumentIndex := argumentIndex + 1;
       argumentNode := argumentNode^.nextSibling
     end;
     appendTacInstruction(instruction)
   end
+end;
+
+procedure lowerCallStatement(node: astNode; var errorCount: integer);
+begin
+  lowerCall(node, errorCount)
 end;
 
 procedure lowerReturnStatement(node: astNode; var errorCount: integer);
