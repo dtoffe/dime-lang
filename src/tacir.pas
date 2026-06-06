@@ -29,6 +29,9 @@ type
   tacProcedureIndex = 0..maxTacProcedures;
   tacTemporaryId = 0..maxTacInstructions;
   tacLabelId = 0..maxTacInstructions;
+  tacTemporaryStoragePolicy = (
+    irTempsStackSlots
+  );
   tacIntrinsicKind = (
     irIntrinsicNone,
     irIntrinsicReadInt,
@@ -142,6 +145,7 @@ type
     parameterCount: integer;
     localCount: integer;
     temporaryCount: integer;
+    temporaryStoragePolicy: tacTemporaryStoragePolicy;
     parameterAreaSize: integer;
     localAreaSize: integer;
     temporaryAreaSize: integer;
@@ -215,6 +219,9 @@ function appendTacBasicBlock(blockLabelId: tacLabelId): tacBasicBlockIndex;
 function appendTacInstruction(const instruction: tacInstruction): tacInstructionIndex;
 procedure setTacCallArgument(var instruction: tacInstruction; argumentIndex: integer;
                              const argument: tacOperand);
+function findTacTemporaryFrameSlot(procedureIndex: tacProcedureIndex;
+                                   temporaryId: tacTemporaryId;
+                                   var slot: tacFrameSlot): boolean;
 procedure dumpTacIr(const outputFileName: string);
 procedure syncTacProcedurePrologue(procedureIndex: tacProcedureIndex);
 
@@ -624,6 +631,14 @@ begin
     irSizeAddress: operandSizeToString := 'address';
   else
     operandSizeToString := 'none'
+  end
+end;
+
+function temporaryStoragePolicyToString(policy: tacTemporaryStoragePolicy): string;
+begin
+  case policy of
+    irTempsStackSlots:
+      temporaryStoragePolicyToString := 'stack_slots'
   end
 end;
 
@@ -1043,6 +1058,7 @@ begin
     frameInfo.parameterCount := 0;
     frameInfo.localCount := 0;
     frameInfo.temporaryCount := 0;
+    frameInfo.temporaryStoragePolicy := irTempsStackSlots;
     frameInfo.parameterAreaSize := 0;
     frameInfo.localAreaSize := 0;
     frameInfo.temporaryAreaSize := 0;
@@ -1213,6 +1229,27 @@ begin
     instruction.callArgumentCount := argumentIndex
 end;
 
+function findTacTemporaryFrameSlot(procedureIndex: tacProcedureIndex;
+                                   temporaryId: tacTemporaryId;
+                                   var slot: tacFrameSlot): boolean;
+var
+  temporaryIndex: integer;
+begin
+  findTacTemporaryFrameSlot := false;
+  if (procedureIndex < 1) or (procedureIndex > currentProgram.procedureCount) then
+    exit;
+
+  rebuildTacProcedureFrameLayout(procedureIndex);
+  with currentProgram.procedures[procedureIndex].frameInfo do
+    for temporaryIndex := 1 to temporaryCount do
+      if temporaries[temporaryIndex].operand.temporaryId = temporaryId then
+      begin
+        slot := temporaries[temporaryIndex];
+        findTacTemporaryFrameSlot := true;
+        exit
+      end
+end;
+
 procedure dumpTacInstruction(var outputFile: Text; instructionIndex: integer;
                              const instruction: tacInstruction);
 var
@@ -1266,6 +1303,7 @@ begin
       writeln(outputFile, '  frame params=', frameInfo.parameterCount,
               ' locals=', frameInfo.localCount,
               ' temps=', frameInfo.temporaryCount,
+              ' temp_policy=', temporaryStoragePolicyToString(frameInfo.temporaryStoragePolicy),
               ' param_area=', frameInfo.parameterAreaSize,
               ' local_area=', frameInfo.localAreaSize,
               ' temp_area=', frameInfo.temporaryAreaSize,
@@ -1283,6 +1321,7 @@ begin
       for itemIndex := 1 to frameInfo.temporaryCount do
         writeln(outputFile, '  frame_temp ', itemIndex, ' ',
                 operandToString(frameInfo.temporaries[itemIndex].operand),
+                ' storage=stack_slot',
                 ' offset=', frameInfo.temporaries[itemIndex].offset,
                 ' size=', frameInfo.temporaries[itemIndex].sizeInBytes);
       for itemIndex := 1 to basicBlockCount do

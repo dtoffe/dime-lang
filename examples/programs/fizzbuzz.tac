@@ -1,55 +1,55 @@
 tac program
 procedures 2
 proc 1 fizzbuzz return=none params=0 locals=0 temps=48 blocks=11 labels=10 instructions=82
-  frame params=0 locals=0 temps=48 param_area=0 local_area=0 temp_area=156 frame_size=156
-  frame_temp 1 temp[t1]:integer/dword offset=-4 size=4
-  frame_temp 2 temp[t2]:integer/dword offset=-8 size=4
-  frame_temp 3 temp[t3]:integer/dword offset=-12 size=4
-  frame_temp 4 temp[t4]:integer/dword offset=-16 size=4
-  frame_temp 5 temp[t5]:integer/dword offset=-20 size=4
-  frame_temp 6 temp[t6]:integer/dword offset=-24 size=4
-  frame_temp 7 temp[t7]:integer/dword offset=-28 size=4
-  frame_temp 8 temp[t8]:boolean/byte offset=-29 size=1
-  frame_temp 9 temp[t9]:integer/dword offset=-33 size=4
-  frame_temp 10 temp[t10]:integer/dword offset=-37 size=4
-  frame_temp 11 temp[t11]:integer/dword offset=-41 size=4
-  frame_temp 12 temp[t12]:integer/dword offset=-45 size=4
-  frame_temp 13 temp[t13]:integer/dword offset=-49 size=4
-  frame_temp 14 temp[t14]:integer/dword offset=-53 size=4
-  frame_temp 15 temp[t15]:integer/dword offset=-57 size=4
-  frame_temp 16 temp[t16]:boolean/byte offset=-58 size=1
-  frame_temp 17 temp[t17]:integer/dword offset=-62 size=4
-  frame_temp 18 temp[t18]:integer/dword offset=-66 size=4
-  frame_temp 19 temp[t19]:integer/dword offset=-70 size=4
-  frame_temp 20 temp[t20]:integer/dword offset=-74 size=4
-  frame_temp 21 temp[t21]:integer/dword offset=-78 size=4
-  frame_temp 22 temp[t22]:integer/dword offset=-82 size=4
-  frame_temp 23 temp[t23]:boolean/byte offset=-83 size=1
-  frame_temp 24 temp[t24]:boolean/byte offset=-84 size=1
-  frame_temp 25 temp[t25]:boolean/byte offset=-85 size=1
-  frame_temp 26 temp[t26]:boolean/byte offset=-86 size=1
-  frame_temp 27 temp[t27]:char/byte offset=-87 size=1
-  frame_temp 28 temp[t28]:char/byte offset=-88 size=1
-  frame_temp 29 temp[t29]:integer/dword offset=-92 size=4
-  frame_temp 30 temp[t30]:integer/dword offset=-96 size=4
-  frame_temp 31 temp[t31]:integer/dword offset=-100 size=4
-  frame_temp 32 temp[t32]:boolean/byte offset=-101 size=1
-  frame_temp 33 temp[t33]:char/byte offset=-102 size=1
-  frame_temp 34 temp[t34]:integer/dword offset=-106 size=4
-  frame_temp 35 temp[t35]:integer/dword offset=-110 size=4
-  frame_temp 36 temp[t36]:integer/dword offset=-114 size=4
-  frame_temp 37 temp[t37]:boolean/byte offset=-115 size=1
-  frame_temp 38 temp[t38]:char/byte offset=-116 size=1
-  frame_temp 39 temp[t39]:integer/dword offset=-120 size=4
-  frame_temp 40 temp[t40]:integer/dword offset=-124 size=4
-  frame_temp 41 temp[t41]:integer/dword offset=-128 size=4
-  frame_temp 42 temp[t42]:integer/dword offset=-132 size=4
-  frame_temp 43 temp[t43]:integer/dword offset=-136 size=4
-  frame_temp 44 temp[t44]:integer/dword offset=-140 size=4
-  frame_temp 45 temp[t45]:integer/dword offset=-144 size=4
-  frame_temp 46 temp[t46]:integer/dword offset=-148 size=4
-  frame_temp 47 temp[t47]:integer/dword offset=-152 size=4
-  frame_temp 48 temp[t48]:integer/dword offset=-156 size=4
+  frame params=0 locals=0 temps=48 temp_policy=stack_slots param_area=0 local_area=0 temp_area=156 frame_size=156
+  frame_temp 1 temp[t1]:integer/dword storage=stack_slot offset=-4 size=4
+  frame_temp 2 temp[t2]:integer/dword storage=stack_slot offset=-8 size=4
+  frame_temp 3 temp[t3]:integer/dword storage=stack_slot offset=-12 size=4
+  frame_temp 4 temp[t4]:integer/dword storage=stack_slot offset=-16 size=4
+  frame_temp 5 temp[t5]:integer/dword storage=stack_slot offset=-20 size=4
+  frame_temp 6 temp[t6]:integer/dword storage=stack_slot offset=-24 size=4
+  frame_temp 7 temp[t7]:integer/dword storage=stack_slot offset=-28 size=4
+  frame_temp 8 temp[t8]:boolean/byte storage=stack_slot offset=-29 size=1
+  frame_temp 9 temp[t9]:integer/dword storage=stack_slot offset=-33 size=4
+  frame_temp 10 temp[t10]:integer/dword storage=stack_slot offset=-37 size=4
+  frame_temp 11 temp[t11]:integer/dword storage=stack_slot offset=-41 size=4
+  frame_temp 12 temp[t12]:integer/dword storage=stack_slot offset=-45 size=4
+  frame_temp 13 temp[t13]:integer/dword storage=stack_slot offset=-49 size=4
+  frame_temp 14 temp[t14]:integer/dword storage=stack_slot offset=-53 size=4
+  frame_temp 15 temp[t15]:integer/dword storage=stack_slot offset=-57 size=4
+  frame_temp 16 temp[t16]:boolean/byte storage=stack_slot offset=-58 size=1
+  frame_temp 17 temp[t17]:integer/dword storage=stack_slot offset=-62 size=4
+  frame_temp 18 temp[t18]:integer/dword storage=stack_slot offset=-66 size=4
+  frame_temp 19 temp[t19]:integer/dword storage=stack_slot offset=-70 size=4
+  frame_temp 20 temp[t20]:integer/dword storage=stack_slot offset=-74 size=4
+  frame_temp 21 temp[t21]:integer/dword storage=stack_slot offset=-78 size=4
+  frame_temp 22 temp[t22]:integer/dword storage=stack_slot offset=-82 size=4
+  frame_temp 23 temp[t23]:boolean/byte storage=stack_slot offset=-83 size=1
+  frame_temp 24 temp[t24]:boolean/byte storage=stack_slot offset=-84 size=1
+  frame_temp 25 temp[t25]:boolean/byte storage=stack_slot offset=-85 size=1
+  frame_temp 26 temp[t26]:boolean/byte storage=stack_slot offset=-86 size=1
+  frame_temp 27 temp[t27]:char/byte storage=stack_slot offset=-87 size=1
+  frame_temp 28 temp[t28]:char/byte storage=stack_slot offset=-88 size=1
+  frame_temp 29 temp[t29]:integer/dword storage=stack_slot offset=-92 size=4
+  frame_temp 30 temp[t30]:integer/dword storage=stack_slot offset=-96 size=4
+  frame_temp 31 temp[t31]:integer/dword storage=stack_slot offset=-100 size=4
+  frame_temp 32 temp[t32]:boolean/byte storage=stack_slot offset=-101 size=1
+  frame_temp 33 temp[t33]:char/byte storage=stack_slot offset=-102 size=1
+  frame_temp 34 temp[t34]:integer/dword storage=stack_slot offset=-106 size=4
+  frame_temp 35 temp[t35]:integer/dword storage=stack_slot offset=-110 size=4
+  frame_temp 36 temp[t36]:integer/dword storage=stack_slot offset=-114 size=4
+  frame_temp 37 temp[t37]:boolean/byte storage=stack_slot offset=-115 size=1
+  frame_temp 38 temp[t38]:char/byte storage=stack_slot offset=-116 size=1
+  frame_temp 39 temp[t39]:integer/dword storage=stack_slot offset=-120 size=4
+  frame_temp 40 temp[t40]:integer/dword storage=stack_slot offset=-124 size=4
+  frame_temp 41 temp[t41]:integer/dword storage=stack_slot offset=-128 size=4
+  frame_temp 42 temp[t42]:integer/dword storage=stack_slot offset=-132 size=4
+  frame_temp 43 temp[t43]:integer/dword storage=stack_slot offset=-136 size=4
+  frame_temp 44 temp[t44]:integer/dword storage=stack_slot offset=-140 size=4
+  frame_temp 45 temp[t45]:integer/dword storage=stack_slot offset=-144 size=4
+  frame_temp 46 temp[t46]:integer/dword storage=stack_slot offset=-148 size=4
+  frame_temp 47 temp[t47]:integer/dword storage=stack_slot offset=-152 size=4
+  frame_temp 48 temp[t48]:integer/dword storage=stack_slot offset=-156 size=4
   block 1 label=L1 first=1 count=13
    1 enter left=imm(156):integer/dword
    2 load_const result=temp[t1]:integer/dword left=imm(0):integer/dword
@@ -155,20 +155,20 @@ proc 1 fizzbuzz return=none params=0 locals=0 temps=48 blocks=11 labels=10 instr
   labelmap L10 block=10 first=75
 endproc
 proc 2 printsumma return=none params=0 locals=0 temps=13 blocks=1 labels=1 instructions=33
-  frame params=0 locals=0 temps=13 param_area=0 local_area=0 temp_area=25 frame_size=25
-  frame_temp 1 temp[t49]:char/byte offset=-1 size=1
-  frame_temp 2 temp[t50]:char/byte offset=-2 size=1
-  frame_temp 3 temp[t51]:integer/dword offset=-6 size=4
-  frame_temp 4 temp[t52]:char/byte offset=-7 size=1
-  frame_temp 5 temp[t53]:char/byte offset=-8 size=1
-  frame_temp 6 temp[t54]:integer/dword offset=-12 size=4
-  frame_temp 7 temp[t55]:char/byte offset=-13 size=1
-  frame_temp 8 temp[t56]:char/byte offset=-14 size=1
-  frame_temp 9 temp[t57]:integer/dword offset=-18 size=4
-  frame_temp 10 temp[t58]:char/byte offset=-19 size=1
-  frame_temp 11 temp[t59]:char/byte offset=-20 size=1
-  frame_temp 12 temp[t60]:char/byte offset=-21 size=1
-  frame_temp 13 temp[t61]:integer/dword offset=-25 size=4
+  frame params=0 locals=0 temps=13 temp_policy=stack_slots param_area=0 local_area=0 temp_area=25 frame_size=25
+  frame_temp 1 temp[t49]:char/byte storage=stack_slot offset=-1 size=1
+  frame_temp 2 temp[t50]:char/byte storage=stack_slot offset=-2 size=1
+  frame_temp 3 temp[t51]:integer/dword storage=stack_slot offset=-6 size=4
+  frame_temp 4 temp[t52]:char/byte storage=stack_slot offset=-7 size=1
+  frame_temp 5 temp[t53]:char/byte storage=stack_slot offset=-8 size=1
+  frame_temp 6 temp[t54]:integer/dword storage=stack_slot offset=-12 size=4
+  frame_temp 7 temp[t55]:char/byte storage=stack_slot offset=-13 size=1
+  frame_temp 8 temp[t56]:char/byte storage=stack_slot offset=-14 size=1
+  frame_temp 9 temp[t57]:integer/dword storage=stack_slot offset=-18 size=4
+  frame_temp 10 temp[t58]:char/byte storage=stack_slot offset=-19 size=1
+  frame_temp 11 temp[t59]:char/byte storage=stack_slot offset=-20 size=1
+  frame_temp 12 temp[t60]:char/byte storage=stack_slot offset=-21 size=1
+  frame_temp 13 temp[t61]:integer/dword storage=stack_slot offset=-25 size=4
   block 1 label=L11 first=1 count=33
    1 enter left=imm(25):integer/dword
    2 load_const result=temp[t49]:char/byte left=imm(78):char/byte
