@@ -32,6 +32,7 @@ type
 
   tacInstructionKind = (
     irNoOp,
+    irEnterFrame,
     irLoadConst,
     irCopy,
     irUnaryOp,
@@ -50,6 +51,7 @@ type
     irCallProc,
     irBuiltinRead,
     irBuiltinWrite,
+    irLeaveFrame,
     irReturn
   );
 
@@ -151,7 +153,8 @@ type
     labelBlockIndex: array [1..maxTacInstructions] of tacBasicBlockIndex;
     instructionCount: integer;
     instructions: array [1..maxTacInstructions] of tacInstruction;
-    labelCount: integer
+    labelCount: integer;
+    prologueInstruction: tacInstructionIndex
   end;
 
   tacProgram = record
@@ -197,6 +200,7 @@ function appendTacInstruction(const instruction: tacInstruction): tacInstruction
 procedure setTacCallArgument(var instruction: tacInstruction; argumentIndex: integer;
                              const argument: tacOperand);
 procedure dumpTacIr(const outputFileName: string);
+procedure syncTacProcedurePrologue(procedureIndex: tacProcedureIndex);
 
 implementation
 
@@ -264,6 +268,23 @@ begin
   isValueOrNoneOperandKind := (kind = irOperandNone) or isValueOperandKind(kind)
 end;
 
+procedure syncTacProcedurePrologue(procedureIndex: tacProcedureIndex);
+var
+  prologueIndex: tacInstructionIndex;
+begin
+  if (procedureIndex < 1) or (procedureIndex > currentProgram.procedureCount) then
+    exit;
+
+  prologueIndex := currentProgram.procedures[procedureIndex].prologueInstruction;
+  if prologueIndex = 0 then
+    exit;
+
+  with currentProgram.procedures[procedureIndex] do
+    if instructions[prologueIndex].kind = irEnterFrame then
+      instructions[prologueIndex].leftOperand :=
+        makeTacConstOperand(frameInfo.frameSize, typeInteger)
+end;
+
 function instructionUsesStorageOperands(kind: tacInstructionKind): boolean;
 begin
   instructionUsesStorageOperands := kind in [irAddrLocal, irAddrParam,
@@ -276,6 +297,11 @@ var
 begin
   validateTacInstruction := true;
   case instruction.kind of
+    irEnterFrame:
+      validateTacInstruction := (instruction.resultOperand.kind = irOperandNone) and
+                                (instruction.leftOperand.kind = irOperandImmediate) and
+                                (instruction.rightOperand.kind = irOperandNone) and
+                                (instruction.targetOperand.kind = irOperandNone);
     irLoadConst:
       validateTacInstruction := (instruction.resultOperand.kind = irOperandTemporary) and
                                 (instruction.leftOperand.kind = irOperandImmediate);
@@ -339,6 +365,11 @@ begin
     irBuiltinWrite:
       validateTacInstruction := (instruction.targetOperand.kind = irOperandIntrinsic) and
                                 isValueOperandKind(instruction.leftOperand.kind);
+    irLeaveFrame:
+      validateTacInstruction := (instruction.resultOperand.kind = irOperandNone) and
+                                (instruction.leftOperand.kind = irOperandNone) and
+                                (instruction.rightOperand.kind = irOperandNone) and
+                                (instruction.targetOperand.kind = irOperandNone);
     irReturn,
     irNoOp,
     irLabel:
@@ -410,6 +441,7 @@ function instructionKindToString(kind: tacInstructionKind): string;
 begin
   case kind of
     irNoOp: instructionKindToString := 'noop';
+    irEnterFrame: instructionKindToString := 'enter';
     irLoadConst: instructionKindToString := 'load_const';
     irCopy: instructionKindToString := 'copy';
     irUnaryOp: instructionKindToString := 'unary';
@@ -428,6 +460,7 @@ begin
     irCallProc: instructionKindToString := 'call';
     irBuiltinRead: instructionKindToString := 'builtin_read';
     irBuiltinWrite: instructionKindToString := 'builtin_write';
+    irLeaveFrame: instructionKindToString := 'leave';
     irReturn: instructionKindToString := 'return'
   end
 end;
@@ -569,7 +602,8 @@ begin
     end;
 
     frameInfo.frameSize := frameInfo.localAreaSize + frameInfo.temporaryAreaSize
-  end
+  end;
+  syncTacProcedurePrologue(procedureIndex)
 end;
 
 function classifySymbolOperand(symbol: symbolIndex): tacOperandKind;
@@ -862,7 +896,8 @@ begin
     frameInfo.parameterAreaSize := 0;
     frameInfo.localAreaSize := 0;
     frameInfo.temporaryAreaSize := 0;
-    frameInfo.frameSize := 0
+    frameInfo.frameSize := 0;
+    prologueInstruction := 0
   end
 end;
 
@@ -995,7 +1030,9 @@ begin
 
     instructionCount := instructionCount + 1;
     appendTacInstruction := instructionCount;
-    instructions[appendTacInstruction] := instruction
+    instructions[appendTacInstruction] := instruction;
+    if (instruction.kind = irEnterFrame) and (prologueInstruction = 0) then
+      prologueInstruction := appendTacInstruction
   end;
 
   currentProgram.instructionCount := currentProgram.instructionCount + 1;

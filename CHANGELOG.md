@@ -9,6 +9,7 @@ and this project is expected to follow [Semantic Versioning](https://semver.org/
 
 ### [Added]
 
+- Add procedure prologue and epilogue pseudo-ops to TAC.
 - Add target-neutral argument-list call convention to TAC.
 - Add frame layout model for TAC procedures.
 - Add explicit address operations to lowered TAC.

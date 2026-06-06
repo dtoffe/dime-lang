@@ -27,6 +27,7 @@ const
 type
   tacRuntimeInstructionKind = (
     rtNoOp,
+    rtEnterFrame,
     rtLoadConst,
     rtCopy,
     rtUnaryOp,
@@ -45,6 +46,7 @@ type
     rtCallProc,
     rtBuiltinRead,
     rtBuiltinWrite,
+    rtLeaveFrame,
     rtReturn
   );
 
@@ -259,7 +261,9 @@ end;
 
 function instructionKindFromText(const kindText: string): tacRuntimeInstructionKind;
 begin
-  if kindText = 'load_const' then
+  if kindText = 'enter' then
+    instructionKindFromText := rtEnterFrame
+  else if kindText = 'load_const' then
     instructionKindFromText := rtLoadConst
   else if kindText = 'copy' then
     instructionKindFromText := rtCopy
@@ -295,6 +299,8 @@ begin
     instructionKindFromText := rtBuiltinRead
   else if kindText = 'builtin_write' then
     instructionKindFromText := rtBuiltinWrite
+  else if kindText = 'leave' then
+    instructionKindFromText := rtLeaveFrame
   else if kindText = 'return' then
     instructionKindFromText := rtReturn
   else
@@ -908,6 +914,8 @@ begin
 
     instruction := procedures[currentProcedureIndex].instructions[programCounter];
     case instruction.kind of
+      rtEnterFrame:
+        programCounter := programCounter + 1;
       rtLoadConst:
         begin
           assignOperand(instruction.resultOperand, operandValue(instruction.leftOperand));
@@ -1029,6 +1037,8 @@ begin
           executeBuiltinWrite(instruction);
           programCounter := programCounter + 1
         end;
+      rtLeaveFrame:
+        programCounter := programCounter + 1;
       rtReturn:
         begin
           if returnStackTop = 0 then

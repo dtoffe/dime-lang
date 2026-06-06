@@ -125,6 +125,25 @@ begin
   appendTacInstruction(instruction)
 end;
 
+procedure appendProcedureEnter;
+var
+  instruction: tacInstruction;
+begin
+  instruction := newTacInstruction(irEnterFrame);
+  instruction.leftOperand := makeTacConstOperand(0, typeInteger);
+  appendTacInstruction(instruction)
+end;
+
+procedure appendProcedureLeaveAndReturn;
+var
+  instruction: tacInstruction;
+begin
+  instruction := newTacInstruction(irLeaveFrame);
+  appendTacInstruction(instruction);
+  instruction := newTacInstruction(irReturn);
+  appendTacInstruction(instruction)
+end;
+
 procedure pushLoopBreakLabel(labelId: tacLabelId);
 begin
   loopBreakLabelCount := loopBreakLabelCount + 1;
@@ -453,6 +472,8 @@ begin
     appendTacInstruction(instruction)
   end;
 
+  instruction := newTacInstruction(irLeaveFrame);
+  appendTacInstruction(instruction);
   instruction := newTacInstruction(irReturn);
   appendTacInstruction(instruction)
 end;
@@ -740,6 +761,7 @@ begin
   procedureIndex := appendTacProcedure(node^.identifierText, procedureSymbol);
   describeTacProcedure(procedureIndex, node, false, typeInteger);
   appendLabel(newTacLabel);
+  appendProcedureEnter;
   currentLoweredFunctionSymbol := 0;
   lowerBlock(routineBlockNode(node), errorCount)
 end;
@@ -763,6 +785,7 @@ begin
   procedureIndex := appendTacProcedure(node^.identifierText, functionSymbol);
   describeTacProcedure(procedureIndex, node, true, returnType);
   appendLabel(newTacLabel);
+  appendProcedureEnter;
   currentLoweredFunctionSymbol := functionSymbol;
   lowerBlock(routineBlockNode(node), errorCount);
   currentLoweredFunctionSymbol := 0
@@ -771,7 +794,6 @@ end;
 procedure lowerBlockBody(blockNode: astNode; var errorCount: integer);
 var
   childNode: astNode;
-  instruction: tacInstruction;
 begin
   if blockNode = nil then
     exit;
@@ -789,8 +811,7 @@ begin
     childNode := childNode^.nextSibling
   end;
 
-  instruction := newTacInstruction(irReturn);
-  appendTacInstruction(instruction)
+  appendProcedureLeaveAndReturn
 end;
 
 procedure lowerBlock(node: astNode; var errorCount: integer);
@@ -837,6 +858,7 @@ begin
   setTacProcedureReturnType(procedureIndex, typeInteger, false);
   recordBlockLocals(programBlock, procedureIndex);
   appendLabel(newTacLabel);
+  appendProcedureEnter;
 
   lowerBlock(programBlock, errorCount)
 end;
