@@ -1384,7 +1384,7 @@ begin
           begin
             write(outputFile, '  block ', itemIndex,
                   ' label=L', labelId);
-            for labelIndex := 1 to labelCount do
+            for labelIndex := Low(labelBlockIndex) to High(labelBlockIndex) do
               if (labelIndex <> labelId) and
                  (labelBlockIndex[labelIndex] = itemIndex) then
                 write(outputFile, ' alias=L', labelIndex);
@@ -1404,7 +1404,7 @@ begin
                                  instructions[instructionIndex])
           end
         end;
-      for labelIndex := 1 to labelCount do
+      for labelIndex := Low(labelBlockIndex) to High(labelBlockIndex) do
         if labelBlockIndex[labelIndex] <> 0 then
           writeln(outputFile, '  labelmap L', labelIndex,
                   ' block=', labelBlockIndex[labelIndex],

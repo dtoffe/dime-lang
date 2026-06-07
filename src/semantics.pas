@@ -35,6 +35,7 @@ type
   semanticContext = record
     currentLevel: integer;
     nextAddress: integer;
+    programIdentifier: identifier;
     currentRoutineKind: declarationKind;
     currentRoutineAllowsReturn: boolean;
     currentFunctionSymbol: symbolIndex;
@@ -637,6 +638,9 @@ begin
         end
         else
         begin
+          if node^.identifierText = sema.programIdentifier then
+            reportCompilerError(ERR_PROCEDURE_MUST_NOT_MATCH_PROGRAM_NAME,
+                                nodeSourceContext(node), errorCount);
           if node^.kind = astProcedureDeclaration then
             declaredSymbol := addProcedure(node^.identifierText, sema.currentLevel)
           else
@@ -1023,6 +1027,7 @@ begin
   initializeSymbolTable;
   sema.currentLevel := 0;
   sema.nextAddress := 3;
+  sema.programIdentifier := rootNode^.identifierText;
   sema.currentRoutineKind := proc;
   sema.currentRoutineAllowsReturn := false;
   sema.currentFunctionSymbol := 0;

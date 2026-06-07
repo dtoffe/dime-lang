@@ -9,6 +9,7 @@ and this project is expected to follow [Semantic Versioning](https://semver.org/
 
 ### [Added]
 
+- Add diagnostic to flag program and procedure with the same name.
 - Allocate stack frame slots for TAC temporaries.
 - Add procedure prologue and epilogue pseudo-ops to TAC.
 - Add target-neutral argument-list call convention to TAC.
@@ -24,6 +25,10 @@ and this project is expected to follow [Semantic Versioning](https://semver.org/
 - Lower TAC variable access into explicit loads and stores.
 - Properly split flat TAC into well defined basic blocks.
 - Restructure procedure-level TAC units making the procedure boundary explicit.
+
+### [Fixed]
+
+- Fix minor TAC IR code generation bugs.
 
 ## [v0.0.10] - 2026-06-04
 

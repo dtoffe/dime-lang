@@ -100,6 +100,7 @@ proc 2 multiply return=none params=0 locals=2 temps=22 blocks=6 labels=4 instruc
   labelmap L2 block=1 first=1
   labelmap L3 block=2 first=8
   labelmap L4 block=6 first=33
+  labelmap L5 block=5 first=24
 endproc
 proc 3 divide return=none params=0 locals=1 temps=27 blocks=8 labels=6 instructions=43
   local 1 local[w]:integer/dword
@@ -151,7 +152,7 @@ proc 3 divide return=none params=0 locals=1 temps=27 blocks=8 labels=6 instructi
   14 mul result=temp[t37]:integer/dword left=temp[t35]:integer/dword right=temp[t36]:integer/dword
   15 store result=local[w]:integer/dword left=temp[t37]:integer/dword
   16 jump target=label[L7]:address
-  block 4 label=L8 first=17 count=4
+  block 4 label=L8 alias=L9 first=17 count=4
   17 load result=temp[t38]:integer/dword left=local[w]:integer/dword
   18 load result=temp[t39]:integer/dword left=global[y]:integer/dword
   19 cmp_gt result=temp[t40]:boolean/byte left=temp[t38]:integer/dword right=temp[t39]:integer/dword
@@ -184,6 +185,11 @@ proc 3 divide return=none params=0 locals=1 temps=27 blocks=8 labels=6 instructi
   42 leave
   43 return
   labelmap L6 block=1 first=1
+  labelmap L7 block=2 first=8
+  labelmap L8 block=4 first=17
+  labelmap L9 block=4 first=17
+  labelmap L10 block=8 first=42
+  labelmap L11 block=7 first=41
 endproc
 proc 4 gcd return=none params=0 locals=2 temps=18 blocks=8 labels=5 instructions=30
   local 1 local[f]:integer/dword
@@ -247,4 +253,9 @@ proc 4 gcd return=none params=0 locals=2 temps=18 blocks=8 labels=5 instructions
   28 store result=global[z]:integer/dword left=temp[t73]:integer/dword
   29 leave
   30 return
+  labelmap L12 block=1 first=1
+  labelmap L13 block=2 first=6
+  labelmap L14 block=8 first=27
+  labelmap L15 block=5 first=18
+  labelmap L16 block=7 first=26
 endproc

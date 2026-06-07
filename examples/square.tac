@@ -23,7 +23,7 @@ proc 1 square return=none params=0 locals=2 temps=7 blocks=4 labels=3 instructio
    6 cmp_le result=temp[t4]:boolean/byte left=temp[t2]:integer/dword right=temp[t3]:integer/dword
    7 brfalse left=temp[t4]:boolean/byte target=label[L3]:address
   block 3 first=8 count=6
-   8 call target=proc[square]:address
+   8 call target=proc[calcsquare]:address
    9 load result=temp[t5]:integer/dword left=global[x]:integer/dword
   10 copy result=temp[t6]:integer/dword left=imm(1):integer/dword
   11 add result=temp[t7]:integer/dword left=temp[t5]:integer/dword right=temp[t6]:integer/dword
@@ -36,7 +36,7 @@ proc 1 square return=none params=0 locals=2 temps=7 blocks=4 labels=3 instructio
   labelmap L2 block=2 first=4
   labelmap L3 block=4 first=14
 endproc
-proc 2 square return=none params=0 locals=0 temps=3 blocks=1 labels=1 instructions=7
+proc 2 calcsquare return=none params=0 locals=0 temps=3 blocks=1 labels=1 instructions=7
   frame params=0 locals=0 temps=3 temp_policy=stack_slots param_area=0 local_area=0 temp_area=12 frame_size=12
   frame_temp 1 temp[t8]:integer/dword storage=stack_slot offset=-4 size=4
   frame_temp 2 temp[t9]:integer/dword storage=stack_slot offset=-8 size=4
@@ -49,4 +49,5 @@ proc 2 square return=none params=0 locals=0 temps=3 blocks=1 labels=1 instructio
    5 store result=global[squ]:integer/dword left=temp[t10]:integer/dword
    6 leave
    7 return
+  labelmap L4 block=1 first=1
 endproc

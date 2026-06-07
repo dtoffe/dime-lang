@@ -113,6 +113,7 @@ const
     ERR_BREAK_ONLY_ALLOWED_IN_LOOP = 97;
     ERR_PROCEDURE_RETURN_MUST_NOT_HAVE_VALUE = 98;
     ERR_FUNCTION_RETURN_REQUIRES_VALUE = 99;
+    ERR_PROCEDURE_MUST_NOT_MATCH_PROGRAM_NAME = 100;
 
     ERROR_PCODEINT_INVALID_L_VALUE = 'Error converting l-value';
     ERROR_PCODEINT_INVALID_A_VALUE = 'Error converting a-value';
@@ -304,8 +305,9 @@ begin
         ERR_BREAK_ONLY_ALLOWED_IN_LOOP: compilerErrorMessage := '"break" is only allowed inside a while, repeat, or for loop.';
         ERR_PROCEDURE_RETURN_MUST_NOT_HAVE_VALUE: compilerErrorMessage := 'Procedure return must not include an expression.';
         ERR_FUNCTION_RETURN_REQUIRES_VALUE: compilerErrorMessage := 'Function return must include an expression.';
-    else
-        compilerErrorMessage := 'Unknown compiler error.'
+        ERR_PROCEDURE_MUST_NOT_MATCH_PROGRAM_NAME: compilerErrorMessage := 'Procedure or function name must not match the program name.';
+        else
+            compilerErrorMessage := 'Unknown compiler error.'
     end
 end;
 

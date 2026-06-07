@@ -1,6 +1,6 @@
 tac program
 procedures 2
-proc 1 fizzbuzz return=none params=0 locals=0 temps=48 blocks=11 labels=10 instructions=87
+proc 1 fizzbuzz symbol=0 return=none params=0 locals=0 temps=48 blocks=11 labels=10 instructions=87
   frame params=0 locals=0 temps=48 temp_policy=stack_slots param_area=0 local_area=0 temp_area=156 frame_size=156
   frame_temp 1 temp[t1]:integer/dword storage=stack_slot offset=-4 size=4
   frame_temp 2 temp[t2]:integer/dword storage=stack_slot offset=-8 size=4
@@ -145,7 +145,7 @@ proc 1 fizzbuzz return=none params=0 locals=0 temps=48 blocks=11 labels=10 instr
   83 store result=global[n]:integer/dword left=temp[t47]:integer/dword
   84 jump target=label[L2]:address
   block 11 label=L4 first=85 count=3
-  85 call target=proc[printsumma]:address
+  85 call target=proc[s20|printsumma]:address
   86 leave
   87 return
   labelmap L1 block=1 first=1
@@ -159,7 +159,7 @@ proc 1 fizzbuzz return=none params=0 locals=0 temps=48 blocks=11 labels=10 instr
   labelmap L9 block=9 first=72
   labelmap L10 block=10 first=80
 endproc
-proc 2 printsumma return=none params=0 locals=0 temps=13 blocks=1 labels=1 instructions=46
+proc 2 printsumma symbol=20 return=none params=0 locals=0 temps=13 blocks=1 labels=1 instructions=46
   frame params=0 locals=0 temps=13 temp_policy=stack_slots param_area=0 local_area=0 temp_area=25 frame_size=25
   frame_temp 1 temp[t49]:char/byte storage=stack_slot offset=-1 size=1
   frame_temp 2 temp[t50]:char/byte storage=stack_slot offset=-2 size=1
@@ -221,4 +221,5 @@ proc 2 printsumma return=none params=0 locals=0 temps=13 blocks=1 labels=1 instr
   44 intrinsic_call target=intrinsic[writeln]:address
   45 leave
   46 return
+  labelmap L11 block=1 first=1
 endproc
