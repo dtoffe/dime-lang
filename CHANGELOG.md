@@ -19,6 +19,7 @@ and this project is expected to follow [Semantic Versioning](https://semver.org/
 
 ### [Changed]
 
+- Extend short term roadmap with more milestones.
 - Cleanup of older, now unused TAC instructions.
 - Normalize TAC instructions, eliminate variants of the same instruction.
 - Replace read/write builtins with explicit intrinsic calls in TAC.
