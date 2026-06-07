@@ -28,6 +28,26 @@ type
   tacRuntimeInstructionKind = (
     rtNoOp,
     rtEnterFrame,
+    rtAdd,
+    rtSub,
+    rtMul,
+    rtDiv,
+    rtMod,
+    rtNeg,
+    rtCmpEq,
+    rtCmpNe,
+    rtCmpLt,
+    rtCmpLe,
+    rtCmpGt,
+    rtCmpGe,
+    rtJump,
+    rtBranchTrue,
+    rtBranchFalse,
+    rtArg,
+    rtCall,
+    rtResult,
+    rtIntrinsicCall,
+    rtAddrGlobal,
     rtLoadConst,
     rtCopy,
     rtUnaryOp,
@@ -76,6 +96,7 @@ type
     leftOperand: tacRuntimeOperand;
     rightOperand: tacRuntimeOperand;
     targetOperand: tacRuntimeOperand;
+    positionIndex: integer;
     operatorText: string;
     callArgumentCount: integer;
     callArguments: array [1..maxProcedureParameters] of tacRuntimeOperand
@@ -122,6 +143,12 @@ var
   temporaries: array [1..maxTacTemporaries] of integer;
   returnStack: array [1..maxCallDepth] of tacReturnAddress;
   returnStackTop: integer;
+  pendingCallArguments: array [1..maxProcedureParameters] of integer;
+  pendingCallArgumentCount: integer;
+  lastCallResultValue: integer;
+  lastCallResultProcedureIndex: integer;
+  lastCallResultIsValue: boolean;
+  hasLastCallResult: boolean;
 
 function makeNoneOperand: tacRuntimeOperand;
 begin
@@ -263,14 +290,48 @@ function instructionKindFromText(const kindText: string): tacRuntimeInstructionK
 begin
   if kindText = 'enter' then
     instructionKindFromText := rtEnterFrame
-  else if kindText = 'load_const' then
-    instructionKindFromText := rtLoadConst
+  else if kindText = 'add' then
+    instructionKindFromText := rtAdd
+  else if kindText = 'sub' then
+    instructionKindFromText := rtSub
+  else if kindText = 'mul' then
+    instructionKindFromText := rtMul
+  else if kindText = 'div' then
+    instructionKindFromText := rtDiv
+  else if kindText = 'mod' then
+    instructionKindFromText := rtMod
+  else if kindText = 'neg' then
+    instructionKindFromText := rtNeg
+  else if kindText = 'cmp_eq' then
+    instructionKindFromText := rtCmpEq
+  else if kindText = 'cmp_ne' then
+    instructionKindFromText := rtCmpNe
+  else if kindText = 'cmp_lt' then
+    instructionKindFromText := rtCmpLt
+  else if kindText = 'cmp_le' then
+    instructionKindFromText := rtCmpLe
+  else if kindText = 'cmp_gt' then
+    instructionKindFromText := rtCmpGt
+  else if kindText = 'cmp_ge' then
+    instructionKindFromText := rtCmpGe
+  else if kindText = 'jump' then
+    instructionKindFromText := rtJump
+  else if kindText = 'brtrue' then
+    instructionKindFromText := rtBranchTrue
+  else if kindText = 'brfalse' then
+    instructionKindFromText := rtBranchFalse
+  else if kindText = 'arg' then
+    instructionKindFromText := rtArg
+  else if kindText = 'call' then
+    instructionKindFromText := rtCall
+  else if kindText = 'result' then
+    instructionKindFromText := rtResult
+  else if kindText = 'intrinsic_call' then
+    instructionKindFromText := rtIntrinsicCall
+  else if kindText = 'addr_global' then
+    instructionKindFromText := rtAddrGlobal
   else if kindText = 'copy' then
     instructionKindFromText := rtCopy
-  else if kindText = 'unary' then
-    instructionKindFromText := rtUnaryOp
-  else if kindText = 'binary' then
-    instructionKindFromText := rtBinaryOp
   else if kindText = 'addr_local' then
     instructionKindFromText := rtAddrLocal
   else if kindText = 'addr_param' then
@@ -283,22 +344,10 @@ begin
     instructionKindFromText := rtLoadAddr
   else if kindText = 'store_addr' then
     instructionKindFromText := rtStoreAddr
-  else if kindText = 'goto' then
-    instructionKindFromText := rtGoto
-  else if kindText = 'goto_if_zero' then
-    instructionKindFromText := rtGotoIfZero
-  else if kindText = 'label' then
-    instructionKindFromText := rtLabel
-  else if (kindText = 'load') or (kindText = 'load_var') then
+  else if kindText = 'load' then
     instructionKindFromText := rtLoadVar
-  else if (kindText = 'store') or (kindText = 'store_var') then
+  else if kindText = 'store' then
     instructionKindFromText := rtStoreVar
-  else if (kindText = 'call') or (kindText = 'call_proc') then
-    instructionKindFromText := rtCallProc
-  else if kindText = 'builtin_read' then
-    instructionKindFromText := rtBuiltinRead
-  else if kindText = 'builtin_write' then
-    instructionKindFromText := rtBuiltinWrite
   else if kindText = 'leave' then
     instructionKindFromText := rtLeaveFrame
   else if kindText = 'return' then
@@ -446,6 +495,7 @@ begin
   procedures[procedureIndex].instructions[instructionIndex].leftOperand := makeNoneOperand;
   procedures[procedureIndex].instructions[instructionIndex].rightOperand := makeNoneOperand;
   procedures[procedureIndex].instructions[instructionIndex].targetOperand := makeNoneOperand;
+  procedures[procedureIndex].instructions[instructionIndex].positionIndex := 0;
   procedures[procedureIndex].instructions[instructionIndex].operatorText := '';
   procedures[procedureIndex].instructions[instructionIndex].callArgumentCount := 0;
   for argumentIndex := 1 to maxProcedureParameters do
@@ -477,6 +527,11 @@ begin
     if valueText <> '' then
       procedures[procedureIndex].instructions[instructionIndex].targetOperand :=
         parseOperand(valueText);
+
+    valueText := tokenValue(tokens[tokenIndex], 'index');
+    if valueText <> '' then
+      procedures[procedureIndex].instructions[instructionIndex].positionIndex :=
+        parseIntegerOrHalt(valueText, 'Invalid TAC argument index.');
 
     for argumentIndex := 1 to maxProcedureParameters do
     begin
@@ -687,7 +742,13 @@ begin
   nextVariableAddress := 1;
   memoryCellCount := 0;
   FillChar(temporaries, SizeOf(temporaries), 0);
-  returnStackTop := 0
+  returnStackTop := 0;
+  pendingCallArgumentCount := 0;
+  FillChar(pendingCallArguments, SizeOf(pendingCallArguments), 0);
+  lastCallResultValue := 0;
+  lastCallResultProcedureIndex := 0;
+  lastCallResultIsValue := false;
+  hasLastCallResult := false
 end;
 
 function findProcedure(const procedureName: string): integer;
@@ -696,7 +757,7 @@ var
 begin
   findProcedure := 0;
   for procedureIndex := 1 to procedureCount do
-    if procedures[procedureIndex].name = procedureName then
+    if SameText(Trim(procedures[procedureIndex].name), Trim(procedureName)) then
     begin
       findProcedure := procedureIndex;
       exit
@@ -896,21 +957,25 @@ var
   value: integer;
 begin
   if instruction.targetOperand.name = 'read_int' then
-    assignOperand(instruction.resultOperand,
-                  readValueByIntrinsic(instruction.targetOperand.name,
-                                       instruction.resultOperand.valueType))
+  begin
+    lastCallResultValue := readValueByIntrinsic('read_int', 'integer');
+    lastCallResultIsValue := true;
+    hasLastCallResult := true
+  end
   else if instruction.targetOperand.name = 'read_char' then
-    assignOperand(instruction.resultOperand,
-                  readValueByIntrinsic(instruction.targetOperand.name,
-                                       instruction.resultOperand.valueType))
+  begin
+    lastCallResultValue := readValueByIntrinsic('read_char', 'char');
+    lastCallResultIsValue := true;
+    hasLastCallResult := true
+  end
   else if instruction.targetOperand.name = 'write_int' then
   begin
-    value := operandValue(instruction.callArguments[1]);
+    value := pendingCallArguments[1];
     Write(value)
   end
   else if instruction.targetOperand.name = 'write_char' then
   begin
-    value := operandValue(instruction.callArguments[1]);
+    value := pendingCallArguments[1];
     Write(Chr(value))
   end
   else if instruction.targetOperand.name = 'write_string' then
@@ -926,7 +991,15 @@ begin
   begin
     reportRuntimeError('Unknown TAC intrinsic call.');
     halt(1)
-  end
+  end;
+
+  if (instruction.targetOperand.name = 'write_int') or
+     (instruction.targetOperand.name = 'write_char') or
+     (instruction.targetOperand.name = 'write_string') or
+     (instruction.targetOperand.name = 'writeln') or
+     (instruction.targetOperand.name = 'readln') then
+    hasLastCallResult := false;
+  pendingCallArgumentCount := 0
 end;
 
 procedure executeTac;
@@ -954,6 +1027,168 @@ begin
     case instruction.kind of
       rtEnterFrame:
         programCounter := programCounter + 1;
+      rtAdd:
+        begin
+          assignOperand(instruction.resultOperand,
+                        operandValue(instruction.leftOperand) +
+                        operandValue(instruction.rightOperand));
+          programCounter := programCounter + 1
+        end;
+      rtSub:
+        begin
+          assignOperand(instruction.resultOperand,
+                        operandValue(instruction.leftOperand) -
+                        operandValue(instruction.rightOperand));
+          programCounter := programCounter + 1
+        end;
+      rtMul:
+        begin
+          assignOperand(instruction.resultOperand,
+                        operandValue(instruction.leftOperand) *
+                        operandValue(instruction.rightOperand));
+          programCounter := programCounter + 1
+        end;
+      rtDiv:
+        begin
+          assignOperand(instruction.resultOperand,
+                        operandValue(instruction.leftOperand) div
+                        operandValue(instruction.rightOperand));
+          programCounter := programCounter + 1
+        end;
+      rtMod:
+        begin
+          assignOperand(instruction.resultOperand,
+                        operandValue(instruction.leftOperand) mod
+                        operandValue(instruction.rightOperand));
+          programCounter := programCounter + 1
+        end;
+      rtNeg:
+        begin
+          assignOperand(instruction.resultOperand,
+                        -operandValue(instruction.leftOperand));
+          programCounter := programCounter + 1
+        end;
+      rtCmpEq:
+        begin
+          assignOperand(instruction.resultOperand,
+                        Ord(operandValue(instruction.leftOperand) =
+                            operandValue(instruction.rightOperand)));
+          programCounter := programCounter + 1
+        end;
+      rtCmpNe:
+        begin
+          assignOperand(instruction.resultOperand,
+                        Ord(operandValue(instruction.leftOperand) <>
+                            operandValue(instruction.rightOperand)));
+          programCounter := programCounter + 1
+        end;
+      rtCmpLt:
+        begin
+          assignOperand(instruction.resultOperand,
+                        Ord(operandValue(instruction.leftOperand) <
+                            operandValue(instruction.rightOperand)));
+          programCounter := programCounter + 1
+        end;
+      rtCmpLe:
+        begin
+          assignOperand(instruction.resultOperand,
+                        Ord(operandValue(instruction.leftOperand) <=
+                            operandValue(instruction.rightOperand)));
+          programCounter := programCounter + 1
+        end;
+      rtCmpGt:
+        begin
+          assignOperand(instruction.resultOperand,
+                        Ord(operandValue(instruction.leftOperand) >
+                            operandValue(instruction.rightOperand)));
+          programCounter := programCounter + 1
+        end;
+      rtCmpGe:
+        begin
+          assignOperand(instruction.resultOperand,
+                        Ord(operandValue(instruction.leftOperand) >=
+                            operandValue(instruction.rightOperand)));
+          programCounter := programCounter + 1
+        end;
+      rtJump:
+        programCounter := labelTarget(currentProcedureIndex, instruction.targetOperand.value);
+      rtBranchTrue:
+        begin
+          if operandValue(instruction.leftOperand) <> 0 then
+            programCounter := labelTarget(currentProcedureIndex, instruction.targetOperand.value)
+          else
+            programCounter := programCounter + 1
+        end;
+      rtBranchFalse:
+        begin
+          if operandValue(instruction.leftOperand) = 0 then
+            programCounter := labelTarget(currentProcedureIndex, instruction.targetOperand.value)
+          else
+            programCounter := programCounter + 1
+        end;
+      rtArg:
+        begin
+          if (instruction.positionIndex < 0) or
+             (instruction.positionIndex >= maxProcedureParameters) then
+          begin
+            reportRuntimeError('TAC argument index out of range.');
+            halt(1)
+          end;
+          pendingCallArguments[instruction.positionIndex + 1] :=
+            operandValue(instruction.leftOperand);
+          if pendingCallArgumentCount < instruction.positionIndex + 1 then
+            pendingCallArgumentCount := instruction.positionIndex + 1;
+          programCounter := programCounter + 1
+        end;
+      rtCall:
+        begin
+          calleeProcedureIndex := findProcedure(instruction.targetOperand.name);
+          if calleeProcedureIndex = 0 then
+          begin
+            reportRuntimeError('Unknown TAC procedure.');
+            halt(1)
+          end;
+          if returnStackTop >= maxCallDepth then
+          begin
+            reportRuntimeError('TAC call stack overflow.');
+            halt(1)
+          end;
+          if pendingCallArgumentCount <> procedures[calleeProcedureIndex].parameterCount then
+          begin
+            reportRuntimeError('TAC call argument count does not match procedure parameters.');
+            halt(1)
+          end;
+          for argumentIndex := 1 to pendingCallArgumentCount do
+            assignOperand(procedures[calleeProcedureIndex].parameters[argumentIndex],
+                          pendingCallArguments[argumentIndex]);
+          pendingCallArgumentCount := 0;
+          returnStackTop := returnStackTop + 1;
+          returnStack[returnStackTop].procedureIndex := currentProcedureIndex;
+          returnStack[returnStackTop].instructionIndex := programCounter + 1;
+          returnStack[returnStackTop].calleeProcedureIndex := calleeProcedureIndex;
+          currentProcedureIndex := calleeProcedureIndex;
+          programCounter := 1
+        end;
+      rtResult:
+        begin
+          if not hasLastCallResult then
+          begin
+            reportRuntimeError('Missing TAC call result.');
+            halt(1)
+          end;
+          if lastCallResultIsValue then
+            assignOperand(instruction.resultOperand, lastCallResultValue)
+          else
+            assignOperand(instruction.resultOperand,
+                          variableValueByName(procedures[lastCallResultProcedureIndex].name));
+          hasLastCallResult := false;
+          programCounter := programCounter + 1
+        end;
+      rtIntrinsicCall:
+        begin
+          executeIntrinsicCall(instruction);
+          programCounter := programCounter + 1
+        end;
       rtLoadConst:
         begin
           assignOperand(instruction.resultOperand, operandValue(instruction.leftOperand));
@@ -980,7 +1215,8 @@ begin
           programCounter := programCounter + 1
         end;
       rtAddrLocal,
-      rtAddrParam:
+      rtAddrParam,
+      rtAddrGlobal:
         begin
           assignOperand(instruction.resultOperand, addressValue(instruction.leftOperand));
           programCounter := programCounter + 1
@@ -1096,6 +1332,9 @@ begin
               assignOperand(returnStack[returnStackTop].resultOperand,
                             variableValueByName(
                               procedures[returnStack[returnStackTop].calleeProcedureIndex].name));
+            lastCallResultProcedureIndex := returnStack[returnStackTop].calleeProcedureIndex;
+            lastCallResultIsValue := false;
+            hasLastCallResult := true;
             currentProcedureIndex := returnStack[returnStackTop].procedureIndex;
             programCounter := returnStack[returnStackTop].instructionIndex;
             returnStackTop := returnStackTop - 1

@@ -1,0 +1,250 @@
+tac program
+procedures 4
+proc 1 mdgdc return=none params=0 locals=0 temps=6 blocks=1 labels=1 instructions=18
+  frame params=0 locals=0 temps=6 temp_policy=stack_slots param_area=0 local_area=0 temp_area=24 frame_size=24
+  frame_temp 1 temp[t1]:integer/dword storage=stack_slot offset=-4 size=4
+  frame_temp 2 temp[t2]:integer/dword storage=stack_slot offset=-8 size=4
+  frame_temp 3 temp[t3]:integer/dword storage=stack_slot offset=-12 size=4
+  frame_temp 4 temp[t4]:integer/dword storage=stack_slot offset=-16 size=4
+  frame_temp 5 temp[t5]:integer/dword storage=stack_slot offset=-20 size=4
+  frame_temp 6 temp[t6]:integer/dword storage=stack_slot offset=-24 size=4
+  block 1 label=L1 first=1 count=18
+   1 enter left=imm(24):integer/dword
+   2 copy result=temp[t1]:integer/dword left=imm(7):integer/dword
+   3 store result=global[x]:integer/dword left=temp[t1]:integer/dword
+   4 copy result=temp[t2]:integer/dword left=imm(85):integer/dword
+   5 store result=global[y]:integer/dword left=temp[t2]:integer/dword
+   6 call target=proc[multiply]:address
+   7 copy result=temp[t3]:integer/dword left=imm(25):integer/dword
+   8 store result=global[x]:integer/dword left=temp[t3]:integer/dword
+   9 copy result=temp[t4]:integer/dword left=imm(3):integer/dword
+  10 store result=global[y]:integer/dword left=temp[t4]:integer/dword
+  11 call target=proc[divide]:address
+  12 copy result=temp[t5]:integer/dword left=imm(84):integer/dword
+  13 store result=global[x]:integer/dword left=temp[t5]:integer/dword
+  14 copy result=temp[t6]:integer/dword left=imm(36):integer/dword
+  15 store result=global[y]:integer/dword left=temp[t6]:integer/dword
+  16 call target=proc[gcd]:address
+  17 leave
+  18 return
+  labelmap L1 block=1 first=1
+endproc
+proc 2 multiply return=none params=0 locals=2 temps=22 blocks=6 labels=4 instructions=34
+  local 1 local[a]:integer/dword
+  local 2 local[b]:integer/dword
+  frame params=0 locals=2 temps=22 temp_policy=stack_slots param_area=0 local_area=8 temp_area=82 frame_size=90
+  frame_local 1 local[a]:integer/dword offset=-4 size=4
+  frame_local 2 local[b]:integer/dword offset=-8 size=4
+  frame_temp 1 temp[t7]:integer/dword storage=stack_slot offset=-12 size=4
+  frame_temp 2 temp[t8]:integer/dword storage=stack_slot offset=-16 size=4
+  frame_temp 3 temp[t9]:integer/dword storage=stack_slot offset=-20 size=4
+  frame_temp 4 temp[t10]:integer/dword storage=stack_slot offset=-24 size=4
+  frame_temp 5 temp[t11]:integer/dword storage=stack_slot offset=-28 size=4
+  frame_temp 6 temp[t12]:boolean/byte storage=stack_slot offset=-29 size=1
+  frame_temp 7 temp[t13]:integer/dword storage=stack_slot offset=-33 size=4
+  frame_temp 8 temp[t14]:integer/dword storage=stack_slot offset=-37 size=4
+  frame_temp 9 temp[t15]:integer/dword storage=stack_slot offset=-41 size=4
+  frame_temp 10 temp[t16]:integer/dword storage=stack_slot offset=-45 size=4
+  frame_temp 11 temp[t17]:integer/dword storage=stack_slot offset=-49 size=4
+  frame_temp 12 temp[t18]:integer/dword storage=stack_slot offset=-53 size=4
+  frame_temp 13 temp[t19]:boolean/byte storage=stack_slot offset=-54 size=1
+  frame_temp 14 temp[t20]:integer/dword storage=stack_slot offset=-58 size=4
+  frame_temp 15 temp[t21]:integer/dword storage=stack_slot offset=-62 size=4
+  frame_temp 16 temp[t22]:integer/dword storage=stack_slot offset=-66 size=4
+  frame_temp 17 temp[t23]:integer/dword storage=stack_slot offset=-70 size=4
+  frame_temp 18 temp[t24]:integer/dword storage=stack_slot offset=-74 size=4
+  frame_temp 19 temp[t25]:integer/dword storage=stack_slot offset=-78 size=4
+  frame_temp 20 temp[t26]:integer/dword storage=stack_slot offset=-82 size=4
+  frame_temp 21 temp[t27]:integer/dword storage=stack_slot offset=-86 size=4
+  frame_temp 22 temp[t28]:integer/dword storage=stack_slot offset=-90 size=4
+  block 1 label=L2 first=1 count=7
+   1 enter left=imm(90):integer/dword
+   2 load result=temp[t7]:integer/dword left=global[x]:integer/dword
+   3 store result=local[a]:integer/dword left=temp[t7]:integer/dword
+   4 load result=temp[t8]:integer/dword left=global[y]:integer/dword
+   5 store result=local[b]:integer/dword left=temp[t8]:integer/dword
+   6 copy result=temp[t9]:integer/dword left=imm(0):integer/dword
+   7 store result=global[z]:integer/dword left=temp[t9]:integer/dword
+  block 2 label=L3 first=8 count=4
+   8 load result=temp[t10]:integer/dword left=local[b]:integer/dword
+   9 copy result=temp[t11]:integer/dword left=imm(0):integer/dword
+  10 cmp_gt result=temp[t12]:boolean/byte left=temp[t10]:integer/dword right=temp[t11]:integer/dword
+  11 brfalse left=temp[t12]:boolean/byte target=label[L4]:address
+  block 3 first=12 count=8
+  12 load result=temp[t13]:integer/dword left=local[b]:integer/dword
+  13 copy result=temp[t14]:integer/dword left=imm(2):integer/dword
+  14 div result=temp[t15]:integer/dword left=temp[t13]:integer/dword right=temp[t14]:integer/dword
+  15 copy result=temp[t16]:integer/dword left=imm(2):integer/dword
+  16 mul result=temp[t17]:integer/dword left=temp[t15]:integer/dword right=temp[t16]:integer/dword
+  17 load result=temp[t18]:integer/dword left=local[b]:integer/dword
+  18 cmp_ne result=temp[t19]:boolean/byte left=temp[t17]:integer/dword right=temp[t18]:integer/dword
+  19 brfalse left=temp[t19]:boolean/byte target=label[L5]:address
+  block 4 first=20 count=4
+  20 load result=temp[t20]:integer/dword left=global[z]:integer/dword
+  21 load result=temp[t21]:integer/dword left=local[a]:integer/dword
+  22 add result=temp[t22]:integer/dword left=temp[t20]:integer/dword right=temp[t21]:integer/dword
+  23 store result=global[z]:integer/dword left=temp[t22]:integer/dword
+  block 5 label=L5 first=24 count=9
+  24 copy result=temp[t23]:integer/dword left=imm(2):integer/dword
+  25 load result=temp[t24]:integer/dword left=local[a]:integer/dword
+  26 mul result=temp[t25]:integer/dword left=temp[t23]:integer/dword right=temp[t24]:integer/dword
+  27 store result=local[a]:integer/dword left=temp[t25]:integer/dword
+  28 load result=temp[t26]:integer/dword left=local[b]:integer/dword
+  29 copy result=temp[t27]:integer/dword left=imm(2):integer/dword
+  30 div result=temp[t28]:integer/dword left=temp[t26]:integer/dword right=temp[t27]:integer/dword
+  31 store result=local[b]:integer/dword left=temp[t28]:integer/dword
+  32 jump target=label[L3]:address
+  block 6 label=L4 first=33 count=2
+  33 leave
+  34 return
+  labelmap L2 block=1 first=1
+  labelmap L3 block=2 first=8
+  labelmap L4 block=6 first=33
+endproc
+proc 3 divide return=none params=0 locals=1 temps=27 blocks=8 labels=6 instructions=43
+  local 1 local[w]:integer/dword
+  frame params=0 locals=1 temps=27 temp_policy=stack_slots param_area=0 local_area=4 temp_area=99 frame_size=103
+  frame_local 1 local[w]:integer/dword offset=-4 size=4
+  frame_temp 1 temp[t29]:integer/dword storage=stack_slot offset=-8 size=4
+  frame_temp 2 temp[t30]:integer/dword storage=stack_slot offset=-12 size=4
+  frame_temp 3 temp[t31]:integer/dword storage=stack_slot offset=-16 size=4
+  frame_temp 4 temp[t32]:integer/dword storage=stack_slot offset=-20 size=4
+  frame_temp 5 temp[t33]:integer/dword storage=stack_slot offset=-24 size=4
+  frame_temp 6 temp[t34]:boolean/byte storage=stack_slot offset=-25 size=1
+  frame_temp 7 temp[t35]:integer/dword storage=stack_slot offset=-29 size=4
+  frame_temp 8 temp[t36]:integer/dword storage=stack_slot offset=-33 size=4
+  frame_temp 9 temp[t37]:integer/dword storage=stack_slot offset=-37 size=4
+  frame_temp 10 temp[t38]:integer/dword storage=stack_slot offset=-41 size=4
+  frame_temp 11 temp[t39]:integer/dword storage=stack_slot offset=-45 size=4
+  frame_temp 12 temp[t40]:boolean/byte storage=stack_slot offset=-46 size=1
+  frame_temp 13 temp[t41]:integer/dword storage=stack_slot offset=-50 size=4
+  frame_temp 14 temp[t42]:integer/dword storage=stack_slot offset=-54 size=4
+  frame_temp 15 temp[t43]:integer/dword storage=stack_slot offset=-58 size=4
+  frame_temp 16 temp[t44]:integer/dword storage=stack_slot offset=-62 size=4
+  frame_temp 17 temp[t45]:integer/dword storage=stack_slot offset=-66 size=4
+  frame_temp 18 temp[t46]:integer/dword storage=stack_slot offset=-70 size=4
+  frame_temp 19 temp[t47]:integer/dword storage=stack_slot offset=-74 size=4
+  frame_temp 20 temp[t48]:integer/dword storage=stack_slot offset=-78 size=4
+  frame_temp 21 temp[t49]:boolean/byte storage=stack_slot offset=-79 size=1
+  frame_temp 22 temp[t50]:integer/dword storage=stack_slot offset=-83 size=4
+  frame_temp 23 temp[t51]:integer/dword storage=stack_slot offset=-87 size=4
+  frame_temp 24 temp[t52]:integer/dword storage=stack_slot offset=-91 size=4
+  frame_temp 25 temp[t53]:integer/dword storage=stack_slot offset=-95 size=4
+  frame_temp 26 temp[t54]:integer/dword storage=stack_slot offset=-99 size=4
+  frame_temp 27 temp[t55]:integer/dword storage=stack_slot offset=-103 size=4
+  block 1 label=L6 first=1 count=7
+   1 enter left=imm(103):integer/dword
+   2 load result=temp[t29]:integer/dword left=global[x]:integer/dword
+   3 store result=global[r]:integer/dword left=temp[t29]:integer/dword
+   4 copy result=temp[t30]:integer/dword left=imm(0):integer/dword
+   5 store result=global[q]:integer/dword left=temp[t30]:integer/dword
+   6 load result=temp[t31]:integer/dword left=global[y]:integer/dword
+   7 store result=local[w]:integer/dword left=temp[t31]:integer/dword
+  block 2 label=L7 first=8 count=4
+   8 load result=temp[t32]:integer/dword left=local[w]:integer/dword
+   9 load result=temp[t33]:integer/dword left=global[r]:integer/dword
+  10 cmp_le result=temp[t34]:boolean/byte left=temp[t32]:integer/dword right=temp[t33]:integer/dword
+  11 brfalse left=temp[t34]:boolean/byte target=label[L8]:address
+  block 3 first=12 count=5
+  12 copy result=temp[t35]:integer/dword left=imm(2):integer/dword
+  13 load result=temp[t36]:integer/dword left=local[w]:integer/dword
+  14 mul result=temp[t37]:integer/dword left=temp[t35]:integer/dword right=temp[t36]:integer/dword
+  15 store result=local[w]:integer/dword left=temp[t37]:integer/dword
+  16 jump target=label[L7]:address
+  block 4 label=L8 first=17 count=4
+  17 load result=temp[t38]:integer/dword left=local[w]:integer/dword
+  18 load result=temp[t39]:integer/dword left=global[y]:integer/dword
+  19 cmp_gt result=temp[t40]:boolean/byte left=temp[t38]:integer/dword right=temp[t39]:integer/dword
+  20 brfalse left=temp[t40]:boolean/byte target=label[L10]:address
+  block 5 first=21 count=12
+  21 copy result=temp[t41]:integer/dword left=imm(2):integer/dword
+  22 load result=temp[t42]:integer/dword left=global[q]:integer/dword
+  23 mul result=temp[t43]:integer/dword left=temp[t41]:integer/dword right=temp[t42]:integer/dword
+  24 store result=global[q]:integer/dword left=temp[t43]:integer/dword
+  25 load result=temp[t44]:integer/dword left=local[w]:integer/dword
+  26 copy result=temp[t45]:integer/dword left=imm(2):integer/dword
+  27 div result=temp[t46]:integer/dword left=temp[t44]:integer/dword right=temp[t45]:integer/dword
+  28 store result=local[w]:integer/dword left=temp[t46]:integer/dword
+  29 load result=temp[t47]:integer/dword left=local[w]:integer/dword
+  30 load result=temp[t48]:integer/dword left=global[r]:integer/dword
+  31 cmp_le result=temp[t49]:boolean/byte left=temp[t47]:integer/dword right=temp[t48]:integer/dword
+  32 brfalse left=temp[t49]:boolean/byte target=label[L11]:address
+  block 6 first=33 count=8
+  33 load result=temp[t50]:integer/dword left=global[r]:integer/dword
+  34 load result=temp[t51]:integer/dword left=local[w]:integer/dword
+  35 sub result=temp[t52]:integer/dword left=temp[t50]:integer/dword right=temp[t51]:integer/dword
+  36 store result=global[r]:integer/dword left=temp[t52]:integer/dword
+  37 load result=temp[t53]:integer/dword left=global[q]:integer/dword
+  38 copy result=temp[t54]:integer/dword left=imm(1):integer/dword
+  39 add result=temp[t55]:integer/dword left=temp[t53]:integer/dword right=temp[t54]:integer/dword
+  40 store result=global[q]:integer/dword left=temp[t55]:integer/dword
+  block 7 label=L11 first=41 count=1
+  41 jump target=label[L9]:address
+  block 8 label=L10 first=42 count=2
+  42 leave
+  43 return
+  labelmap L6 block=1 first=1
+endproc
+proc 4 gcd return=none params=0 locals=2 temps=18 blocks=8 labels=5 instructions=30
+  local 1 local[f]:integer/dword
+  local 2 local[g]:integer/dword
+  frame params=0 locals=2 temps=18 temp_policy=stack_slots param_area=0 local_area=8 temp_area=63 frame_size=71
+  frame_local 1 local[f]:integer/dword offset=-4 size=4
+  frame_local 2 local[g]:integer/dword offset=-8 size=4
+  frame_temp 1 temp[t56]:integer/dword storage=stack_slot offset=-12 size=4
+  frame_temp 2 temp[t57]:integer/dword storage=stack_slot offset=-16 size=4
+  frame_temp 3 temp[t58]:integer/dword storage=stack_slot offset=-20 size=4
+  frame_temp 4 temp[t59]:integer/dword storage=stack_slot offset=-24 size=4
+  frame_temp 5 temp[t60]:boolean/byte storage=stack_slot offset=-25 size=1
+  frame_temp 6 temp[t61]:integer/dword storage=stack_slot offset=-29 size=4
+  frame_temp 7 temp[t62]:integer/dword storage=stack_slot offset=-33 size=4
+  frame_temp 8 temp[t63]:boolean/byte storage=stack_slot offset=-34 size=1
+  frame_temp 9 temp[t64]:integer/dword storage=stack_slot offset=-38 size=4
+  frame_temp 10 temp[t65]:integer/dword storage=stack_slot offset=-42 size=4
+  frame_temp 11 temp[t66]:integer/dword storage=stack_slot offset=-46 size=4
+  frame_temp 12 temp[t67]:integer/dword storage=stack_slot offset=-50 size=4
+  frame_temp 13 temp[t68]:integer/dword storage=stack_slot offset=-54 size=4
+  frame_temp 14 temp[t69]:boolean/byte storage=stack_slot offset=-55 size=1
+  frame_temp 15 temp[t70]:integer/dword storage=stack_slot offset=-59 size=4
+  frame_temp 16 temp[t71]:integer/dword storage=stack_slot offset=-63 size=4
+  frame_temp 17 temp[t72]:integer/dword storage=stack_slot offset=-67 size=4
+  frame_temp 18 temp[t73]:integer/dword storage=stack_slot offset=-71 size=4
+  block 1 label=L12 first=1 count=5
+   1 enter left=imm(71):integer/dword
+   2 load result=temp[t56]:integer/dword left=global[x]:integer/dword
+   3 store result=local[f]:integer/dword left=temp[t56]:integer/dword
+   4 load result=temp[t57]:integer/dword left=global[y]:integer/dword
+   5 store result=local[g]:integer/dword left=temp[t57]:integer/dword
+  block 2 label=L13 first=6 count=4
+   6 load result=temp[t58]:integer/dword left=local[f]:integer/dword
+   7 load result=temp[t59]:integer/dword left=local[g]:integer/dword
+   8 cmp_ne result=temp[t60]:boolean/byte left=temp[t58]:integer/dword right=temp[t59]:integer/dword
+   9 brfalse left=temp[t60]:boolean/byte target=label[L14]:address
+  block 3 first=10 count=4
+  10 load result=temp[t61]:integer/dword left=local[f]:integer/dword
+  11 load result=temp[t62]:integer/dword left=local[g]:integer/dword
+  12 cmp_lt result=temp[t63]:boolean/byte left=temp[t61]:integer/dword right=temp[t62]:integer/dword
+  13 brfalse left=temp[t63]:boolean/byte target=label[L15]:address
+  block 4 first=14 count=4
+  14 load result=temp[t64]:integer/dword left=local[g]:integer/dword
+  15 load result=temp[t65]:integer/dword left=local[f]:integer/dword
+  16 sub result=temp[t66]:integer/dword left=temp[t64]:integer/dword right=temp[t65]:integer/dword
+  17 store result=local[g]:integer/dword left=temp[t66]:integer/dword
+  block 5 label=L15 first=18 count=4
+  18 load result=temp[t67]:integer/dword left=local[g]:integer/dword
+  19 load result=temp[t68]:integer/dword left=local[f]:integer/dword
+  20 cmp_lt result=temp[t69]:boolean/byte left=temp[t67]:integer/dword right=temp[t68]:integer/dword
+  21 brfalse left=temp[t69]:boolean/byte target=label[L16]:address
+  block 6 first=22 count=4
+  22 load result=temp[t70]:integer/dword left=local[f]:integer/dword
+  23 load result=temp[t71]:integer/dword left=local[g]:integer/dword
+  24 sub result=temp[t72]:integer/dword left=temp[t70]:integer/dword right=temp[t71]:integer/dword
+  25 store result=local[f]:integer/dword left=temp[t72]:integer/dword
+  block 7 label=L16 first=26 count=1
+  26 jump target=label[L13]:address
+  block 8 label=L14 first=27 count=4
+  27 load result=temp[t73]:integer/dword left=local[f]:integer/dword
+  28 store result=global[z]:integer/dword left=temp[t73]:integer/dword
+  29 leave
+  30 return
+endproc

@@ -1,0 +1,104 @@
+tac program
+procedures 2
+proc 1 recursive return=none params=0 locals=2 temps=13 blocks=7 labels=4 instructions=23
+  local 1 global[f]:integer/dword
+  local 2 global[n]:integer/dword
+  frame params=0 locals=2 temps=13 temp_policy=stack_slots param_area=0 local_area=8 temp_area=43 frame_size=51
+  frame_local 1 global[f]:integer/dword offset=-4 size=4
+  frame_local 2 global[n]:integer/dword offset=-8 size=4
+  frame_temp 1 temp[t1]:integer/dword storage=stack_slot offset=-12 size=4
+  frame_temp 2 temp[t2]:integer/dword storage=stack_slot offset=-16 size=4
+  frame_temp 3 temp[t3]:integer/dword storage=stack_slot offset=-20 size=4
+  frame_temp 4 temp[t4]:boolean/byte storage=stack_slot offset=-21 size=1
+  frame_temp 5 temp[t5]:integer/dword storage=stack_slot offset=-25 size=4
+  frame_temp 6 temp[t6]:integer/dword storage=stack_slot offset=-29 size=4
+  frame_temp 7 temp[t7]:integer/dword storage=stack_slot offset=-33 size=4
+  frame_temp 8 temp[t8]:integer/dword storage=stack_slot offset=-37 size=4
+  frame_temp 9 temp[t9]:boolean/byte storage=stack_slot offset=-38 size=1
+  frame_temp 10 temp[t10]:integer/dword storage=stack_slot offset=-42 size=4
+  frame_temp 11 temp[t11]:integer/dword storage=stack_slot offset=-46 size=4
+  frame_temp 12 temp[t12]:integer/dword storage=stack_slot offset=-50 size=4
+  frame_temp 13 temp[t13]:boolean/byte storage=stack_slot offset=-51 size=1
+  block 1 label=L1 first=1 count=7
+   1 enter left=imm(51):integer/dword
+   2 copy result=temp[t1]:integer/dword left=imm(7):integer/dword
+   3 store result=global[n]:integer/dword left=temp[t1]:integer/dword
+   4 load result=temp[t2]:integer/dword left=global[n]:integer/dword
+   5 copy result=temp[t3]:integer/dword left=imm(0):integer/dword
+   6 cmp_lt result=temp[t4]:boolean/byte left=temp[t2]:integer/dword right=temp[t3]:integer/dword
+   7 brfalse left=temp[t4]:boolean/byte target=label[L2]:address
+  block 2 first=8 count=3
+   8 copy result=temp[t5]:integer/dword left=imm(1):integer/dword
+   9 neg result=temp[t6]:integer/dword left=temp[t5]:integer/dword
+  10 store result=global[f]:integer/dword left=temp[t6]:integer/dword
+  block 3 label=L2 first=11 count=4
+  11 load result=temp[t7]:integer/dword left=global[n]:integer/dword
+  12 copy result=temp[t8]:integer/dword left=imm(0):integer/dword
+  13 cmp_eq result=temp[t9]:boolean/byte left=temp[t7]:integer/dword right=temp[t8]:integer/dword
+  14 brfalse left=temp[t9]:boolean/byte target=label[L3]:address
+  block 4 first=15 count=2
+  15 copy result=temp[t10]:integer/dword left=imm(1):integer/dword
+  16 store result=global[f]:integer/dword left=temp[t10]:integer/dword
+  block 5 label=L3 first=17 count=4
+  17 load result=temp[t11]:integer/dword left=global[n]:integer/dword
+  18 copy result=temp[t12]:integer/dword left=imm(0):integer/dword
+  19 cmp_gt result=temp[t13]:boolean/byte left=temp[t11]:integer/dword right=temp[t12]:integer/dword
+  20 brfalse left=temp[t13]:boolean/byte target=label[L4]:address
+  block 6 first=21 count=1
+  21 call target=proc[fact]:address
+  block 7 label=L4 first=22 count=2
+  22 leave
+  23 return
+  labelmap L1 block=1 first=1
+  labelmap L2 block=3 first=11
+  labelmap L3 block=5 first=17
+  labelmap L4 block=7 first=22
+endproc
+proc 2 fact return=none params=0 locals=1 temps=14 blocks=5 labels=3 instructions=24
+  local 1 local[ans1]:integer/dword
+  frame params=0 locals=1 temps=14 temp_policy=stack_slots param_area=0 local_area=4 temp_area=50 frame_size=54
+  frame_local 1 local[ans1]:integer/dword offset=-4 size=4
+  frame_temp 1 temp[t14]:integer/dword storage=stack_slot offset=-8 size=4
+  frame_temp 2 temp[t15]:integer/dword storage=stack_slot offset=-12 size=4
+  frame_temp 3 temp[t16]:integer/dword storage=stack_slot offset=-16 size=4
+  frame_temp 4 temp[t17]:integer/dword storage=stack_slot offset=-20 size=4
+  frame_temp 5 temp[t18]:integer/dword storage=stack_slot offset=-24 size=4
+  frame_temp 6 temp[t19]:integer/dword storage=stack_slot offset=-28 size=4
+  frame_temp 7 temp[t20]:boolean/byte storage=stack_slot offset=-29 size=1
+  frame_temp 8 temp[t21]:integer/dword storage=stack_slot offset=-33 size=4
+  frame_temp 9 temp[t22]:integer/dword storage=stack_slot offset=-37 size=4
+  frame_temp 10 temp[t23]:integer/dword storage=stack_slot offset=-41 size=4
+  frame_temp 11 temp[t24]:boolean/byte storage=stack_slot offset=-42 size=1
+  frame_temp 12 temp[t25]:integer/dword storage=stack_slot offset=-46 size=4
+  frame_temp 13 temp[t26]:integer/dword storage=stack_slot offset=-50 size=4
+  frame_temp 14 temp[t27]:integer/dword storage=stack_slot offset=-54 size=4
+  block 1 label=L5 first=1 count=11
+   1 enter left=imm(54):integer/dword
+   2 load result=temp[t14]:integer/dword left=global[n]:integer/dword
+   3 store result=local[ans1]:integer/dword left=temp[t14]:integer/dword
+   4 load result=temp[t15]:integer/dword left=global[n]:integer/dword
+   5 copy result=temp[t16]:integer/dword left=imm(1):integer/dword
+   6 sub result=temp[t17]:integer/dword left=temp[t15]:integer/dword right=temp[t16]:integer/dword
+   7 store result=global[n]:integer/dword left=temp[t17]:integer/dword
+   8 load result=temp[t18]:integer/dword left=global[n]:integer/dword
+   9 copy result=temp[t19]:integer/dword left=imm(0):integer/dword
+  10 cmp_eq result=temp[t20]:boolean/byte left=temp[t18]:integer/dword right=temp[t19]:integer/dword
+  11 brfalse left=temp[t20]:boolean/byte target=label[L6]:address
+  block 2 first=12 count=2
+  12 copy result=temp[t21]:integer/dword left=imm(1):integer/dword
+  13 store result=global[f]:integer/dword left=temp[t21]:integer/dword
+  block 3 label=L6 first=14 count=4
+  14 load result=temp[t22]:integer/dword left=global[n]:integer/dword
+  15 copy result=temp[t23]:integer/dword left=imm(0):integer/dword
+  16 cmp_gt result=temp[t24]:boolean/byte left=temp[t22]:integer/dword right=temp[t23]:integer/dword
+  17 brfalse left=temp[t24]:boolean/byte target=label[L7]:address
+  block 4 first=18 count=1
+  18 call target=proc[fact]:address
+  block 5 label=L7 first=19 count=6
+  19 load result=temp[t25]:integer/dword left=global[f]:integer/dword
+  20 load result=temp[t26]:integer/dword left=local[ans1]:integer/dword
+  21 mul result=temp[t27]:integer/dword left=temp[t25]:integer/dword right=temp[t26]:integer/dword
+  22 store result=global[f]:integer/dword left=temp[t27]:integer/dword
+  23 leave
+  24 return
+endproc

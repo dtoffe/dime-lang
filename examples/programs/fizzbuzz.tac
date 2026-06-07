@@ -1,6 +1,6 @@
 tac program
 procedures 2
-proc 1 fizzbuzz return=none params=0 locals=0 temps=48 blocks=11 labels=10 instructions=82
+proc 1 fizzbuzz return=none params=0 locals=0 temps=48 blocks=11 labels=10 instructions=87
   frame params=0 locals=0 temps=48 temp_policy=stack_slots param_area=0 local_area=0 temp_area=156 frame_size=156
   frame_temp 1 temp[t1]:integer/dword storage=stack_slot offset=-4 size=4
   frame_temp 2 temp[t2]:integer/dword storage=stack_slot offset=-8 size=4
@@ -52,109 +52,114 @@ proc 1 fizzbuzz return=none params=0 locals=0 temps=48 blocks=11 labels=10 instr
   frame_temp 48 temp[t48]:integer/dword storage=stack_slot offset=-156 size=4
   block 1 label=L1 first=1 count=13
    1 enter left=imm(156):integer/dword
-   2 load_const result=temp[t1]:integer/dword left=imm(0):integer/dword
+   2 copy result=temp[t1]:integer/dword left=imm(0):integer/dword
    3 store result=global[cnorm]:integer/dword left=temp[t1]:integer/dword
-   4 load_const result=temp[t2]:integer/dword left=imm(0):integer/dword
+   4 copy result=temp[t2]:integer/dword left=imm(0):integer/dword
    5 store result=global[cfizz]:integer/dword left=temp[t2]:integer/dword
-   6 load_const result=temp[t3]:integer/dword left=imm(0):integer/dword
+   6 copy result=temp[t3]:integer/dword left=imm(0):integer/dword
    7 store result=global[cbuzz]:integer/dword left=temp[t3]:integer/dword
-   8 load_const result=temp[t4]:integer/dword left=imm(0):integer/dword
+   8 copy result=temp[t4]:integer/dword left=imm(0):integer/dword
    9 store result=global[cfb]:integer/dword left=temp[t4]:integer/dword
-  10 load_const result=temp[t5]:integer/dword left=imm(0):integer/dword
+  10 copy result=temp[t5]:integer/dword left=imm(0):integer/dword
   11 store result=global[sumcnt]:integer/dword left=temp[t5]:integer/dword
-  12 load_const result=temp[t6]:integer/dword left=imm(1):integer/dword
+  12 copy result=temp[t6]:integer/dword left=imm(1):integer/dword
   13 store result=global[n]:integer/dword left=temp[t6]:integer/dword
   block 2 label=L2 first=14 count=4
-  14 load_const result=temp[t7]:integer/dword left=imm(100):integer/dword
+  14 copy result=temp[t7]:integer/dword left=imm(100):integer/dword
   15 load result=temp[t9]:integer/dword left=global[n]:integer/dword
-  16 binary result=temp[t8]:boolean/byte left=temp[t9]:integer/dword right=temp[t7]:integer/dword op=<=
-  17 goto_if_zero left=temp[t8]:boolean/byte target=label[L4]:address
+  16 cmp_le result=temp[t8]:boolean/byte left=temp[t9]:integer/dword right=temp[t7]:integer/dword
+  17 brfalse left=temp[t8]:boolean/byte target=label[L4]:address
   block 3 first=18 count=20
   18 load result=temp[t10]:integer/dword left=global[n]:integer/dword
-  19 load_const result=temp[t11]:integer/dword left=imm(3):integer/dword
-  20 binary result=temp[t12]:integer/dword left=temp[t10]:integer/dword right=temp[t11]:integer/dword op=/
-  21 load_const result=temp[t13]:integer/dword left=imm(3):integer/dword
-  22 binary result=temp[t14]:integer/dword left=temp[t12]:integer/dword right=temp[t13]:integer/dword op=*
+  19 copy result=temp[t11]:integer/dword left=imm(3):integer/dword
+  20 div result=temp[t12]:integer/dword left=temp[t10]:integer/dword right=temp[t11]:integer/dword
+  21 copy result=temp[t13]:integer/dword left=imm(3):integer/dword
+  22 mul result=temp[t14]:integer/dword left=temp[t12]:integer/dword right=temp[t13]:integer/dword
   23 load result=temp[t15]:integer/dword left=global[n]:integer/dword
-  24 binary result=temp[t16]:boolean/byte left=temp[t14]:integer/dword right=temp[t15]:integer/dword op==
+  24 cmp_eq result=temp[t16]:boolean/byte left=temp[t14]:integer/dword right=temp[t15]:integer/dword
   25 store result=global[fizz]:boolean/byte left=temp[t16]:boolean/byte
   26 load result=temp[t17]:integer/dword left=global[n]:integer/dword
-  27 load_const result=temp[t18]:integer/dword left=imm(5):integer/dword
-  28 binary result=temp[t19]:integer/dword left=temp[t17]:integer/dword right=temp[t18]:integer/dword op=/
-  29 load_const result=temp[t20]:integer/dword left=imm(5):integer/dword
-  30 binary result=temp[t21]:integer/dword left=temp[t19]:integer/dword right=temp[t20]:integer/dword op=*
+  27 copy result=temp[t18]:integer/dword left=imm(5):integer/dword
+  28 div result=temp[t19]:integer/dword left=temp[t17]:integer/dword right=temp[t18]:integer/dword
+  29 copy result=temp[t20]:integer/dword left=imm(5):integer/dword
+  30 mul result=temp[t21]:integer/dword left=temp[t19]:integer/dword right=temp[t20]:integer/dword
   31 load result=temp[t22]:integer/dword left=global[n]:integer/dword
-  32 binary result=temp[t23]:boolean/byte left=temp[t21]:integer/dword right=temp[t22]:integer/dword op==
+  32 cmp_eq result=temp[t23]:boolean/byte left=temp[t21]:integer/dword right=temp[t22]:integer/dword
   33 store result=global[buzz]:boolean/byte left=temp[t23]:boolean/byte
   34 load result=temp[t24]:boolean/byte left=global[fizz]:boolean/byte
   35 load result=temp[t25]:boolean/byte left=global[buzz]:boolean/byte
-  36 binary result=temp[t26]:boolean/byte left=temp[t24]:boolean/byte right=temp[t25]:boolean/byte op=and
-  37 goto_if_zero left=temp[t26]:boolean/byte target=label[L5]:address
-  block 4 first=38 count=10
-  38 load_const result=temp[t27]:char/byte left=imm(70):char/byte
-  39 call target=intrinsic[write_char]:address arg1=temp[t27]:char/byte
-  40 load_const result=temp[t28]:char/byte left=imm(66):char/byte
-  41 call target=intrinsic[write_char]:address arg1=temp[t28]:char/byte
-  42 call target=intrinsic[writeln]:address
-  43 load result=temp[t29]:integer/dword left=global[cfb]:integer/dword
-  44 load_const result=temp[t30]:integer/dword left=imm(1):integer/dword
-  45 binary result=temp[t31]:integer/dword left=temp[t29]:integer/dword right=temp[t30]:integer/dword op=+
-  46 store result=global[cfb]:integer/dword left=temp[t31]:integer/dword
-  47 goto target=label[L6]:address
-  block 5 label=L5 first=48 count=2
-  48 load result=temp[t32]:boolean/byte left=global[fizz]:boolean/byte
-  49 goto_if_zero left=temp[t32]:boolean/byte target=label[L7]:address
-  block 6 first=50 count=8
-  50 load_const result=temp[t33]:char/byte left=imm(70):char/byte
-  51 call target=intrinsic[write_char]:address arg1=temp[t33]:char/byte
-  52 call target=intrinsic[writeln]:address
-  53 load result=temp[t34]:integer/dword left=global[cfizz]:integer/dword
-  54 load_const result=temp[t35]:integer/dword left=imm(1):integer/dword
-  55 binary result=temp[t36]:integer/dword left=temp[t34]:integer/dword right=temp[t35]:integer/dword op=+
-  56 store result=global[cfizz]:integer/dword left=temp[t36]:integer/dword
-  57 goto target=label[L8]:address
-  block 7 label=L7 first=58 count=2
-  58 load result=temp[t37]:boolean/byte left=global[buzz]:boolean/byte
-  59 goto_if_zero left=temp[t37]:boolean/byte target=label[L9]:address
-  block 8 first=60 count=8
-  60 load_const result=temp[t38]:char/byte left=imm(66):char/byte
-  61 call target=intrinsic[write_char]:address arg1=temp[t38]:char/byte
-  62 call target=intrinsic[writeln]:address
-  63 load result=temp[t39]:integer/dword left=global[cbuzz]:integer/dword
-  64 load_const result=temp[t40]:integer/dword left=imm(1):integer/dword
-  65 binary result=temp[t41]:integer/dword left=temp[t39]:integer/dword right=temp[t40]:integer/dword op=+
-  66 store result=global[cbuzz]:integer/dword left=temp[t41]:integer/dword
-  67 goto target=label[L10]:address
-  block 9 label=L9 first=68 count=7
-  68 load result=temp[t42]:integer/dword left=global[n]:integer/dword
-  69 call target=intrinsic[write_int]:address arg1=temp[t42]:integer/dword
-  70 call target=intrinsic[writeln]:address
-  71 load result=temp[t43]:integer/dword left=global[cnorm]:integer/dword
-  72 load_const result=temp[t44]:integer/dword left=imm(1):integer/dword
-  73 binary result=temp[t45]:integer/dword left=temp[t43]:integer/dword right=temp[t44]:integer/dword op=+
-  74 store result=global[cnorm]:integer/dword left=temp[t45]:integer/dword
-  block 10 label=L10 alias=L3 alias=L6 alias=L8 first=75 count=5
-  75 load_const result=temp[t46]:integer/dword left=imm(1):integer/dword
-  76 load result=temp[t48]:integer/dword left=global[n]:integer/dword
-  77 binary result=temp[t47]:integer/dword left=temp[t48]:integer/dword right=temp[t46]:integer/dword op=+
-  78 store result=global[n]:integer/dword left=temp[t47]:integer/dword
-  79 goto target=label[L2]:address
-  block 11 label=L4 first=80 count=3
-  80 call target=proc[printsumma]:address
-  81 leave
-  82 return
+  36 mul result=temp[t26]:boolean/byte left=temp[t24]:boolean/byte right=temp[t25]:boolean/byte
+  37 brfalse left=temp[t26]:boolean/byte target=label[L5]:address
+  block 4 first=38 count=12
+  38 copy result=temp[t27]:char/byte left=imm(70):char/byte
+  39 arg left=temp[t27]:char/byte index=0
+  40 intrinsic_call target=intrinsic[write_char]:address
+  41 copy result=temp[t28]:char/byte left=imm(66):char/byte
+  42 arg left=temp[t28]:char/byte index=0
+  43 intrinsic_call target=intrinsic[write_char]:address
+  44 intrinsic_call target=intrinsic[writeln]:address
+  45 load result=temp[t29]:integer/dword left=global[cfb]:integer/dword
+  46 copy result=temp[t30]:integer/dword left=imm(1):integer/dword
+  47 add result=temp[t31]:integer/dword left=temp[t29]:integer/dword right=temp[t30]:integer/dword
+  48 store result=global[cfb]:integer/dword left=temp[t31]:integer/dword
+  49 jump target=label[L6]:address
+  block 5 label=L5 first=50 count=2
+  50 load result=temp[t32]:boolean/byte left=global[fizz]:boolean/byte
+  51 brfalse left=temp[t32]:boolean/byte target=label[L7]:address
+  block 6 first=52 count=9
+  52 copy result=temp[t33]:char/byte left=imm(70):char/byte
+  53 arg left=temp[t33]:char/byte index=0
+  54 intrinsic_call target=intrinsic[write_char]:address
+  55 intrinsic_call target=intrinsic[writeln]:address
+  56 load result=temp[t34]:integer/dword left=global[cfizz]:integer/dword
+  57 copy result=temp[t35]:integer/dword left=imm(1):integer/dword
+  58 add result=temp[t36]:integer/dword left=temp[t34]:integer/dword right=temp[t35]:integer/dword
+  59 store result=global[cfizz]:integer/dword left=temp[t36]:integer/dword
+  60 jump target=label[L8]:address
+  block 7 label=L7 first=61 count=2
+  61 load result=temp[t37]:boolean/byte left=global[buzz]:boolean/byte
+  62 brfalse left=temp[t37]:boolean/byte target=label[L9]:address
+  block 8 first=63 count=9
+  63 copy result=temp[t38]:char/byte left=imm(66):char/byte
+  64 arg left=temp[t38]:char/byte index=0
+  65 intrinsic_call target=intrinsic[write_char]:address
+  66 intrinsic_call target=intrinsic[writeln]:address
+  67 load result=temp[t39]:integer/dword left=global[cbuzz]:integer/dword
+  68 copy result=temp[t40]:integer/dword left=imm(1):integer/dword
+  69 add result=temp[t41]:integer/dword left=temp[t39]:integer/dword right=temp[t40]:integer/dword
+  70 store result=global[cbuzz]:integer/dword left=temp[t41]:integer/dword
+  71 jump target=label[L10]:address
+  block 9 label=L9 first=72 count=8
+  72 load result=temp[t42]:integer/dword left=global[n]:integer/dword
+  73 arg left=temp[t42]:integer/dword index=0
+  74 intrinsic_call target=intrinsic[write_int]:address
+  75 intrinsic_call target=intrinsic[writeln]:address
+  76 load result=temp[t43]:integer/dword left=global[cnorm]:integer/dword
+  77 copy result=temp[t44]:integer/dword left=imm(1):integer/dword
+  78 add result=temp[t45]:integer/dword left=temp[t43]:integer/dword right=temp[t44]:integer/dword
+  79 store result=global[cnorm]:integer/dword left=temp[t45]:integer/dword
+  block 10 label=L10 alias=L3 alias=L6 alias=L8 first=80 count=5
+  80 copy result=temp[t46]:integer/dword left=imm(1):integer/dword
+  81 load result=temp[t48]:integer/dword left=global[n]:integer/dword
+  82 add result=temp[t47]:integer/dword left=temp[t48]:integer/dword right=temp[t46]:integer/dword
+  83 store result=global[n]:integer/dword left=temp[t47]:integer/dword
+  84 jump target=label[L2]:address
+  block 11 label=L4 first=85 count=3
+  85 call target=proc[printsumma]:address
+  86 leave
+  87 return
   labelmap L1 block=1 first=1
   labelmap L2 block=2 first=14
-  labelmap L3 block=10 first=75
-  labelmap L4 block=11 first=80
-  labelmap L5 block=5 first=48
-  labelmap L6 block=10 first=75
-  labelmap L7 block=7 first=58
-  labelmap L8 block=10 first=75
-  labelmap L9 block=9 first=68
-  labelmap L10 block=10 first=75
+  labelmap L3 block=10 first=80
+  labelmap L4 block=11 first=85
+  labelmap L5 block=5 first=50
+  labelmap L6 block=10 first=80
+  labelmap L7 block=7 first=61
+  labelmap L8 block=10 first=80
+  labelmap L9 block=9 first=72
+  labelmap L10 block=10 first=80
 endproc
-proc 2 printsumma return=none params=0 locals=0 temps=13 blocks=1 labels=1 instructions=33
+proc 2 printsumma return=none params=0 locals=0 temps=13 blocks=1 labels=1 instructions=46
   frame params=0 locals=0 temps=13 temp_policy=stack_slots param_area=0 local_area=0 temp_area=25 frame_size=25
   frame_temp 1 temp[t49]:char/byte storage=stack_slot offset=-1 size=1
   frame_temp 2 temp[t50]:char/byte storage=stack_slot offset=-2 size=1
@@ -169,38 +174,51 @@ proc 2 printsumma return=none params=0 locals=0 temps=13 blocks=1 labels=1 instr
   frame_temp 11 temp[t59]:char/byte storage=stack_slot offset=-20 size=1
   frame_temp 12 temp[t60]:char/byte storage=stack_slot offset=-21 size=1
   frame_temp 13 temp[t61]:integer/dword storage=stack_slot offset=-25 size=4
-  block 1 label=L11 first=1 count=33
+  block 1 label=L11 first=1 count=46
    1 enter left=imm(25):integer/dword
-   2 load_const result=temp[t49]:char/byte left=imm(78):char/byte
-   3 call target=intrinsic[write_char]:address arg1=temp[t49]:char/byte
-   4 load_const result=temp[t50]:char/byte left=imm(58):char/byte
-   5 call target=intrinsic[write_char]:address arg1=temp[t50]:char/byte
-   6 load result=temp[t51]:integer/dword left=global[cnorm]:integer/dword
-   7 call target=intrinsic[write_int]:address arg1=temp[t51]:integer/dword
-   8 call target=intrinsic[writeln]:address
-   9 load_const result=temp[t52]:char/byte left=imm(70):char/byte
-  10 call target=intrinsic[write_char]:address arg1=temp[t52]:char/byte
-  11 load_const result=temp[t53]:char/byte left=imm(58):char/byte
-  12 call target=intrinsic[write_char]:address arg1=temp[t53]:char/byte
-  13 load result=temp[t54]:integer/dword left=global[cfizz]:integer/dword
-  14 call target=intrinsic[write_int]:address arg1=temp[t54]:integer/dword
-  15 call target=intrinsic[writeln]:address
-  16 load_const result=temp[t55]:char/byte left=imm(66):char/byte
-  17 call target=intrinsic[write_char]:address arg1=temp[t55]:char/byte
-  18 load_const result=temp[t56]:char/byte left=imm(58):char/byte
-  19 call target=intrinsic[write_char]:address arg1=temp[t56]:char/byte
-  20 load result=temp[t57]:integer/dword left=global[cbuzz]:integer/dword
-  21 call target=intrinsic[write_int]:address arg1=temp[t57]:integer/dword
-  22 call target=intrinsic[writeln]:address
-  23 load_const result=temp[t58]:char/byte left=imm(70):char/byte
-  24 call target=intrinsic[write_char]:address arg1=temp[t58]:char/byte
-  25 load_const result=temp[t59]:char/byte left=imm(66):char/byte
-  26 call target=intrinsic[write_char]:address arg1=temp[t59]:char/byte
-  27 load_const result=temp[t60]:char/byte left=imm(58):char/byte
-  28 call target=intrinsic[write_char]:address arg1=temp[t60]:char/byte
-  29 load result=temp[t61]:integer/dword left=global[cfb]:integer/dword
-  30 call target=intrinsic[write_int]:address arg1=temp[t61]:integer/dword
-  31 call target=intrinsic[writeln]:address
-  32 leave
-  33 return
+   2 copy result=temp[t49]:char/byte left=imm(78):char/byte
+   3 arg left=temp[t49]:char/byte index=0
+   4 intrinsic_call target=intrinsic[write_char]:address
+   5 copy result=temp[t50]:char/byte left=imm(58):char/byte
+   6 arg left=temp[t50]:char/byte index=0
+   7 intrinsic_call target=intrinsic[write_char]:address
+   8 load result=temp[t51]:integer/dword left=global[cnorm]:integer/dword
+   9 arg left=temp[t51]:integer/dword index=0
+  10 intrinsic_call target=intrinsic[write_int]:address
+  11 intrinsic_call target=intrinsic[writeln]:address
+  12 copy result=temp[t52]:char/byte left=imm(70):char/byte
+  13 arg left=temp[t52]:char/byte index=0
+  14 intrinsic_call target=intrinsic[write_char]:address
+  15 copy result=temp[t53]:char/byte left=imm(58):char/byte
+  16 arg left=temp[t53]:char/byte index=0
+  17 intrinsic_call target=intrinsic[write_char]:address
+  18 load result=temp[t54]:integer/dword left=global[cfizz]:integer/dword
+  19 arg left=temp[t54]:integer/dword index=0
+  20 intrinsic_call target=intrinsic[write_int]:address
+  21 intrinsic_call target=intrinsic[writeln]:address
+  22 copy result=temp[t55]:char/byte left=imm(66):char/byte
+  23 arg left=temp[t55]:char/byte index=0
+  24 intrinsic_call target=intrinsic[write_char]:address
+  25 copy result=temp[t56]:char/byte left=imm(58):char/byte
+  26 arg left=temp[t56]:char/byte index=0
+  27 intrinsic_call target=intrinsic[write_char]:address
+  28 load result=temp[t57]:integer/dword left=global[cbuzz]:integer/dword
+  29 arg left=temp[t57]:integer/dword index=0
+  30 intrinsic_call target=intrinsic[write_int]:address
+  31 intrinsic_call target=intrinsic[writeln]:address
+  32 copy result=temp[t58]:char/byte left=imm(70):char/byte
+  33 arg left=temp[t58]:char/byte index=0
+  34 intrinsic_call target=intrinsic[write_char]:address
+  35 copy result=temp[t59]:char/byte left=imm(66):char/byte
+  36 arg left=temp[t59]:char/byte index=0
+  37 intrinsic_call target=intrinsic[write_char]:address
+  38 copy result=temp[t60]:char/byte left=imm(58):char/byte
+  39 arg left=temp[t60]:char/byte index=0
+  40 intrinsic_call target=intrinsic[write_char]:address
+  41 load result=temp[t61]:integer/dword left=global[cfb]:integer/dword
+  42 arg left=temp[t61]:integer/dword index=0
+  43 intrinsic_call target=intrinsic[write_int]:address
+  44 intrinsic_call target=intrinsic[writeln]:address
+  45 leave
+  46 return
 endproc

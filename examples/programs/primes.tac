@@ -32,35 +32,35 @@ proc 2 isprime return=none params=0 locals=1 temps=17 blocks=6 labels=4 instruct
   frame_temp 17 temp[t17]:integer/dword storage=stack_slot offset=-60 size=4
   block 1 label=L2 first=1 count=5
    1 enter left=imm(60):integer/dword
-   2 load_const result=temp[t1]:boolean/byte left=imm(1):boolean/byte
+   2 copy result=temp[t1]:boolean/byte left=imm(1):boolean/byte
    3 store result=global[ret]:boolean/byte left=temp[t1]:boolean/byte
-   4 load_const result=temp[t2]:integer/dword left=imm(2):integer/dword
+   4 copy result=temp[t2]:integer/dword left=imm(2):integer/dword
    5 store result=local[i]:integer/dword left=temp[t2]:integer/dword
   block 2 label=L3 first=6 count=4
    6 load result=temp[t3]:integer/dword left=local[i]:integer/dword
    7 load result=temp[t4]:integer/dword left=global[arg]:integer/dword
-   8 binary result=temp[t5]:boolean/byte left=temp[t3]:integer/dword right=temp[t4]:integer/dword op=<
-   9 goto_if_zero left=temp[t5]:boolean/byte target=label[L4]:address
+   8 cmp_lt result=temp[t5]:boolean/byte left=temp[t3]:integer/dword right=temp[t4]:integer/dword
+   9 brfalse left=temp[t5]:boolean/byte target=label[L4]:address
   block 3 first=10 count=8
   10 load result=temp[t6]:integer/dword left=global[arg]:integer/dword
   11 load result=temp[t7]:integer/dword left=local[i]:integer/dword
-  12 binary result=temp[t8]:integer/dword left=temp[t6]:integer/dword right=temp[t7]:integer/dword op=/
+  12 div result=temp[t8]:integer/dword left=temp[t6]:integer/dword right=temp[t7]:integer/dword
   13 load result=temp[t9]:integer/dword left=local[i]:integer/dword
-  14 binary result=temp[t10]:integer/dword left=temp[t8]:integer/dword right=temp[t9]:integer/dword op=*
+  14 mul result=temp[t10]:integer/dword left=temp[t8]:integer/dword right=temp[t9]:integer/dword
   15 load result=temp[t11]:integer/dword left=global[arg]:integer/dword
-  16 binary result=temp[t12]:boolean/byte left=temp[t10]:integer/dword right=temp[t11]:integer/dword op==
-  17 goto_if_zero left=temp[t12]:boolean/byte target=label[L5]:address
+  16 cmp_eq result=temp[t12]:boolean/byte left=temp[t10]:integer/dword right=temp[t11]:integer/dword
+  17 brfalse left=temp[t12]:boolean/byte target=label[L5]:address
   block 4 first=18 count=4
-  18 load_const result=temp[t13]:boolean/byte left=imm(0):boolean/byte
+  18 copy result=temp[t13]:boolean/byte left=imm(0):boolean/byte
   19 store result=global[ret]:boolean/byte left=temp[t13]:boolean/byte
   20 load result=temp[t14]:integer/dword left=global[arg]:integer/dword
   21 store result=local[i]:integer/dword left=temp[t14]:integer/dword
   block 5 label=L5 first=22 count=5
   22 load result=temp[t15]:integer/dword left=local[i]:integer/dword
-  23 load_const result=temp[t16]:integer/dword left=imm(1):integer/dword
-  24 binary result=temp[t17]:integer/dword left=temp[t15]:integer/dword right=temp[t16]:integer/dword op=+
+  23 copy result=temp[t16]:integer/dword left=imm(1):integer/dword
+  24 add result=temp[t17]:integer/dword left=temp[t15]:integer/dword right=temp[t16]:integer/dword
   25 store result=local[i]:integer/dword left=temp[t17]:integer/dword
-  26 goto target=label[L3]:address
+  26 jump target=label[L3]:address
   block 6 label=L4 first=27 count=2
   27 leave
   28 return
@@ -68,7 +68,7 @@ proc 2 isprime return=none params=0 locals=1 temps=17 blocks=6 labels=4 instruct
   labelmap L3 block=2 first=6
   labelmap L4 block=6 first=27
 endproc
-proc 3 printprime return=none params=0 locals=0 temps=11 blocks=6 labels=5 instructions=22
+proc 3 printprime return=none params=0 locals=0 temps=11 blocks=6 labels=5 instructions=23
   frame params=0 locals=0 temps=11 temp_policy=stack_slots param_area=0 local_area=0 temp_area=38 frame_size=38
   frame_temp 1 temp[t18]:integer/dword storage=stack_slot offset=-4 size=4
   frame_temp 2 temp[t19]:integer/dword storage=stack_slot offset=-8 size=4
@@ -83,30 +83,31 @@ proc 3 printprime return=none params=0 locals=0 temps=11 blocks=6 labels=5 instr
   frame_temp 11 temp[t28]:integer/dword storage=stack_slot offset=-38 size=4
   block 1 label=L6 first=1 count=3
    1 enter left=imm(38):integer/dword
-   2 load_const result=temp[t18]:integer/dword left=imm(2):integer/dword
+   2 copy result=temp[t18]:integer/dword left=imm(2):integer/dword
    3 store result=global[arg]:integer/dword left=temp[t18]:integer/dword
   block 2 label=L7 first=4 count=6
-   4 load_const result=temp[t19]:integer/dword left=imm(100):integer/dword
-   5 load_const result=temp[t20]:integer/dword left=imm(1):integer/dword
-   6 binary result=temp[t21]:integer/dword left=temp[t19]:integer/dword right=temp[t20]:integer/dword op=-
+   4 copy result=temp[t19]:integer/dword left=imm(100):integer/dword
+   5 copy result=temp[t20]:integer/dword left=imm(1):integer/dword
+   6 sub result=temp[t21]:integer/dword left=temp[t19]:integer/dword right=temp[t20]:integer/dword
    7 load result=temp[t23]:integer/dword left=global[arg]:integer/dword
-   8 binary result=temp[t22]:boolean/byte left=temp[t23]:integer/dword right=temp[t21]:integer/dword op=<=
-   9 goto_if_zero left=temp[t22]:boolean/byte target=label[L9]:address
+   8 cmp_le result=temp[t22]:boolean/byte left=temp[t23]:integer/dword right=temp[t21]:integer/dword
+   9 brfalse left=temp[t22]:boolean/byte target=label[L9]:address
   block 3 first=10 count=3
   10 call target=proc[isprime]:address
   11 load result=temp[t24]:boolean/byte left=global[ret]:boolean/byte
-  12 goto_if_zero left=temp[t24]:boolean/byte target=label[L10]:address
-  block 4 first=13 count=3
+  12 brfalse left=temp[t24]:boolean/byte target=label[L10]:address
+  block 4 first=13 count=4
   13 load result=temp[t25]:integer/dword left=global[arg]:integer/dword
-  14 call target=intrinsic[write_int]:address arg1=temp[t25]:integer/dword
-  15 call target=intrinsic[writeln]:address
-  block 5 label=L10 first=16 count=5
-  16 load_const result=temp[t26]:integer/dword left=imm(1):integer/dword
-  17 load result=temp[t28]:integer/dword left=global[arg]:integer/dword
-  18 binary result=temp[t27]:integer/dword left=temp[t28]:integer/dword right=temp[t26]:integer/dword op=+
-  19 store result=global[arg]:integer/dword left=temp[t27]:integer/dword
-  20 goto target=label[L7]:address
-  block 6 label=L9 first=21 count=2
-  21 leave
-  22 return
+  14 arg left=temp[t25]:integer/dword index=0
+  15 intrinsic_call target=intrinsic[write_int]:address
+  16 intrinsic_call target=intrinsic[writeln]:address
+  block 5 label=L10 first=17 count=5
+  17 copy result=temp[t26]:integer/dword left=imm(1):integer/dword
+  18 load result=temp[t28]:integer/dword left=global[arg]:integer/dword
+  19 add result=temp[t27]:integer/dword left=temp[t28]:integer/dword right=temp[t26]:integer/dword
+  20 store result=global[arg]:integer/dword left=temp[t27]:integer/dword
+  21 jump target=label[L7]:address
+  block 6 label=L9 first=22 count=2
+  22 leave
+  23 return
 endproc

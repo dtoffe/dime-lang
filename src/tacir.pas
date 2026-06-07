@@ -50,6 +50,26 @@ type
   tacInstructionKind = (
     irNoOp,
     irEnterFrame,
+    irAdd,
+    irSub,
+    irMul,
+    irDiv,
+    irMod,
+    irNeg,
+    irCmpEq,
+    irCmpNe,
+    irCmpLt,
+    irCmpLe,
+    irCmpGt,
+    irCmpGe,
+    irJump,
+    irBranchTrue,
+    irBranchFalse,
+    irArg,
+    irCall,
+    irResult,
+    irIntrinsicCall,
+    irAddrGlobal,
     irLoadConst,
     irCopy,
     irUnaryOp,
@@ -118,6 +138,7 @@ type
     leftOperand: tacOperand;
     rightOperand: tacOperand;
     targetOperand: tacOperand;
+    positionIndex: integer;
     operatorSymbol: symbol;
     callArgumentCount: integer;
     callArguments: array [1..maxTacOperandsPerCall] of tacOperand
@@ -237,7 +258,8 @@ var
 
 function instructionEndsBasicBlock(kind: tacInstructionKind): boolean;
 begin
-  instructionEndsBasicBlock := kind in [irGoto, irGotoIfZero, irReturn]
+  instructionEndsBasicBlock := kind in [irJump, irBranchTrue, irBranchFalse,
+                                        irGoto, irGotoIfZero, irReturn]
 end;
 
 function currentProcedureHasOpenBlock: boolean;
@@ -419,7 +441,7 @@ end;
 
 function instructionUsesStorageOperands(kind: tacInstructionKind): boolean;
 begin
-  instructionUsesStorageOperands := kind in [irAddrLocal, irAddrParam,
+  instructionUsesStorageOperands := kind in [irAddrLocal, irAddrParam, irAddrGlobal,
                                              irLoadVar, irStoreVar, irBuiltinRead]
 end;
 
@@ -434,6 +456,58 @@ begin
                                 (instruction.leftOperand.kind = irOperandImmediate) and
                                 (instruction.rightOperand.kind = irOperandNone) and
                                 (instruction.targetOperand.kind = irOperandNone);
+    irAdd,
+    irSub,
+    irMul,
+    irDiv,
+    irMod,
+    irCmpEq,
+    irCmpNe,
+    irCmpLt,
+    irCmpLe,
+    irCmpGt,
+    irCmpGe:
+      validateTacInstruction := (instruction.resultOperand.kind = irOperandTemporary) and
+                                isValueOperandKind(instruction.leftOperand.kind) and
+                                isValueOperandKind(instruction.rightOperand.kind);
+    irNeg:
+      validateTacInstruction := (instruction.resultOperand.kind = irOperandTemporary) and
+                                isValueOperandKind(instruction.leftOperand.kind) and
+                                (instruction.rightOperand.kind = irOperandNone);
+    irJump:
+      validateTacInstruction := instruction.targetOperand.kind = irOperandLabel;
+    irBranchTrue,
+    irBranchFalse:
+      validateTacInstruction := isValueOperandKind(instruction.leftOperand.kind) and
+                                (instruction.targetOperand.kind = irOperandLabel);
+    irArg:
+      validateTacInstruction := (instruction.resultOperand.kind = irOperandNone) and
+                                isValueOperandKind(instruction.leftOperand.kind) and
+                                (instruction.rightOperand.kind = irOperandNone) and
+                                (instruction.targetOperand.kind = irOperandNone) and
+                                (instruction.positionIndex >= 0) and
+                                (instruction.positionIndex < maxTacOperandsPerCall);
+    irCall:
+      validateTacInstruction := (instruction.targetOperand.kind = irOperandProcedure) and
+                                (instruction.resultOperand.kind = irOperandNone) and
+                                (instruction.leftOperand.kind = irOperandNone) and
+                                (instruction.rightOperand.kind = irOperandNone);
+    irResult:
+      validateTacInstruction := (instruction.resultOperand.kind = irOperandTemporary) and
+                                (instruction.leftOperand.kind = irOperandNone) and
+                                (instruction.rightOperand.kind = irOperandNone) and
+                                (instruction.targetOperand.kind = irOperandNone);
+    irIntrinsicCall:
+      begin
+        validateTacInstruction := instruction.targetOperand.kind = irOperandIntrinsic;
+        if validateTacInstruction then
+          validateTacInstruction := (instruction.resultOperand.kind = irOperandNone) and
+                                    (instruction.leftOperand.kind = irOperandNone) and
+                                    (instruction.rightOperand.kind = irOperandNone)
+      end;
+    irAddrGlobal:
+      validateTacInstruction := isAddressValueOperand(instruction.resultOperand) and
+                                (instruction.leftOperand.kind = irOperandGlobal);
     irLoadConst:
       validateTacInstruction := (instruction.resultOperand.kind = irOperandTemporary) and
                                 (instruction.leftOperand.kind = irOperandImmediate);
@@ -579,6 +653,26 @@ begin
   case kind of
     irNoOp: instructionKindToString := 'noop';
     irEnterFrame: instructionKindToString := 'enter';
+    irAdd: instructionKindToString := 'add';
+    irSub: instructionKindToString := 'sub';
+    irMul: instructionKindToString := 'mul';
+    irDiv: instructionKindToString := 'div';
+    irMod: instructionKindToString := 'mod';
+    irNeg: instructionKindToString := 'neg';
+    irCmpEq: instructionKindToString := 'cmp_eq';
+    irCmpNe: instructionKindToString := 'cmp_ne';
+    irCmpLt: instructionKindToString := 'cmp_lt';
+    irCmpLe: instructionKindToString := 'cmp_le';
+    irCmpGt: instructionKindToString := 'cmp_gt';
+    irCmpGe: instructionKindToString := 'cmp_ge';
+    irJump: instructionKindToString := 'jump';
+    irBranchTrue: instructionKindToString := 'brtrue';
+    irBranchFalse: instructionKindToString := 'brfalse';
+    irArg: instructionKindToString := 'arg';
+    irCall: instructionKindToString := 'call';
+    irResult: instructionKindToString := 'result';
+    irIntrinsicCall: instructionKindToString := 'intrinsic_call';
+    irAddrGlobal: instructionKindToString := 'addr_global';
     irLoadConst: instructionKindToString := 'load_const';
     irCopy: instructionKindToString := 'copy';
     irUnaryOp: instructionKindToString := 'unary';
@@ -1024,6 +1118,7 @@ begin
   newTacInstruction.leftOperand := makeTacNoneOperand;
   newTacInstruction.rightOperand := makeTacNoneOperand;
   newTacInstruction.targetOperand := makeTacNoneOperand;
+  newTacInstruction.positionIndex := 0;
   newTacInstruction.operatorSymbol := nul;
   newTacInstruction.callArgumentCount := 0;
   for argumentIndex := 1 to maxTacOperandsPerCall do
@@ -1264,6 +1359,10 @@ begin
     write(outputFile, ' right=', operandToString(instruction.rightOperand));
   if instruction.targetOperand.kind <> irOperandNone then
     write(outputFile, ' target=', operandToString(instruction.targetOperand));
+  if instruction.positionIndex <> 0 then
+    write(outputFile, ' index=', instruction.positionIndex);
+  if (instruction.kind = irArg) and (instruction.positionIndex = 0) then
+    write(outputFile, ' index=0');
   if instruction.operatorSymbol <> nul then
     write(outputFile, ' op=', operatorToString(instruction.operatorSymbol));
   for argumentIndex := 1 to instruction.callArgumentCount do

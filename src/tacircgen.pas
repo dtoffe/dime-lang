@@ -110,7 +110,7 @@ procedure appendGoto(labelId: tacLabelId);
 var
   instruction: tacInstruction;
 begin
-  instruction := newTacInstruction(irGoto);
+  instruction := newTacInstruction(irJump);
   instruction.targetOperand := makeTacLabelOperand(labelId);
   appendTacInstruction(instruction)
 end;
@@ -119,7 +119,7 @@ procedure appendGotoIfZero(const conditionOperand: tacOperand; labelId: tacLabel
 var
   instruction: tacInstruction;
 begin
-  instruction := newTacInstruction(irGotoIfZero);
+  instruction := newTacInstruction(irBranchFalse);
   instruction.leftOperand := conditionOperand;
   instruction.targetOperand := makeTacLabelOperand(labelId);
   appendTacInstruction(instruction)
@@ -150,20 +150,24 @@ var
   instruction: tacInstruction;
 begin
   appendIntrinsicCall := resultOperand;
-  instruction := newTacInstruction(irCallProc);
+  instruction := newTacInstruction(irIntrinsicCall);
   instruction.targetOperand := makeTacIntrinsicOperand(intrinsicKind);
-  instruction.resultOperand := resultOperand;
-  appendTacInstruction(instruction)
+  appendTacInstruction(instruction);
+  if resultOperand.kind <> irOperandNone then
+  begin
+    instruction := newTacInstruction(irResult);
+    instruction.resultOperand := resultOperand;
+    appendTacInstruction(instruction)
+  end
 end;
 
-procedure appendIntrinsicCallArgument(intrinsicKind: tacIntrinsicKind;
-                                      const argumentOperand: tacOperand);
+procedure appendCallArgument(argumentIndex: integer; const argumentOperand: tacOperand);
 var
   instruction: tacInstruction;
 begin
-  instruction := newTacInstruction(irCallProc);
-  instruction.targetOperand := makeTacIntrinsicOperand(intrinsicKind);
-  setTacCallArgument(instruction, 1, argumentOperand);
+  instruction := newTacInstruction(irArg);
+  instruction.positionIndex := argumentIndex;
+  instruction.leftOperand := argumentOperand;
   appendTacInstruction(instruction)
 end;
 
@@ -227,7 +231,7 @@ begin
     constant:
       begin
         lowerIdentifierReference := newTacTemporary(getDeclarationType(resolvedSymbol));
-        instruction := newTacInstruction(irLoadConst);
+        instruction := newTacInstruction(irCopy);
         instruction.resultOperand := lowerIdentifierReference;
         instruction.leftOperand := makeTacConstOperand(getConstantValue(resolvedSymbol),
                                                        getDeclarationType(resolvedSymbol));
@@ -253,23 +257,56 @@ var
   instruction: tacInstruction;
 begin
   lowerLiteral := newTacTemporary(nodeValueType(node));
-  instruction := newTacInstruction(irLoadConst);
+  instruction := newTacInstruction(irCopy);
   instruction.resultOperand := lowerLiteral;
   instruction.leftOperand := makeTacConstOperand(node^.numberValue, nodeValueType(node));
   appendTacInstruction(instruction)
+end;
+
+function comparisonOpcodeFor(operatorSymbol: symbol): tacInstructionKind;
+begin
+  case operatorSymbol of
+    eql: comparisonOpcodeFor := irCmpEq;
+    neq: comparisonOpcodeFor := irCmpNe;
+    lss: comparisonOpcodeFor := irCmpLt;
+    leq: comparisonOpcodeFor := irCmpLe;
+    gtr: comparisonOpcodeFor := irCmpGt;
+    geq: comparisonOpcodeFor := irCmpGe;
+  else
+    comparisonOpcodeFor := irNoOp
+  end
+end;
+
+function arithmeticOpcodeFor(operatorSymbol: symbol): tacInstructionKind;
+begin
+  case operatorSymbol of
+    plus: arithmeticOpcodeFor := irAdd;
+    minus: arithmeticOpcodeFor := irSub;
+    times: arithmeticOpcodeFor := irMul;
+    slash: arithmeticOpcodeFor := irDiv;
+  else
+    arithmeticOpcodeFor := irNoOp
+  end
 end;
 
 function lowerUnaryExpression(node: astNode; var errorCount: integer): tacOperand;
 var
   operand: tacOperand;
   instruction: tacInstruction;
+  zeroOperand: tacOperand;
 begin
   operand := lowerExpression(node^.firstChild, errorCount);
   lowerUnaryExpression := newTacTemporary(nodeValueType(node));
-  instruction := newTacInstruction(irUnaryOp);
+  if node^.operatorSymbol = minus then
+    instruction := newTacInstruction(irNeg)
+  else
+  begin
+    instruction := newTacInstruction(irCmpEq);
+    zeroOperand := makeTacConstOperand(0, operand.valueType);
+    instruction.rightOperand := zeroOperand
+  end;
   instruction.resultOperand := lowerUnaryExpression;
   instruction.leftOperand := operand;
-  instruction.operatorSymbol := node^.operatorSymbol;
   appendTacInstruction(instruction)
 end;
 
@@ -278,6 +315,7 @@ var
   leftNode, rightNode: astNode;
   leftOperand, rightOperand: tacOperand;
   instruction: tacInstruction;
+  sumOperand, oneOperand, zeroOperand: tacOperand;
 begin
   leftNode := node^.firstChild;
   rightNode := nil;
@@ -288,11 +326,51 @@ begin
   rightOperand := lowerExpression(rightNode, errorCount);
   lowerBinaryExpression := newTacTemporary(nodeValueType(node));
 
-  instruction := newTacInstruction(irBinaryOp);
+  if node^.operatorSymbol in [plus, minus, times, slash] then
+    instruction := newTacInstruction(arithmeticOpcodeFor(node^.operatorSymbol))
+  else if node^.operatorSymbol in [eql, neq, lss, leq, gtr, geq] then
+    instruction := newTacInstruction(comparisonOpcodeFor(node^.operatorSymbol))
+  else if node^.operatorSymbol = andsym then
+    instruction := newTacInstruction(irMul)
+  else if node^.operatorSymbol = orsym then
+  begin
+    sumOperand := newTacTemporary(typeInteger);
+    instruction := newTacInstruction(irAdd);
+    instruction.resultOperand := sumOperand;
+    instruction.leftOperand := leftOperand;
+    instruction.rightOperand := rightOperand;
+    appendTacInstruction(instruction);
+
+    zeroOperand := makeTacConstOperand(0, typeInteger);
+    instruction := newTacInstruction(irCmpNe);
+    instruction.resultOperand := lowerBinaryExpression;
+    instruction.leftOperand := sumOperand;
+    instruction.rightOperand := zeroOperand;
+    appendTacInstruction(instruction);
+    exit
+  end
+  else if node^.operatorSymbol = xorsym then
+  begin
+    sumOperand := newTacTemporary(typeInteger);
+    instruction := newTacInstruction(irAdd);
+    instruction.resultOperand := sumOperand;
+    instruction.leftOperand := leftOperand;
+    instruction.rightOperand := rightOperand;
+    appendTacInstruction(instruction);
+
+    oneOperand := makeTacConstOperand(1, typeInteger);
+    instruction := newTacInstruction(irCmpEq);
+    instruction.resultOperand := lowerBinaryExpression;
+    instruction.leftOperand := sumOperand;
+    instruction.rightOperand := oneOperand;
+    appendTacInstruction(instruction);
+    exit
+  end
+  else
+    instruction := newTacInstruction(irAdd);
   instruction.resultOperand := lowerBinaryExpression;
   instruction.leftOperand := leftOperand;
   instruction.rightOperand := rightOperand;
-  instruction.operatorSymbol := node^.operatorSymbol;
   appendTacInstruction(instruction)
 end;
 
@@ -330,11 +408,10 @@ begin
     begin
       whenOperand := lowerExpression(whenNode, errorCount);
       conditionOperand := newTacTemporary(typeBoolean);
-      instruction := newTacInstruction(irBinaryOp);
+      instruction := newTacInstruction(irCmpEq);
       instruction.resultOperand := conditionOperand;
       instruction.leftOperand := selectorOperand;
       instruction.rightOperand := whenOperand;
-      instruction.operatorSymbol := eql;
       appendTacInstruction(instruction)
     end
     else
@@ -437,8 +514,9 @@ begin
     if argumentNode <> nil then
     begin
       argumentOperand := lowerExpression(argumentNode, errorCount);
-      appendIntrinsicCallArgument(tacIntrinsicForWriteType(argumentOperand.valueType),
-                                  argumentOperand)
+      appendCallArgument(0, argumentOperand);
+      appendIntrinsicCall(tacIntrinsicForWriteType(argumentOperand.valueType),
+                          makeTacNoneOperand)
     end;
     if procKind = builtinWriteLn then
       appendIntrinsicCall(irIntrinsicWriteLn, makeTacNoneOperand)
@@ -460,24 +538,27 @@ begin
   end
   else
   begin
-    instruction := newTacInstruction(irCallProc);
+    instruction := newTacInstruction(irCall);
     instruction.targetOperand := makeTacProcedureOperand(resolvedSymbol,
                                                          calleeNode^.identifierText);
     if getDeclarationKind(resolvedSymbol) = func then
-    begin
       lowerCall := newTacTemporary(nodeValueType(node));
-      instruction.resultOperand := lowerCall
-    end;
 
-    argumentIndex := 1;
+    argumentIndex := 0;
     while argumentNode <> nil do
     begin
       argumentOperand := lowerExpression(argumentNode, errorCount);
-      setTacCallArgument(instruction, argumentIndex, argumentOperand);
+      appendCallArgument(argumentIndex, argumentOperand);
       argumentIndex := argumentIndex + 1;
       argumentNode := argumentNode^.nextSibling
     end;
-    appendTacInstruction(instruction)
+    appendTacInstruction(instruction);
+    if lowerCall.kind <> irOperandNone then
+    begin
+      instruction := newTacInstruction(irResult);
+      instruction.resultOperand := lowerCall;
+      appendTacInstruction(instruction)
+    end
   end
 end;
 
@@ -631,11 +712,10 @@ begin
 
   endOperand := lowerExpression(endNode, errorCount);
   comparisonOperand := newTacTemporary(typeBoolean);
-  instruction := newTacInstruction(irBinaryOp);
+  instruction := newTacInstruction(irCmpLe);
   instruction.resultOperand := comparisonOperand;
   instruction.leftOperand := lowerIdentifierReference(counterNode);
   instruction.rightOperand := endOperand;
-  instruction.operatorSymbol := leq;
   appendTacInstruction(instruction);
   appendGotoIfZero(comparisonOperand, exitLabel);
 
@@ -648,11 +728,10 @@ begin
 
   stepOperand := lowerExpression(stepNode, errorCount);
   incrementOperand := newTacTemporary(typeInteger);
-  instruction := newTacInstruction(irBinaryOp);
+  instruction := newTacInstruction(irAdd);
   instruction.resultOperand := incrementOperand;
   instruction.leftOperand := lowerIdentifierReference(counterNode);
   instruction.rightOperand := stepOperand;
-  instruction.operatorSymbol := plus;
   appendTacInstruction(instruction);
 
   instruction := newTacInstruction(irStoreVar);
@@ -698,11 +777,10 @@ begin
         selectorOperand := lowerIdentifierReference(selectorNode);
         labelOperand := lowerExpression(labelNode, errorCount);
         comparisonOperand := newTacTemporary(typeBoolean);
-        instruction := newTacInstruction(irBinaryOp);
+        instruction := newTacInstruction(irCmpEq);
         instruction.resultOperand := comparisonOperand;
         instruction.leftOperand := selectorOperand;
         instruction.rightOperand := labelOperand;
-        instruction.operatorSymbol := eql;
         appendTacInstruction(instruction);
 
         nextLabel := newTacLabel;
