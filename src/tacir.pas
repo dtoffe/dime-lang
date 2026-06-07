@@ -72,8 +72,6 @@ type
     irAddrGlobal,
     irLoadConst,
     irCopy,
-    irUnaryOp,
-    irBinaryOp,
     irAddrLocal,
     irAddrParam,
     irFieldAddr,
@@ -81,13 +79,9 @@ type
     irLoadAddr,
     irStoreAddr,
     irGoto,
-    irGotoIfZero,
     irLabel,
     irLoadVar,
     irStoreVar,
-    irCallProc,
-    irBuiltinRead,
-    irBuiltinWrite,
     irLeaveFrame,
     irReturn
   );
@@ -259,7 +253,7 @@ var
 function instructionEndsBasicBlock(kind: tacInstructionKind): boolean;
 begin
   instructionEndsBasicBlock := kind in [irJump, irBranchTrue, irBranchFalse,
-                                        irGoto, irGotoIfZero, irReturn]
+                                        irGoto, irReturn]
 end;
 
 function currentProcedureHasOpenBlock: boolean;
@@ -442,12 +436,10 @@ end;
 function instructionUsesStorageOperands(kind: tacInstructionKind): boolean;
 begin
   instructionUsesStorageOperands := kind in [irAddrLocal, irAddrParam, irAddrGlobal,
-                                             irLoadVar, irStoreVar, irBuiltinRead]
+                                             irLoadVar, irStoreVar]
 end;
 
 function validateTacInstruction(const instruction: tacInstruction): boolean;
-var
-  argumentIndex: integer;
 begin
   validateTacInstruction := true;
   case instruction.kind of
@@ -511,15 +503,10 @@ begin
     irLoadConst:
       validateTacInstruction := (instruction.resultOperand.kind = irOperandTemporary) and
                                 (instruction.leftOperand.kind = irOperandImmediate);
-    irCopy,
-    irUnaryOp:
+    irCopy:
       validateTacInstruction := (instruction.resultOperand.kind = irOperandTemporary) and
                                 isValueOperandKind(instruction.leftOperand.kind) and
                                 (instruction.rightOperand.kind = irOperandNone);
-    irBinaryOp:
-      validateTacInstruction := (instruction.resultOperand.kind = irOperandTemporary) and
-                                isValueOperandKind(instruction.leftOperand.kind) and
-                                isValueOperandKind(instruction.rightOperand.kind);
     irAddrLocal:
       validateTacInstruction := isAddressValueOperand(instruction.resultOperand) and
                                 (instruction.leftOperand.kind = irOperandLocal);
@@ -543,38 +530,11 @@ begin
                                 isValueOperandKind(instruction.leftOperand.kind);
     irGoto:
       validateTacInstruction := instruction.targetOperand.kind = irOperandLabel;
-    irGotoIfZero:
-      validateTacInstruction := isValueOperandKind(instruction.leftOperand.kind) and
-                                (instruction.targetOperand.kind = irOperandLabel);
     irLoadVar:
       validateTacInstruction := (instruction.resultOperand.kind = irOperandTemporary) and
                                 isStorageOperandKind(instruction.leftOperand.kind);
     irStoreVar:
       validateTacInstruction := isStorageOperandKind(instruction.resultOperand.kind) and
-                                isValueOperandKind(instruction.leftOperand.kind);
-    irCallProc:
-      begin
-        validateTacInstruction := instruction.targetOperand.kind in [irOperandProcedure,
-                                                                     irOperandIntrinsic];
-        if validateTacInstruction and
-           (instruction.targetOperand.kind = irOperandIntrinsic) then
-          validateTacInstruction := validateTacIntrinsicCall(instruction);
-        if validateTacInstruction then
-          if instruction.targetOperand.kind = irOperandProcedure then
-            validateTacInstruction := isValueOrNoneOperandKind(instruction.resultOperand.kind);
-        if validateTacInstruction then
-          for argumentIndex := 1 to instruction.callArgumentCount do
-            if not isValueOperandKind(instruction.callArguments[argumentIndex].kind) then
-            begin
-              validateTacInstruction := false;
-              break
-            end
-      end;
-    irBuiltinRead:
-      validateTacInstruction := (instruction.targetOperand.kind = irOperandIntrinsic) and
-                                isStorageOperandKind(instruction.resultOperand.kind);
-    irBuiltinWrite:
-      validateTacInstruction := (instruction.targetOperand.kind = irOperandIntrinsic) and
                                 isValueOperandKind(instruction.leftOperand.kind);
     irLeaveFrame:
       validateTacInstruction := (instruction.resultOperand.kind = irOperandNone) and
@@ -675,8 +635,6 @@ begin
     irAddrGlobal: instructionKindToString := 'addr_global';
     irLoadConst: instructionKindToString := 'load_const';
     irCopy: instructionKindToString := 'copy';
-    irUnaryOp: instructionKindToString := 'unary';
-    irBinaryOp: instructionKindToString := 'binary';
     irAddrLocal: instructionKindToString := 'addr_local';
     irAddrParam: instructionKindToString := 'addr_param';
     irFieldAddr: instructionKindToString := 'field_addr';
@@ -684,13 +642,9 @@ begin
     irLoadAddr: instructionKindToString := 'load_addr';
     irStoreAddr: instructionKindToString := 'store_addr';
     irGoto: instructionKindToString := 'goto';
-    irGotoIfZero: instructionKindToString := 'goto_if_zero';
     irLabel: instructionKindToString := 'label';
     irLoadVar: instructionKindToString := 'load';
     irStoreVar: instructionKindToString := 'store';
-    irCallProc: instructionKindToString := 'call';
-    irBuiltinRead: instructionKindToString := 'builtin_read';
-    irBuiltinWrite: instructionKindToString := 'builtin_write';
     irLeaveFrame: instructionKindToString := 'leave';
     irReturn: instructionKindToString := 'return'
   end

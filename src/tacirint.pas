@@ -50,8 +50,6 @@ type
     rtAddrGlobal,
     rtLoadConst,
     rtCopy,
-    rtUnaryOp,
-    rtBinaryOp,
     rtAddrLocal,
     rtAddrParam,
     rtFieldAddr,
@@ -59,13 +57,9 @@ type
     rtLoadAddr,
     rtStoreAddr,
     rtGoto,
-    rtGotoIfZero,
     rtLabel,
     rtLoadVar,
     rtStoreVar,
-    rtCallProc,
-    rtBuiltinRead,
-    rtBuiltinWrite,
     rtLeaveFrame,
     rtReturn
   );
@@ -780,48 +774,6 @@ begin
   end
 end;
 
-function applyUnaryOperator(const operatorText: string; operand: integer): integer;
-begin
-  if operatorText = '-' then
-    applyUnaryOperator := -operand
-  else if operatorText = 'not' then
-    applyUnaryOperator := Ord(operand = 0)
-  else
-    applyUnaryOperator := operand
-end;
-
-function applyBinaryOperator(const operatorText: string; leftValue, rightValue: integer): integer;
-begin
-  if operatorText = '+' then
-    applyBinaryOperator := leftValue + rightValue
-  else if operatorText = '-' then
-    applyBinaryOperator := leftValue - rightValue
-  else if operatorText = '*' then
-    applyBinaryOperator := leftValue * rightValue
-  else if operatorText = '/' then
-    applyBinaryOperator := leftValue div rightValue
-  else if operatorText = '=' then
-    applyBinaryOperator := Ord(leftValue = rightValue)
-  else if operatorText = '<>' then
-    applyBinaryOperator := Ord(leftValue <> rightValue)
-  else if operatorText = '<' then
-    applyBinaryOperator := Ord(leftValue < rightValue)
-  else if operatorText = '<=' then
-    applyBinaryOperator := Ord(leftValue <= rightValue)
-  else if operatorText = '>' then
-    applyBinaryOperator := Ord(leftValue > rightValue)
-  else if operatorText = '>=' then
-    applyBinaryOperator := Ord(leftValue >= rightValue)
-  else if operatorText = 'and' then
-    applyBinaryOperator := Ord((leftValue <> 0) and (rightValue <> 0))
-  else if operatorText = 'or' then
-    applyBinaryOperator := Ord((leftValue <> 0) or (rightValue <> 0))
-  else if operatorText = 'xor' then
-    applyBinaryOperator := Ord((leftValue <> 0) xor (rightValue <> 0))
-  else
-    applyBinaryOperator := 0
-end;
-
 procedure consumeInputLineRemainder;
 var
   currentChar: char;
@@ -929,27 +881,6 @@ begin
     readValueByIntrinsic := readBooleanValueOrHalt(consumeLineRemainder)
   else
     readValueByIntrinsic := readIntegerValueOrHalt(consumeLineRemainder)
-end;
-
-procedure executeBuiltinWrite(const instruction: tacRuntimeInstruction);
-var
-  value: integer;
-begin
-  value := operandValue(instruction.leftOperand);
-  if instruction.leftOperand.valueType = 'char' then
-  begin
-    if instruction.targetOperand.name = 'writeln' then
-      WriteLn(Chr(value))
-    else
-      Write(Chr(value))
-  end
-  else
-  begin
-    if instruction.targetOperand.name = 'writeln' then
-      WriteLn(value)
-    else
-      Write(value)
-  end
 end;
 
 procedure executeIntrinsicCall(const instruction: tacRuntimeInstruction);
@@ -1199,21 +1130,6 @@ begin
           assignOperand(instruction.resultOperand, operandValue(instruction.leftOperand));
           programCounter := programCounter + 1
         end;
-      rtUnaryOp:
-        begin
-          assignOperand(instruction.resultOperand,
-                        applyUnaryOperator(instruction.operatorText,
-                                           operandValue(instruction.leftOperand)));
-          programCounter := programCounter + 1
-        end;
-      rtBinaryOp:
-        begin
-          assignOperand(instruction.resultOperand,
-                        applyBinaryOperator(instruction.operatorText,
-                                            operandValue(instruction.leftOperand),
-                                            operandValue(instruction.rightOperand)));
-          programCounter := programCounter + 1
-        end;
       rtAddrLocal,
       rtAddrParam,
       rtAddrGlobal:
@@ -1250,13 +1166,6 @@ begin
         end;
       rtGoto:
         programCounter := labelTarget(currentProcedureIndex, instruction.targetOperand.value);
-      rtGotoIfZero:
-        begin
-          if operandValue(instruction.leftOperand) = 0 then
-            programCounter := labelTarget(currentProcedureIndex, instruction.targetOperand.value)
-          else
-            programCounter := programCounter + 1
-        end;
       rtLabel,
       rtNoOp:
         programCounter := programCounter + 1;
@@ -1268,53 +1177,6 @@ begin
       rtStoreVar:
         begin
           assignOperand(instruction.resultOperand, operandValue(instruction.leftOperand));
-          programCounter := programCounter + 1
-        end;
-      rtCallProc:
-        begin
-          if instruction.targetOperand.kind = rtOperandIntrinsic then
-          begin
-            executeIntrinsicCall(instruction);
-            programCounter := programCounter + 1;
-            continue
-          end;
-          calleeProcedureIndex := findProcedure(instruction.targetOperand.name);
-          if calleeProcedureIndex = 0 then
-          begin
-            reportRuntimeError('Unknown TAC procedure.');
-            halt(1)
-          end;
-          if returnStackTop >= maxCallDepth then
-          begin
-            reportRuntimeError('TAC call stack overflow.');
-            halt(1)
-          end;
-          if instruction.callArgumentCount <> procedures[calleeProcedureIndex].parameterCount then
-          begin
-            reportRuntimeError('TAC call argument count does not match procedure parameters.');
-            halt(1)
-          end;
-          for argumentIndex := 1 to instruction.callArgumentCount do
-            assignOperand(procedures[calleeProcedureIndex].parameters[argumentIndex],
-                          operandValue(instruction.callArguments[argumentIndex]));
-          returnStackTop := returnStackTop + 1;
-          returnStack[returnStackTop].procedureIndex := currentProcedureIndex;
-          returnStack[returnStackTop].instructionIndex := programCounter + 1;
-          returnStack[returnStackTop].resultOperand := instruction.resultOperand;
-          returnStack[returnStackTop].calleeProcedureIndex := calleeProcedureIndex;
-          currentProcedureIndex := calleeProcedureIndex;
-          programCounter := 1
-        end;
-      rtBuiltinRead:
-        begin
-          assignOperand(instruction.resultOperand,
-                        readValueByIntrinsic(instruction.targetOperand.name,
-                                             instruction.resultOperand.valueType));
-          programCounter := programCounter + 1
-        end;
-      rtBuiltinWrite:
-        begin
-          executeBuiltinWrite(instruction);
           programCounter := programCounter + 1
         end;
       rtLeaveFrame:
