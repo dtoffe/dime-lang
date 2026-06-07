@@ -1,9 +1,0 @@
-program forbadctr;
-
-var c: char;
-
-begin
-  for c := 'a' to 'c' by 1 do
-    write(c);
-  endfor;
-end.

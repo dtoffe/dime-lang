@@ -1,9 +1,0 @@
-program forbasic;
-
-var i: integer;
-
-begin
-  for i := 1 to 5 by 2 do
-    write(i);
-  endfor;
-end.
