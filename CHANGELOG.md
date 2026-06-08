@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project is expected to follow [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+### [Added]
+
+- Add new unit `hlir` for high level IR definition.
+
 ## [v0.0.11] - 2026-06-07
 
 ### [Added]

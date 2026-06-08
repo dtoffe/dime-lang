@@ -98,12 +98,4 @@ This roadmap is intentionally conservative. The goal is to build the project in 
 - Keep frame layout and backend preparation below the high-level IR boundary.
 - Preserve current behavior while making the stages conceptually explicit.
 
-### v0.0.11 - Backend preparation
-
-- Define storage layout assignment for locals, temporaries, and procedure state.
-- Add a model for the activation records of procedure calls.
-- Define an explicit call and return convention in the IR.
-- Introduce a target-neutral intrinsic layer for read, readln, write, and writeln.
-- Stress test TAC with more examples so it becomes stable and solid before moving on to assembler generation.
-
 For older releases, see [CHANGELOG.md](./CHANGELOG.md).
