@@ -9,6 +9,7 @@ and this project is expected to follow [Semantic Versioning](https://semver.org/
 
 ### [Added]
 
+- Add new unit `asttohlir` for AST-to-HLIR lowering.
 - Add new unit `hlir` for high level IR definition.
 
 ## [v0.0.11] - 2026-06-07

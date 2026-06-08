@@ -4,10 +4,10 @@
 
   High-level IR definitions for the structured frontend pipeline.
 
-  This unit intentionally stops at data modeling.  It defines a typed,
-  statement-oriented IR that matches the language surface currently accepted by
-  parser.pas and semantics.pas, but it does not yet include AST-to-HLIR
-  generation, validation passes, or lowering to TAC/LIR.
+  This unit defines the core data model for a typed, statement-oriented IR that
+  matches the language surface currently accepted by parser.pas and
+  semantics.pas.  AST-to-HLIR lowering now lives in asttohlir.pas, while
+  validation passes and lowering to TAC/LIR remain future work.
 
   The design goal is to keep frontend intent explicit:
   - procedures/functions remain structured routines
@@ -26,9 +26,9 @@
     and lower into block-based LIR/TAC later.
   - Calls keep builtin/read/write identity at the HLIR level.  Intrinsic and
     calling-convention lowering should happen below this layer.
-  - Memory ownership helpers are intentionally absent for now; once HLIR
-    generation exists, this unit will likely need constructors/free routines
-    similar in spirit to astree.pas. }
+  - Memory ownership helpers are intentionally absent for now.  As HLIR becomes
+    a longer-lived compiler stage, this layer will likely need constructors/free
+    routines similar in spirit to astree.pas. }
 unit hlir;
 
 {$mode objfpc}
