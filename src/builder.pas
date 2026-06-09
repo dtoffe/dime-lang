@@ -60,7 +60,7 @@ begin
 
     generateLlirProgram(hirProgramData, errorCount);
     if errorCount = 0 then
-      dumpLlir(ChangeFileExt(inputFileName, '.tac'));
+      dumpLlir(ChangeFileExt(inputFileName, '.llir'));
 
     if errorCount <> 0 then
     begin

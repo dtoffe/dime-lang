@@ -1,8 +1,8 @@
 { Copyright (c) 2026 Alejandro Daniel Toffetti
   License: MIT. See LICENSE in the project root.
-  Date: 2026-06-05
+  Date: 2026-06-09
 
-  LLIR interpreter. This standalone program reads the textual .tac image
+  LLIR interpreter. This standalone program reads the textual .llir image
   dumped by llir, reconstructs procedure-scoped TAC units, and executes them
   directly. It stays intentionally close to the staged TAC model: variables
   remain symbolic, temporaries are numeric slots, labels are symbolic jump
@@ -1228,7 +1228,7 @@ end;
 begin
   if ParamCount < 1 then
   begin
-    WriteLn('Usage: llirint <tac-file> [quiet|all]');
+    WriteLn('Usage: llirint <llir-file> [quiet|all]');
     halt(1)
   end;
 

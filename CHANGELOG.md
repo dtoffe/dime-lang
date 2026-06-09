@@ -15,6 +15,7 @@ and this project is expected to follow [Semantic Versioning](https://semver.org/
 
 ### [Changed]
 
+- Rename `.tac` file extension to `.llir`.
 - Rewire LLIR to be generated from HLIR instead of AST.
 - Rename references to `tacir` in all source files to `llir`.
 
