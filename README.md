@@ -66,6 +66,7 @@ While the general idea is to borrow and cherrypick features from all of them, an
 - [Changelog](CHANGELOG.md)
 - [Roadmap](ROADMAP.md)
 - [Release Checklist](RELEASING.md)
+- [HLIR](docs/HLIR.md)
 - [LLIR](docs/LLIR.md)
 
 ## Example program: Fizzbuzz
