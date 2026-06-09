@@ -280,6 +280,7 @@ type
 
 procedure initializeHirState(var state: hirState);
 procedure initializeHirProgram(var programData: hirProgramRecord);
+procedure dumpHir(const outputFileName: string; const programData: hirProgramRecord);
 
 function makeHirTypeRef(scalarType: typeValue): hirTypeRef;
 function makeHirSymbolRef(symbol: symbolIndex;
@@ -292,6 +293,444 @@ function hirUnaryOperatorFromSymbol(operatorSymbol: symbol; out op: hirUnaryOper
 function hirBinaryOperatorFromSymbol(operatorSymbol: symbol; out op: hirBinaryOperator): boolean;
 
 implementation
+
+uses
+  SysUtils;
+
+function identifierToString(const identifierName: identifier): string;
+var
+  characterIndex: integer;
+begin
+  identifierToString := '';
+  for characterIndex := Low(identifierName) to High(identifierName) do
+    identifierToString := identifierToString + identifierName[characterIndex];
+  identifierToString := TrimRight(identifierToString)
+end;
+
+function hirTypeToString(const typeRef: hirTypeRef): string;
+begin
+  if typeRef.hasUserDefinedName then
+    hirTypeToString := identifierToString(typeRef.userTypeName)
+  else
+    case typeRef.scalarType of
+      typeInteger:
+        hirTypeToString := 'integer';
+      typeBoolean:
+        hirTypeToString := 'boolean';
+    else
+      hirTypeToString := 'char'
+    end
+end;
+
+function hirRoutineKindToString(kind: hirRoutineKind): string;
+begin
+  case kind of
+    hirRoutineProgram:
+      hirRoutineKindToString := 'program';
+    hirRoutineProcedure:
+      hirRoutineKindToString := 'procedure';
+  else
+    hirRoutineKindToString := 'function'
+  end
+end;
+
+function hirDeclarationKindToString(kind: hirDeclarationKind): string;
+begin
+  case kind of
+    hirDeclConstant:
+      hirDeclarationKindToString := 'const';
+    hirDeclVariable:
+      hirDeclarationKindToString := 'var';
+  else
+    hirDeclarationKindToString := 'param'
+  end
+end;
+
+function hirStatementKindToString(kind: hirStatementKind): string;
+begin
+  case kind of
+    hirStmtCompound:
+      hirStatementKindToString := 'compound';
+    hirStmtAssignment:
+      hirStatementKindToString := 'assign';
+    hirStmtCall:
+      hirStatementKindToString := 'call';
+    hirStmtReturn:
+      hirStatementKindToString := 'return';
+    hirStmtBreak:
+      hirStatementKindToString := 'break';
+    hirStmtContinue:
+      hirStatementKindToString := 'continue';
+    hirStmtIf:
+      hirStatementKindToString := 'if';
+    hirStmtWhile:
+      hirStatementKindToString := 'while';
+    hirStmtRepeat:
+      hirStatementKindToString := 'repeat';
+    hirStmtFor:
+      hirStatementKindToString := 'for';
+  else
+    hirStatementKindToString := 'switch'
+  end
+end;
+
+function hirExpressionKindToString(kind: hirExpressionKind): string;
+begin
+  case kind of
+    hirExprIntegerLiteral:
+      hirExpressionKindToString := 'int_lit';
+    hirExprBooleanLiteral:
+      hirExpressionKindToString := 'bool_lit';
+    hirExprCharLiteral:
+      hirExpressionKindToString := 'char_lit';
+    hirExprSymbol:
+      hirExpressionKindToString := 'symbol';
+    hirExprUnary:
+      hirExpressionKindToString := 'unary';
+    hirExprBinary:
+      hirExpressionKindToString := 'binary';
+    hirExprCall:
+      hirExpressionKindToString := 'call';
+  else
+    hirExpressionKindToString := 'case'
+  end
+end;
+
+function hirUnaryOperatorToString(op: hirUnaryOperator): string;
+begin
+  case op of
+    hirUnaryNegate:
+      hirUnaryOperatorToString := 'neg';
+  else
+    hirUnaryOperatorToString := 'not'
+  end
+end;
+
+function hirBinaryOperatorToString(op: hirBinaryOperator): string;
+begin
+  case op of
+    hirBinaryAdd:
+      hirBinaryOperatorToString := 'add';
+    hirBinarySub:
+      hirBinaryOperatorToString := 'sub';
+    hirBinaryMul:
+      hirBinaryOperatorToString := 'mul';
+    hirBinaryDiv:
+      hirBinaryOperatorToString := 'div';
+    hirBinaryEq:
+      hirBinaryOperatorToString := 'eq';
+    hirBinaryNe:
+      hirBinaryOperatorToString := 'ne';
+    hirBinaryLt:
+      hirBinaryOperatorToString := 'lt';
+    hirBinaryLe:
+      hirBinaryOperatorToString := 'le';
+    hirBinaryGt:
+      hirBinaryOperatorToString := 'gt';
+    hirBinaryGe:
+      hirBinaryOperatorToString := 'ge';
+    hirBinaryAnd:
+      hirBinaryOperatorToString := 'and';
+    hirBinaryOr:
+      hirBinaryOperatorToString := 'or';
+  else
+    hirBinaryOperatorToString := 'xor'
+  end
+end;
+
+function hirCaseModeToString(mode: hirCaseMode): string;
+begin
+  case mode of
+    hirCaseSimple:
+      hirCaseModeToString := 'simple';
+  else
+    hirCaseModeToString := 'searched'
+  end
+end;
+
+function hirSymbolRefToString(const symbolRef: hirSymbolRef): string;
+begin
+  hirSymbolRefToString := identifierToString(symbolRef.name) +
+                          '#' + IntToStr(symbolRef.symbol) +
+                          ':' + hirTypeToString(symbolRef.valueType);
+  if symbolRef.builtinKind <> builtinNone then
+    hirSymbolRefToString := hirSymbolRefToString +
+                            ' builtin=' + builtinProcedureName(symbolRef.builtinKind)
+end;
+
+function indentString(depth: integer): string;
+begin
+  indentString := StringOfChar(' ', depth * 2)
+end;
+
+procedure dumpExpression(var outputFile: Text; expressionNode: hirExpression; depth: integer); forward;
+
+procedure dumpCallSite(var outputFile: Text; const prefix: string;
+                       const callSite: hirCallSite; depth: integer);
+var
+  argumentNode: hirExpression;
+  argumentIndex: integer;
+begin
+  if callSite.targetKind = hirCallBuiltin then
+    writeln(outputFile, indentString(depth), prefix,
+            ' builtin target=', hirSymbolRefToString(callSite.targetSymbol),
+            ' argc=', callSite.argumentCount)
+  else
+    writeln(outputFile, indentString(depth), prefix,
+            ' target=', hirSymbolRefToString(callSite.targetSymbol),
+            ' argc=', callSite.argumentCount);
+
+  argumentNode := callSite.firstArgument;
+  argumentIndex := 0;
+  while argumentNode <> nil do
+  begin
+    writeln(outputFile, indentString(depth + 1), 'arg ', argumentIndex);
+    dumpExpression(outputFile, argumentNode, depth + 2);
+    argumentNode := argumentNode^.nextSibling;
+    argumentIndex := argumentIndex + 1
+  end
+end;
+
+procedure dumpCaseArm(var outputFile: Text; caseArmNode: hirCaseArm; depth: integer);
+begin
+  while caseArmNode <> nil do
+  begin
+    writeln(outputFile, indentString(depth), 'casearm ', caseArmNode^.id);
+    writeln(outputFile, indentString(depth + 1), 'when');
+    dumpExpression(outputFile, caseArmNode^.whenExpression, depth + 2);
+    writeln(outputFile, indentString(depth + 1), 'result');
+    dumpExpression(outputFile, caseArmNode^.resultExpression, depth + 2);
+    caseArmNode := caseArmNode^.nextSibling
+  end
+end;
+
+procedure dumpExpression(var outputFile: Text; expressionNode: hirExpression; depth: integer);
+begin
+  if expressionNode = nil then
+  begin
+    writeln(outputFile, indentString(depth), 'expr <nil>');
+    exit
+  end;
+
+  write(outputFile, indentString(depth), 'expr ', expressionNode^.id,
+        ' ', hirExpressionKindToString(expressionNode^.kind),
+        ' type=', hirTypeToString(expressionNode^.valueType));
+  case expressionNode^.kind of
+    hirExprIntegerLiteral,
+    hirExprBooleanLiteral,
+    hirExprCharLiteral:
+      writeln(outputFile, ' value=', expressionNode^.literalValue);
+    hirExprSymbol:
+      writeln(outputFile, ' symbol=', hirSymbolRefToString(expressionNode^.symbolInfo));
+    hirExprUnary:
+      begin
+        writeln(outputFile, ' op=', hirUnaryOperatorToString(expressionNode^.unaryOperator));
+        dumpExpression(outputFile, expressionNode^.operand, depth + 1)
+      end;
+    hirExprBinary:
+      begin
+        writeln(outputFile, ' op=', hirBinaryOperatorToString(expressionNode^.binaryOperator));
+        dumpExpression(outputFile, expressionNode^.leftOperand, depth + 1);
+        dumpExpression(outputFile, expressionNode^.rightOperand, depth + 1)
+      end;
+    hirExprCall:
+      begin
+        writeln(outputFile);
+        dumpCallSite(outputFile, 'call', expressionNode^.callSite, depth + 1)
+      end;
+    hirExprCase:
+      begin
+        writeln(outputFile, ' mode=', hirCaseModeToString(expressionNode^.caseMode));
+        if expressionNode^.selectorExpression <> nil then
+        begin
+          writeln(outputFile, indentString(depth + 1), 'selector');
+          dumpExpression(outputFile, expressionNode^.selectorExpression, depth + 2)
+        end;
+        dumpCaseArm(outputFile, expressionNode^.firstCaseArm, depth + 1);
+        writeln(outputFile, indentString(depth + 1), 'else');
+        dumpExpression(outputFile, expressionNode^.elseExpression, depth + 2)
+      end
+  end
+end;
+
+procedure dumpSwitchLabels(var outputFile: Text; labelNode: hirSwitchLabel; depth: integer);
+begin
+  while labelNode <> nil do
+  begin
+    writeln(outputFile, indentString(depth), 'label value=', labelNode^.value,
+            ' type=', hirTypeToString(labelNode^.valueType));
+    labelNode := labelNode^.nextSibling
+  end
+end;
+
+procedure dumpStatement(var outputFile: Text; statementNode: hirStatement; depth: integer); forward;
+
+procedure dumpSwitchArms(var outputFile: Text; armNode: hirSwitchArm; depth: integer);
+begin
+  while armNode <> nil do
+  begin
+    writeln(outputFile, indentString(depth), 'arm ', armNode^.id,
+            ' labels=', armNode^.labelCount);
+    dumpSwitchLabels(outputFile, armNode^.firstLabel, depth + 1);
+    writeln(outputFile, indentString(depth + 1), 'body');
+    dumpStatement(outputFile, armNode^.body, depth + 2);
+    armNode := armNode^.nextSibling
+  end
+end;
+
+procedure dumpStatement(var outputFile: Text; statementNode: hirStatement; depth: integer);
+var
+  childNode: hirStatement;
+begin
+  if statementNode = nil then
+  begin
+    writeln(outputFile, indentString(depth), 'stmt <nil>');
+    exit
+  end;
+
+  writeln(outputFile, indentString(depth), 'stmt ', statementNode^.id,
+          ' ', hirStatementKindToString(statementNode^.kind));
+  case statementNode^.kind of
+    hirStmtCompound:
+      begin
+        childNode := statementNode^.firstChild;
+        while childNode <> nil do
+        begin
+          dumpStatement(outputFile, childNode, depth + 1);
+          childNode := childNode^.nextSibling
+        end
+      end;
+    hirStmtAssignment:
+      begin
+        writeln(outputFile, indentString(depth + 1), 'target ',
+                hirSymbolRefToString(statementNode^.targetSymbol));
+        writeln(outputFile, indentString(depth + 1), 'value');
+        dumpExpression(outputFile, statementNode^.valueExpression, depth + 2)
+      end;
+    hirStmtCall:
+      dumpCallSite(outputFile, 'call', statementNode^.callSite, depth + 1);
+    hirStmtReturn:
+      dumpExpression(outputFile, statementNode^.valueExpression, depth + 1);
+    hirStmtIf:
+      begin
+        writeln(outputFile, indentString(depth + 1), 'condition');
+        dumpExpression(outputFile, statementNode^.conditionExpression, depth + 2);
+        writeln(outputFile, indentString(depth + 1), 'then');
+        dumpStatement(outputFile, statementNode^.thenBody, depth + 2);
+        if statementNode^.elseBody <> nil then
+        begin
+          writeln(outputFile, indentString(depth + 1), 'else');
+          dumpStatement(outputFile, statementNode^.elseBody, depth + 2)
+        end
+      end;
+    hirStmtWhile:
+      begin
+        writeln(outputFile, indentString(depth + 1), 'condition');
+        dumpExpression(outputFile, statementNode^.conditionExpression, depth + 2);
+        writeln(outputFile, indentString(depth + 1), 'body');
+        dumpStatement(outputFile, statementNode^.body, depth + 2)
+      end;
+    hirStmtRepeat:
+      begin
+        writeln(outputFile, indentString(depth + 1), 'body');
+        dumpStatement(outputFile, statementNode^.body, depth + 2);
+        writeln(outputFile, indentString(depth + 1), 'until');
+        dumpExpression(outputFile, statementNode^.conditionExpression, depth + 2)
+      end;
+    hirStmtFor:
+      begin
+        writeln(outputFile, indentString(depth + 1), 'counter ',
+                hirSymbolRefToString(statementNode^.targetSymbol));
+        writeln(outputFile, indentString(depth + 1), 'start');
+        dumpExpression(outputFile, statementNode^.startExpression, depth + 2);
+        writeln(outputFile, indentString(depth + 1), 'end');
+        dumpExpression(outputFile, statementNode^.endExpression, depth + 2);
+        writeln(outputFile, indentString(depth + 1), 'step');
+        dumpExpression(outputFile, statementNode^.stepExpression, depth + 2);
+        writeln(outputFile, indentString(depth + 1), 'body');
+        dumpStatement(outputFile, statementNode^.body, depth + 2)
+      end;
+    hirStmtSwitch:
+      begin
+        writeln(outputFile, indentString(depth + 1), 'selector');
+        dumpExpression(outputFile, statementNode^.selectorExpression, depth + 2);
+        dumpSwitchArms(outputFile, statementNode^.firstSwitchArm, depth + 1);
+        if statementNode^.elseBody <> nil then
+        begin
+          writeln(outputFile, indentString(depth + 1), 'else');
+          dumpStatement(outputFile, statementNode^.elseBody, depth + 2)
+        end
+      end
+  end
+end;
+
+procedure dumpDeclarations(var outputFile: Text; declarationNode: hirDeclaration; depth: integer);
+begin
+  while declarationNode <> nil do
+  begin
+    write(outputFile, indentString(depth), 'decl ', declarationNode^.id,
+          ' ', hirDeclarationKindToString(declarationNode^.kind),
+          ' ', hirSymbolRefToString(declarationNode^.symbolInfo));
+    if declarationNode^.kind = hirDeclConstant then
+      writeln(outputFile, ' value=', declarationNode^.constantValue)
+    else
+      writeln(outputFile);
+    declarationNode := declarationNode^.nextSibling
+  end
+end;
+
+procedure dumpRoutine(var outputFile: Text; routineNode: hirRoutine; depth: integer);
+begin
+  while routineNode <> nil do
+  begin
+    writeln(outputFile, indentString(depth), 'routine ', routineNode^.id,
+            ' ', hirRoutineKindToString(routineNode^.kind),
+            ' ', identifierToString(routineNode^.name),
+            ' symbol=', routineNode^.symbol,
+            ' return=', hirTypeToString(routineNode^.returnType),
+            ' params=', routineNode^.parameterCount,
+            ' locals=', routineNode^.localCount);
+    if routineNode^.firstParameter <> nil then
+    begin
+      writeln(outputFile, indentString(depth + 1), 'parameters');
+      dumpDeclarations(outputFile, routineNode^.firstParameter, depth + 2)
+    end;
+    if routineNode^.firstLocal <> nil then
+    begin
+      writeln(outputFile, indentString(depth + 1), 'locals');
+      dumpDeclarations(outputFile, routineNode^.firstLocal, depth + 2)
+    end;
+    writeln(outputFile, indentString(depth + 1), 'body');
+    dumpStatement(outputFile, routineNode^.body, depth + 2);
+    routineNode := routineNode^.nextSibling
+  end
+end;
+
+procedure dumpHir(const outputFileName: string; const programData: hirProgramRecord);
+var
+  outputFile: Text;
+begin
+  Assign(outputFile, outputFileName);
+  Rewrite(outputFile);
+  writeln(outputFile, 'hlir program ', identifierToString(programData.name),
+          ' symbol=', programData.symbol,
+          ' globals=', programData.globalCount,
+          ' routines=', programData.routineCount,
+          ' entry=', programData.entryRoutine <> nil);
+  if programData.firstGlobal <> nil then
+  begin
+    writeln(outputFile, 'globals');
+    dumpDeclarations(outputFile, programData.firstGlobal, 1)
+  end;
+  writeln(outputFile, 'entry');
+  dumpRoutine(outputFile, programData.entryRoutine, 1);
+  if programData.firstRoutine <> nil then
+  begin
+    writeln(outputFile, 'routines');
+    dumpRoutine(outputFile, programData.firstRoutine, 1)
+  end;
+  Close(outputFile)
+end;
 
 procedure initializeHirState(var state: hirState);
 begin

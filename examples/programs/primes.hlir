@@ -1,0 +1,86 @@
+hlir program primes symbol=0 globals=3 routines=2 entry=TRUE
+globals
+  decl 1 const max#5:integer value=100
+  decl 2 var arg#6:integer
+  decl 3 var ret#7:boolean
+entry
+  routine 1 program primes symbol=0 return=integer params=0 locals=0
+    body
+      stmt 1 compound
+        stmt 2 compound
+          stmt 3 call
+            call target=printprime#10:integer argc=0
+routines
+  routine 2 procedure isprime symbol=8 return=integer params=0 locals=1
+    locals
+      decl 4 var i#9:integer
+    body
+      stmt 4 compound
+        stmt 5 compound
+          stmt 6 assign
+            target ret#7:boolean
+            value
+              expr 1 bool_lit type=boolean value=1
+          stmt 7 assign
+            target i#9:integer
+            value
+              expr 2 int_lit type=integer value=2
+          stmt 8 while
+            condition
+              expr 3 binary type=boolean op=lt
+                expr 4 symbol type=integer symbol=i#9:integer
+                expr 5 symbol type=integer symbol=arg#6:integer
+            body
+              stmt 9 compound
+                stmt 10 if
+                  condition
+                    expr 6 binary type=boolean op=eq
+                      expr 7 binary type=integer op=mul
+                        expr 8 binary type=integer op=div
+                          expr 9 symbol type=integer symbol=arg#6:integer
+                          expr 10 symbol type=integer symbol=i#9:integer
+                        expr 11 symbol type=integer symbol=i#9:integer
+                      expr 12 symbol type=integer symbol=arg#6:integer
+                  then
+                    stmt 11 compound
+                      stmt 12 assign
+                        target ret#7:boolean
+                        value
+                          expr 13 bool_lit type=boolean value=0
+                      stmt 13 assign
+                        target i#9:integer
+                        value
+                          expr 14 symbol type=integer symbol=arg#6:integer
+                stmt 14 assign
+                  target i#9:integer
+                  value
+                    expr 15 binary type=integer op=add
+                      expr 16 symbol type=integer symbol=i#9:integer
+                      expr 17 int_lit type=integer value=1
+  routine 3 procedure printprime symbol=10 return=integer params=0 locals=0
+    body
+      stmt 15 compound
+        stmt 16 compound
+          stmt 17 for
+            counter arg#6:integer
+            start
+              expr 18 int_lit type=integer value=2
+            end
+              expr 19 binary type=integer op=sub
+                expr 20 symbol type=integer symbol=max#5:integer
+                expr 21 int_lit type=integer value=1
+            step
+              expr 22 int_lit type=integer value=1
+            body
+              stmt 18 compound
+                stmt 19 call
+                  call target=isprime#8:integer argc=0
+                stmt 20 if
+                  condition
+                    expr 23 symbol type=boolean symbol=ret#7:boolean
+                  then
+                    stmt 21 compound
+                      stmt 22 call
+                        call builtin target=writeln#4:integer builtin=writeln argc=1
+                          arg 0
+                            expr 24 symbol type=integer symbol=arg#6:integer

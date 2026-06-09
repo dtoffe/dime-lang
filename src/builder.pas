@@ -17,7 +17,8 @@ procedure buildFile(const inputFileName: string);
 implementation
 
 uses
-  SysUtils, diagnostics, astree, parser, semantics, llir, llircgen, pcode;
+  SysUtils, diagnostics, astree, parser, semantics, hlir, asttohlir, llir,
+  llircgen, pcode;
 
 procedure dumpAstIfVerbose(rootNode: astNode);
 begin
@@ -28,10 +29,12 @@ end;
 procedure buildFile(const inputFileName: string);
 var
   programNode: astNode;
+  hirProgramData: hirProgramRecord;
   errorCount: integer;
 begin
   errorCount := 0;
   programNode := nil;
+  initializeHirProgram(hirProgramData);
 
   emitDiagnostic(status, STATUS_COMPILER_PROCESSING_FILE + inputFileName);
   parseFile(inputFileName, programNode, errorCount);
@@ -44,6 +47,17 @@ begin
 
   if errorCount = 0 then
   begin
+    lowerAstToHirProgram(programNode, hirProgramData, errorCount);
+    if errorCount = 0 then
+      dumpHir(ChangeFileExt(inputFileName, '.hlir'), hirProgramData);
+
+    if errorCount <> 0 then
+    begin
+      emitDiagnostic(status, STATUS_COMPILER_ERRORS);
+      freeAst(programNode);
+      exit
+    end;
+
     generateLlirProgram(programNode, errorCount);
     if errorCount = 0 then
       dumpLlir(ChangeFileExt(inputFileName, '.tac'));
