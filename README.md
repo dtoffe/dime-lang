@@ -66,6 +66,7 @@ While the general idea is to borrow and cherrypick features from all of them, an
 - [Changelog](CHANGELOG.md)
 - [Roadmap](ROADMAP.md)
 - [Release Checklist](RELEASING.md)
+- [LLIR](docs/LLIR.md)
 
 ## Example program: Fizzbuzz
 
@@ -125,11 +126,12 @@ Compile a source file once:
 ./src/dimec examples/programs/fizzbuzz.pl0 [quiet|all]
 ```
 
-That writes both target files beside the source:
+That writes the current intermediate and target files beside the source:
 
 ```text
+examples/programs/fizzbuzz.hlir
+examples/programs/fizzbuzz.llir
 examples/programs/fizzbuzz.pcode
-examples/programs/fizzbuzz.tac
 ```
 
 Run the p-code image with the p-code interpreter:
@@ -138,8 +140,8 @@ Run the p-code image with the p-code interpreter:
 ./src/pcodeint examples/programs/fizzbuzz.pcode [quiet|all]
 ```
 
-Run the TAC IR image with the TAC interpreter:
+Run the LLIR image with the LLIR interpreter:
 
 ```sh
-./src/tacirint examples/programs/fizzbuzz.tac [quiet|all]
+./src/llirint examples/programs/fizzbuzz.llir [quiet|all]
 ```
