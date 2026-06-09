@@ -15,6 +15,7 @@ and this project is expected to follow [Semantic Versioning](https://semver.org/
 
 ### [Changed]
 
+- Rewire LLIR to be generated from HLIR instead of AST.
 - Rename references to `tacir` in all source files to `llir`.
 
 ## [v0.0.11] - 2026-06-07

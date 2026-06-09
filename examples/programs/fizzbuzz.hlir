@@ -1,0 +1,196 @@
+hlir program fizzbuzz symbol=0 globals=15 routines=1 entry=TRUE
+globals
+  decl 1 const max#5:integer value=100
+  decl 2 const three#6:integer value=3
+  decl 3 const five#7:integer value=5
+  decl 4 const cf#8:char value=70
+  decl 5 const cb#9:char value=66
+  decl 6 const cn#10:char value=78
+  decl 7 const cc#11:char value=58
+  decl 8 var n#12:integer
+  decl 9 var fizz#13:boolean
+  decl 10 var buzz#14:boolean
+  decl 11 var cnorm#15:integer
+  decl 12 var cfizz#16:integer
+  decl 13 var cbuzz#17:integer
+  decl 14 var cfb#18:integer
+  decl 15 var sumcnt#19:integer
+entry
+  routine 1 program fizzbuzz symbol=0 return=integer params=0 locals=0
+    body
+      stmt 1 compound
+        stmt 2 compound
+          stmt 3 assign
+            target cnorm#15:integer
+            value
+              expr 1 int_lit type=integer value=0
+          stmt 4 assign
+            target cfizz#16:integer
+            value
+              expr 2 int_lit type=integer value=0
+          stmt 5 assign
+            target cbuzz#17:integer
+            value
+              expr 3 int_lit type=integer value=0
+          stmt 6 assign
+            target cfb#18:integer
+            value
+              expr 4 int_lit type=integer value=0
+          stmt 7 assign
+            target sumcnt#19:integer
+            value
+              expr 5 int_lit type=integer value=0
+          stmt 8 for
+            counter n#12:integer
+            start
+              expr 6 int_lit type=integer value=1
+            end
+              expr 7 symbol type=integer symbol=max#5:integer
+            step
+              expr 8 int_lit type=integer value=1
+            body
+              stmt 9 compound
+                stmt 10 assign
+                  target fizz#13:boolean
+                  value
+                    expr 9 binary type=boolean op=eq
+                      expr 10 binary type=integer op=mul
+                        expr 11 binary type=integer op=div
+                          expr 12 symbol type=integer symbol=n#12:integer
+                          expr 13 symbol type=integer symbol=three#6:integer
+                        expr 14 symbol type=integer symbol=three#6:integer
+                      expr 15 symbol type=integer symbol=n#12:integer
+                stmt 11 assign
+                  target buzz#14:boolean
+                  value
+                    expr 16 binary type=boolean op=eq
+                      expr 17 binary type=integer op=mul
+                        expr 18 binary type=integer op=div
+                          expr 19 symbol type=integer symbol=n#12:integer
+                          expr 20 symbol type=integer symbol=five#7:integer
+                        expr 21 symbol type=integer symbol=five#7:integer
+                      expr 22 symbol type=integer symbol=n#12:integer
+                stmt 12 if
+                  condition
+                    expr 23 binary type=boolean op=and
+                      expr 24 symbol type=boolean symbol=fizz#13:boolean
+                      expr 25 symbol type=boolean symbol=buzz#14:boolean
+                  then
+                    stmt 13 compound
+                      stmt 14 call
+                        call builtin target=write#3:integer builtin=write argc=1
+                          arg 0
+                            expr 26 symbol type=char symbol=cf#8:char
+                      stmt 15 call
+                        call builtin target=writeln#4:integer builtin=writeln argc=1
+                          arg 0
+                            expr 27 symbol type=char symbol=cb#9:char
+                      stmt 16 assign
+                        target cfb#18:integer
+                        value
+                          expr 28 binary type=integer op=add
+                            expr 29 symbol type=integer symbol=cfb#18:integer
+                            expr 30 int_lit type=integer value=1
+                  else
+                    stmt 17 if
+                      condition
+                        expr 31 symbol type=boolean symbol=fizz#13:boolean
+                      then
+                        stmt 18 compound
+                          stmt 19 call
+                            call builtin target=writeln#4:integer builtin=writeln argc=1
+                              arg 0
+                                expr 32 symbol type=char symbol=cf#8:char
+                          stmt 20 assign
+                            target cfizz#16:integer
+                            value
+                              expr 33 binary type=integer op=add
+                                expr 34 symbol type=integer symbol=cfizz#16:integer
+                                expr 35 int_lit type=integer value=1
+                      else
+                        stmt 21 if
+                          condition
+                            expr 36 symbol type=boolean symbol=buzz#14:boolean
+                          then
+                            stmt 22 compound
+                              stmt 23 call
+                                call builtin target=writeln#4:integer builtin=writeln argc=1
+                                  arg 0
+                                    expr 37 symbol type=char symbol=cb#9:char
+                              stmt 24 assign
+                                target cbuzz#17:integer
+                                value
+                                  expr 38 binary type=integer op=add
+                                    expr 39 symbol type=integer symbol=cbuzz#17:integer
+                                    expr 40 int_lit type=integer value=1
+                          else
+                            stmt 25 compound
+                              stmt 26 call
+                                call builtin target=writeln#4:integer builtin=writeln argc=1
+                                  arg 0
+                                    expr 41 symbol type=integer symbol=n#12:integer
+                              stmt 27 assign
+                                target cnorm#15:integer
+                                value
+                                  expr 42 binary type=integer op=add
+                                    expr 43 symbol type=integer symbol=cnorm#15:integer
+                                    expr 44 int_lit type=integer value=1
+          stmt 28 call
+            call target=printsumma#20:integer argc=0
+routines
+  routine 2 procedure printsumma symbol=20 return=integer params=0 locals=0
+    body
+      stmt 29 compound
+        stmt 30 compound
+          stmt 31 call
+            call builtin target=write#3:integer builtin=write argc=1
+              arg 0
+                expr 45 symbol type=char symbol=cn#10:char
+          stmt 32 call
+            call builtin target=write#3:integer builtin=write argc=1
+              arg 0
+                expr 46 symbol type=char symbol=cc#11:char
+          stmt 33 call
+            call builtin target=writeln#4:integer builtin=writeln argc=1
+              arg 0
+                expr 47 symbol type=integer symbol=cnorm#15:integer
+          stmt 34 call
+            call builtin target=write#3:integer builtin=write argc=1
+              arg 0
+                expr 48 symbol type=char symbol=cf#8:char
+          stmt 35 call
+            call builtin target=write#3:integer builtin=write argc=1
+              arg 0
+                expr 49 symbol type=char symbol=cc#11:char
+          stmt 36 call
+            call builtin target=writeln#4:integer builtin=writeln argc=1
+              arg 0
+                expr 50 symbol type=integer symbol=cfizz#16:integer
+          stmt 37 call
+            call builtin target=write#3:integer builtin=write argc=1
+              arg 0
+                expr 51 symbol type=char symbol=cb#9:char
+          stmt 38 call
+            call builtin target=write#3:integer builtin=write argc=1
+              arg 0
+                expr 52 symbol type=char symbol=cc#11:char
+          stmt 39 call
+            call builtin target=writeln#4:integer builtin=writeln argc=1
+              arg 0
+                expr 53 symbol type=integer symbol=cbuzz#17:integer
+          stmt 40 call
+            call builtin target=write#3:integer builtin=write argc=1
+              arg 0
+                expr 54 symbol type=char symbol=cf#8:char
+          stmt 41 call
+            call builtin target=write#3:integer builtin=write argc=1
+              arg 0
+                expr 55 symbol type=char symbol=cb#9:char
+          stmt 42 call
+            call builtin target=write#3:integer builtin=write argc=1
+              arg 0
+                expr 56 symbol type=char symbol=cc#11:char
+          stmt 43 call
+            call builtin target=writeln#4:integer builtin=writeln argc=1
+              arg 0
+                expr 57 symbol type=integer symbol=cfb#18:integer

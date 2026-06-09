@@ -58,7 +58,7 @@ begin
       exit
     end;
 
-    generateLlirProgram(programNode, errorCount);
+    generateLlirProgram(hirProgramData, errorCount);
     if errorCount = 0 then
       dumpLlir(ChangeFileExt(inputFileName, '.tac'));
 

@@ -889,24 +889,42 @@ var
 begin
   if instruction.targetOperand.name = 'read_int' then
   begin
-    lastCallResultValue := readValueByIntrinsic('read_int', 'integer');
-    lastCallResultIsValue := true;
-    hasLastCallResult := true
+    value := readValueByIntrinsic('read_int', 'integer');
+    if instruction.resultOperand.kind <> rtOperandNone then
+      assignOperand(instruction.resultOperand, value)
+    else
+    begin
+      lastCallResultValue := value;
+      lastCallResultIsValue := true;
+      hasLastCallResult := true
+    end
   end
   else if instruction.targetOperand.name = 'read_char' then
   begin
-    lastCallResultValue := readValueByIntrinsic('read_char', 'char');
-    lastCallResultIsValue := true;
-    hasLastCallResult := true
+    value := readValueByIntrinsic('read_char', 'char');
+    if instruction.resultOperand.kind <> rtOperandNone then
+      assignOperand(instruction.resultOperand, value)
+    else
+    begin
+      lastCallResultValue := value;
+      lastCallResultIsValue := true;
+      hasLastCallResult := true
+    end
   end
   else if instruction.targetOperand.name = 'write_int' then
   begin
-    value := pendingCallArguments[1];
+    if instruction.callArgumentCount >= 1 then
+      value := operandValue(instruction.callArguments[1])
+    else
+      value := pendingCallArguments[1];
     Write(value)
   end
   else if instruction.targetOperand.name = 'write_char' then
   begin
-    value := pendingCallArguments[1];
+    if instruction.callArgumentCount >= 1 then
+      value := operandValue(instruction.callArguments[1])
+    else
+      value := pendingCallArguments[1];
     Write(Chr(value))
   end
   else if instruction.targetOperand.name = 'write_string' then
