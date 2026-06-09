@@ -17,7 +17,7 @@ procedure buildFile(const inputFileName: string);
 implementation
 
 uses
-  SysUtils, diagnostics, astree, parser, semantics, tacir, tacircgen, pcode;
+  SysUtils, diagnostics, astree, parser, semantics, llir, llircgen, pcode;
 
 procedure dumpAstIfVerbose(rootNode: astNode);
 begin
@@ -44,9 +44,9 @@ begin
 
   if errorCount = 0 then
   begin
-    generateTacIrProgram(programNode, errorCount);
+    generateLlirProgram(programNode, errorCount);
     if errorCount = 0 then
-      dumpTacIr(ChangeFileExt(inputFileName, '.tac'));
+      dumpLlir(ChangeFileExt(inputFileName, '.tac'));
 
     if errorCount <> 0 then
     begin

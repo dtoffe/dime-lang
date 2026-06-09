@@ -2,13 +2,13 @@
   License: MIT. See LICENSE in the project root.
   Date: 2026-05-31
 
-  AST-to-TAC lowering support for the compiler pipeline. This unit walks the
-  semantically analyzed AST and uses tacir as a low-level service to build a
+  AST-to-LLIR lowering support for the compiler pipeline. This unit walks the
+  semantically analyzed AST and uses llir as a low-level service to build a
   symbolic three-address-code image. It owns structural translation only:
   expression trees become temporaries, and control-flow nodes become labels and
   conditional/unconditional jumps. It does not parse source text, perform
   semantic checks, allocate registers, assign stack slots, or emit target code. }
-unit tacircgen;
+unit llircgen;
 
 {$mode objfpc}
 
@@ -17,12 +17,12 @@ interface
 uses
   astree;
 
-procedure generateTacIrProgram(rootNode: astNode; var errorCount: integer);
+procedure generateLlirProgram(rootNode: astNode; var errorCount: integer);
 
 implementation
 
 uses
-  semantics, symboltable, tacir, tokens, typetable;
+  semantics, symboltable, llir, tokens, typetable;
 
 var
   currentLoweredFunctionSymbol: symbolIndex;
@@ -947,7 +947,7 @@ begin
   end
 end;
 
-procedure generateTacIrProgram(rootNode: astNode; var errorCount: integer);
+procedure generateLlirProgram(rootNode: astNode; var errorCount: integer);
 var
   programBlock: astNode;
   procedureIndex: tacProcedureIndex;
@@ -955,7 +955,7 @@ begin
   if rootNode = nil then
     exit;
 
-  initializeTacIr;
+  initializeLlir;
   currentLoweredFunctionSymbol := 0;
   loopBreakLabelCount := 0;
   loopContinueLabelCount := 0;

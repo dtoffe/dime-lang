@@ -2,13 +2,14 @@
   License: MIT. See LICENSE in the project root.
   Date: 2026-06-05
 
-  Three-address-code intermediate representation definitions and low-level
-  state management. This unit owns the current TAC image, issues temporary and
-  label identifiers, appends procedures, basic blocks, and instructions, and can
-  dump the generated IR for inspection. It deliberately stays data-only: flat
-  records, fixed arrays, and counts. It does not know about AST nodes, parsing,
-  register allocation, stack slots, or target-code emission. }
-unit tacir;
+  Lower-level IR definitions and state management for the current normalized
+  TAC-based backend representation. This unit owns the current LLIR image,
+  issues temporary and label identifiers, appends procedures, basic blocks, and
+  instructions, and can dump the generated IR for inspection. It deliberately
+  stays data-only: flat records, fixed arrays, and counts. It does not know
+  about AST nodes, parsing, register allocation, stack slots, or target-code
+  emission. }
+unit llir;
 
 {$mode objfpc}
 
@@ -200,9 +201,9 @@ type
     overflow: boolean
   end;
 
-procedure initializeTacIr;
-function tacIrOverflowed: boolean;
-procedure getTacProgram(var targetProgram: tacProgram);
+procedure initializeLlir;
+function llirOverflowed: boolean;
+procedure getLlirProgram(var targetProgram: tacProgram);
 
 function makeTacNoneOperand: tacOperand;
 function makeTacConstOperand(const constantValue: integer; valueType: typeValue): tacOperand;
@@ -237,8 +238,8 @@ procedure setTacCallArgument(var instruction: tacInstruction; argumentIndex: int
 function findTacTemporaryFrameSlot(procedureIndex: tacProcedureIndex;
                                    temporaryId: tacTemporaryId;
                                    var slot: tacFrameSlot): boolean;
-procedure dumpTacIr(const outputFileName: string);
-procedure syncTacProcedurePrologue(procedureIndex: tacProcedureIndex);
+procedure dumpLlir(const outputFileName: string);
+procedure syncLlirProcedurePrologue(procedureIndex: tacProcedureIndex);
 
 implementation
 
@@ -416,7 +417,7 @@ begin
   end
 end;
 
-procedure syncTacProcedurePrologue(procedureIndex: tacProcedureIndex);
+procedure syncLlirProcedurePrologue(procedureIndex: tacProcedureIndex);
 var
   prologueIndex: tacInstructionIndex;
 begin
@@ -816,7 +817,7 @@ begin
 
     frameInfo.frameSize := frameInfo.localAreaSize + frameInfo.temporaryAreaSize
   end;
-  syncTacProcedurePrologue(procedureIndex)
+  syncLlirProcedurePrologue(procedureIndex)
 end;
 
 function classifySymbolOperand(symbol: symbolIndex): tacOperandKind;
@@ -894,19 +895,19 @@ begin
   end
 end;
 
-procedure initializeTacIr;
+procedure initializeLlir;
 begin
   FillChar(currentProgram, SizeOf(currentProgram), 0);
   currentProcedure := 0;
   currentBasicBlock := 0
 end;
 
-function tacIrOverflowed: boolean;
+function llirOverflowed: boolean;
 begin
-  tacIrOverflowed := currentProgram.overflow
+  llirOverflowed := currentProgram.overflow
 end;
 
-procedure getTacProgram(var targetProgram: tacProgram);
+procedure getLlirProgram(var targetProgram: tacProgram);
 begin
   targetProgram := currentProgram
 end;
@@ -1325,7 +1326,7 @@ begin
   writeln(outputFile)
 end;
 
-procedure dumpTacIr(const outputFileName: string);
+procedure dumpLlir(const outputFileName: string);
 var
   outputFile: Text;
   procedureIndex, itemIndex, instructionIndex, blockLastInstruction, labelIndex: integer;
@@ -1416,6 +1417,6 @@ begin
 end;
 
 initialization
-  initializeTacIr;
+  initializeLlir;
 
 end.

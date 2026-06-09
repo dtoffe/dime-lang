@@ -2,12 +2,12 @@
   License: MIT. See LICENSE in the project root.
   Date: 2026-06-05
 
-  TAC IR interpreter. This standalone program reads the textual .tac image
-  dumped by tacir, reconstructs procedure-scoped TAC units, and executes them
+  LLIR interpreter. This standalone program reads the textual .tac image
+  dumped by llir, reconstructs procedure-scoped TAC units, and executes them
   directly. It stays intentionally close to the staged TAC model: variables
   remain symbolic, temporaries are numeric slots, labels are symbolic jump
   targets, and procedure calls use a small return-address stack. }
-program tacirint;
+program llirint;
 
 {$mode objfpc}
 {$H+}
@@ -1210,7 +1210,7 @@ end;
 begin
   if ParamCount < 1 then
   begin
-    WriteLn('Usage: tacirint <tac-file> [quiet|all]');
+    WriteLn('Usage: llirint <tac-file> [quiet|all]');
     halt(1)
   end;
 

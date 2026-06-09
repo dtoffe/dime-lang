@@ -1,15 +1,15 @@
 tac program
 procedures 3
-proc 1 primes symbol=0 return=none params=0 locals=0 temps=0 blocks=1 labels=1 instructions=4
+proc 1 primes return=none params=0 locals=0 temps=0 blocks=1 labels=1 instructions=4
   frame params=0 locals=0 temps=0 temp_policy=stack_slots param_area=0 local_area=0 temp_area=0 frame_size=0
   block 1 label=L1 first=1 count=4
    1 enter left=imm(0):integer/dword
-   2 call target=proc[s10|printprime]:address
+   2 call target=proc[printprime]:address
    3 leave
    4 return
   labelmap L1 block=1 first=1
 endproc
-proc 2 isprime symbol=8 return=none params=0 locals=1 temps=17 blocks=6 labels=4 instructions=28
+proc 2 isprime return=none params=0 locals=1 temps=17 blocks=6 labels=4 instructions=28
   local 1 local[i]:integer/dword
   frame params=0 locals=1 temps=17 temp_policy=stack_slots param_area=0 local_area=4 temp_area=56 frame_size=60
   frame_local 1 local[i]:integer/dword offset=-4 size=4
@@ -69,7 +69,7 @@ proc 2 isprime symbol=8 return=none params=0 locals=1 temps=17 blocks=6 labels=4
   labelmap L4 block=6 first=27
   labelmap L5 block=5 first=22
 endproc
-proc 3 printprime symbol=10 return=none params=0 locals=0 temps=11 blocks=6 labels=5 instructions=23
+proc 3 printprime return=none params=0 locals=0 temps=11 blocks=6 labels=5 instructions=23
   frame params=0 locals=0 temps=11 temp_policy=stack_slots param_area=0 local_area=0 temp_area=38 frame_size=38
   frame_temp 1 temp[t18]:integer/dword storage=stack_slot offset=-4 size=4
   frame_temp 2 temp[t19]:integer/dword storage=stack_slot offset=-8 size=4
@@ -94,7 +94,7 @@ proc 3 printprime symbol=10 return=none params=0 locals=0 temps=11 blocks=6 labe
    8 cmp_le result=temp[t22]:boolean/byte left=temp[t23]:integer/dword right=temp[t21]:integer/dword
    9 brfalse left=temp[t22]:boolean/byte target=label[L9]:address
   block 3 first=10 count=3
-  10 call target=proc[s8|isprime]:address
+  10 call target=proc[isprime]:address
   11 load result=temp[t24]:boolean/byte left=global[ret]:boolean/byte
   12 brfalse left=temp[t24]:boolean/byte target=label[L10]:address
   block 4 first=13 count=4
