@@ -1,0 +1,40 @@
+hlir program booldemo symbol=0 globals=2 routines=0 entry=TRUE
+globals
+  decl 1 const truth#5:boolean value=1
+  decl 2 var flag#6:boolean
+entry
+  routine 1 program booldemo symbol=0 return=integer params=0 locals=0
+    body
+      stmt 1 compound
+        stmt 2 compound
+          stmt 3 assign
+            target flag#6:boolean
+            value
+              expr 1 binary type=boolean op=and
+                expr 2 symbol type=boolean symbol=truth#5:boolean
+                expr 3 unary type=boolean op=not
+                  expr 4 bool_lit type=boolean value=0
+          stmt 4 assign
+            target flag#6:boolean
+            value
+              expr 5 binary type=boolean op=or
+                expr 6 binary type=boolean op=xor
+                  expr 7 symbol type=boolean symbol=flag#6:boolean
+                  expr 8 bool_lit type=boolean value=0
+                expr 9 bool_lit type=boolean value=0
+          stmt 5 if
+            condition
+              expr 10 symbol type=boolean symbol=flag#6:boolean
+            then
+              stmt 6 compound
+                stmt 7 assign
+                  target flag#6:boolean
+                  value
+                    expr 11 binary type=boolean op=and
+                      expr 12 binary type=boolean op=lt
+                        expr 13 int_lit type=integer value=1
+                        expr 14 int_lit type=integer value=2
+                      expr 15 unary type=boolean op=not
+                        expr 16 binary type=boolean op=eq
+                          expr 17 symbol type=boolean symbol=truth#5:boolean
+                          expr 18 bool_lit type=boolean value=0

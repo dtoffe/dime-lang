@@ -1,0 +1,88 @@
+hlir program recursive symbol=0 globals=2 routines=1 entry=TRUE
+globals
+  decl 1 var f#5:integer
+  decl 2 var n#6:integer
+entry
+  routine 1 program recursive symbol=0 return=integer params=0 locals=0
+    body
+      stmt 1 compound
+        stmt 2 compound
+          stmt 3 assign
+            target n#6:integer
+            value
+              expr 1 int_lit type=integer value=7
+          stmt 4 if
+            condition
+              expr 2 binary type=boolean op=lt
+                expr 3 symbol type=integer symbol=n#6:integer
+                expr 4 int_lit type=integer value=0
+            then
+              stmt 5 compound
+                stmt 6 assign
+                  target f#5:integer
+                  value
+                    expr 5 unary type=integer op=neg
+                      expr 6 int_lit type=integer value=1
+          stmt 7 if
+            condition
+              expr 7 binary type=boolean op=eq
+                expr 8 symbol type=integer symbol=n#6:integer
+                expr 9 int_lit type=integer value=0
+            then
+              stmt 8 compound
+                stmt 9 assign
+                  target f#5:integer
+                  value
+                    expr 10 int_lit type=integer value=1
+          stmt 10 if
+            condition
+              expr 11 binary type=boolean op=gt
+                expr 12 symbol type=integer symbol=n#6:integer
+                expr 13 int_lit type=integer value=0
+            then
+              stmt 11 compound
+                stmt 12 call
+                  call target=fact#7:integer argc=0
+routines
+  routine 2 procedure fact symbol=7 return=integer params=0 locals=1
+    locals
+      decl 3 var ans1#8:integer
+    body
+      stmt 13 compound
+        stmt 14 compound
+          stmt 15 assign
+            target ans1#8:integer
+            value
+              expr 14 symbol type=integer symbol=n#6:integer
+          stmt 16 assign
+            target n#6:integer
+            value
+              expr 15 binary type=integer op=sub
+                expr 16 symbol type=integer symbol=n#6:integer
+                expr 17 int_lit type=integer value=1
+          stmt 17 if
+            condition
+              expr 18 binary type=boolean op=eq
+                expr 19 symbol type=integer symbol=n#6:integer
+                expr 20 int_lit type=integer value=0
+            then
+              stmt 18 compound
+                stmt 19 assign
+                  target f#5:integer
+                  value
+                    expr 21 int_lit type=integer value=1
+          stmt 20 if
+            condition
+              expr 22 binary type=boolean op=gt
+                expr 23 symbol type=integer symbol=n#6:integer
+                expr 24 int_lit type=integer value=0
+            then
+              stmt 21 compound
+                stmt 22 call
+                  call target=fact#7:integer argc=0
+          stmt 23 assign
+            target f#5:integer
+            value
+              expr 25 binary type=integer op=mul
+                expr 26 symbol type=integer symbol=f#5:integer
+                expr 27 symbol type=integer symbol=ans1#8:integer

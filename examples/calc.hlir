@@ -1,0 +1,170 @@
+hlir program calc symbol=0 globals=8 routines=5 entry=TRUE
+globals
+  decl 1 const addop#5:integer value=1
+  decl 2 const subop#6:integer value=2
+  decl 3 const multop#7:integer value=3
+  decl 4 const divop#8:integer value=4
+  decl 5 var op#9:integer
+  decl 6 var x#10:integer
+  decl 7 var y#11:integer
+  decl 8 var done#12:integer
+entry
+  routine 1 program calc symbol=0 return=integer params=0 locals=0
+    body
+      stmt 1 compound
+        stmt 2 compound
+          stmt 3 assign
+            target done#12:integer
+            value
+              expr 1 int_lit type=integer value=0
+          stmt 4 assign
+            target x#10:integer
+            value
+              expr 2 int_lit type=integer value=20
+          stmt 5 while
+            condition
+              expr 3 binary type=boolean op=eq
+                expr 4 symbol type=integer symbol=done#12:integer
+                expr 5 int_lit type=integer value=0
+            body
+              stmt 6 compound
+                stmt 7 assign
+                  target op#9:integer
+                  value
+                    expr 6 int_lit type=integer value=1
+                stmt 8 if
+                  condition
+                    expr 7 binary type=boolean op=lt
+                      expr 8 symbol type=integer symbol=op#9:integer
+                      expr 9 int_lit type=integer value=1
+                  then
+                    stmt 9 compound
+                      stmt 10 assign
+                        target done#12:integer
+                        value
+                          expr 10 int_lit type=integer value=1
+                stmt 11 if
+                  condition
+                    expr 11 binary type=boolean op=gt
+                      expr 12 symbol type=integer symbol=op#9:integer
+                      expr 13 int_lit type=integer value=4
+                  then
+                    stmt 12 compound
+                      stmt 13 assign
+                        target done#12:integer
+                        value
+                          expr 14 int_lit type=integer value=1
+                stmt 14 if
+                  condition
+                    expr 15 binary type=boolean op=eq
+                      expr 16 symbol type=integer symbol=done#12:integer
+                      expr 17 int_lit type=integer value=0
+                  then
+                    stmt 15 compound
+                      stmt 16 assign
+                        target y#11:integer
+                        value
+                          expr 18 int_lit type=integer value=4
+                      stmt 17 call
+                        call target=calculate#18:integer argc=0
+routines
+  routine 2 procedure add symbol=13 return=integer params=0 locals=0
+    body
+      stmt 18 compound
+        stmt 19 compound
+          stmt 20 assign
+            target x#10:integer
+            value
+              expr 19 binary type=integer op=add
+                expr 20 symbol type=integer symbol=x#10:integer
+                expr 21 symbol type=integer symbol=y#11:integer
+  routine 3 procedure sub symbol=14 return=integer params=0 locals=0
+    body
+      stmt 21 compound
+        stmt 22 compound
+          stmt 23 assign
+            target x#10:integer
+            value
+              expr 22 binary type=integer op=sub
+                expr 23 symbol type=integer symbol=x#10:integer
+                expr 24 symbol type=integer symbol=y#11:integer
+  routine 4 procedure mult symbol=15 return=integer params=0 locals=1
+    locals
+      decl 9 var c#16:integer
+    body
+      stmt 24 compound
+        stmt 25 compound
+          stmt 26 assign
+            target x#10:integer
+            value
+              expr 25 binary type=integer op=mul
+                expr 26 symbol type=integer symbol=x#10:integer
+                expr 27 symbol type=integer symbol=y#11:integer
+  routine 5 procedure div symbol=17 return=integer params=0 locals=0
+    body
+      stmt 27 compound
+        stmt 28 compound
+          stmt 29 if
+            condition
+              expr 28 binary type=boolean op=ne
+                expr 29 symbol type=integer symbol=y#11:integer
+                expr 30 int_lit type=integer value=0
+            then
+              stmt 30 compound
+                stmt 31 assign
+                  target x#10:integer
+                  value
+                    expr 31 binary type=integer op=div
+                      expr 32 symbol type=integer symbol=x#10:integer
+                      expr 33 symbol type=integer symbol=y#11:integer
+          stmt 32 if
+            condition
+              expr 34 binary type=boolean op=eq
+                expr 35 symbol type=integer symbol=y#11:integer
+                expr 36 int_lit type=integer value=0
+            then
+              stmt 33 compound
+                stmt 34 assign
+                  target done#12:integer
+                  value
+                    expr 37 int_lit type=integer value=1
+  routine 6 procedure calculate symbol=18 return=integer params=0 locals=0
+    body
+      stmt 35 compound
+        stmt 36 compound
+          stmt 37 if
+            condition
+              expr 38 binary type=boolean op=eq
+                expr 39 symbol type=integer symbol=op#9:integer
+                expr 40 symbol type=integer symbol=addop#5:integer
+            then
+              stmt 38 compound
+                stmt 39 call
+                  call target=add#13:integer argc=0
+          stmt 40 if
+            condition
+              expr 41 binary type=boolean op=eq
+                expr 42 symbol type=integer symbol=op#9:integer
+                expr 43 symbol type=integer symbol=subop#6:integer
+            then
+              stmt 41 compound
+                stmt 42 call
+                  call target=sub#14:integer argc=0
+          stmt 43 if
+            condition
+              expr 44 binary type=boolean op=eq
+                expr 45 symbol type=integer symbol=op#9:integer
+                expr 46 symbol type=integer symbol=multop#7:integer
+            then
+              stmt 44 compound
+                stmt 45 call
+                  call target=mult#15:integer argc=0
+          stmt 46 if
+            condition
+              expr 47 binary type=boolean op=eq
+                expr 48 symbol type=integer symbol=op#9:integer
+                expr 49 symbol type=integer symbol=divop#8:integer
+            then
+              stmt 47 compound
+                stmt 48 call
+                  call target=div#17:integer argc=0

@@ -101,4 +101,7 @@ proc 2 fact return=none params=0 locals=1 temps=14 blocks=5 labels=3 instruction
   22 store result=global[f]:integer/dword left=temp[t27]:integer/dword
   23 leave
   24 return
+  labelmap L5 block=1 first=1
+  labelmap L6 block=3 first=14
+  labelmap L7 block=5 first=19
 endproc

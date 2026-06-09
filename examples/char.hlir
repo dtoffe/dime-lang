@@ -1,0 +1,36 @@
+hlir program chardemo symbol=0 globals=5 routines=0 entry=TRUE
+globals
+  decl 1 const lowera#5:char value=97
+  decl 2 const lowerz#6:char value=122
+  decl 3 var first#7:char
+  decl 4 var last#8:char
+  decl 5 var ordered#9:boolean
+entry
+  routine 1 program chardemo symbol=0 return=integer params=0 locals=0
+    body
+      stmt 1 compound
+        stmt 2 compound
+          stmt 3 assign
+            target first#7:char
+            value
+              expr 1 symbol type=char symbol=lowera#5:char
+          stmt 4 assign
+            target last#8:char
+            value
+              expr 2 symbol type=char symbol=lowerz#6:char
+          stmt 5 assign
+            target ordered#9:boolean
+            value
+              expr 3 binary type=boolean op=lt
+                expr 4 symbol type=char symbol=first#7:char
+                expr 5 symbol type=char symbol=last#8:char
+          stmt 6 assign
+            target ordered#9:boolean
+            value
+              expr 6 binary type=boolean op=and
+                expr 7 binary type=boolean op=eq
+                  expr 8 symbol type=char symbol=first#7:char
+                  expr 9 symbol type=char symbol=lowera#5:char
+                expr 10 binary type=boolean op=gt
+                  expr 11 symbol type=char symbol=last#8:char
+                  expr 12 symbol type=char symbol=first#7:char

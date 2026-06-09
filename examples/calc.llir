@@ -1,27 +1,35 @@
 tac program
 procedures 6
-proc 1 calc return=none params=0 locals=0 temps=18 blocks=10 labels=6 instructions=33
-  frame params=0 locals=0 temps=18 temp_policy=stack_slots param_area=0 local_area=0 temp_area=60 frame_size=60
-  frame_temp 1 temp[t1]:integer/dword storage=stack_slot offset=-4 size=4
-  frame_temp 2 temp[t2]:integer/dword storage=stack_slot offset=-8 size=4
-  frame_temp 3 temp[t3]:integer/dword storage=stack_slot offset=-12 size=4
-  frame_temp 4 temp[t4]:integer/dword storage=stack_slot offset=-16 size=4
-  frame_temp 5 temp[t5]:boolean/byte storage=stack_slot offset=-17 size=1
-  frame_temp 6 temp[t6]:integer/dword storage=stack_slot offset=-21 size=4
-  frame_temp 7 temp[t7]:integer/dword storage=stack_slot offset=-25 size=4
-  frame_temp 8 temp[t8]:integer/dword storage=stack_slot offset=-29 size=4
-  frame_temp 9 temp[t9]:boolean/byte storage=stack_slot offset=-30 size=1
-  frame_temp 10 temp[t10]:integer/dword storage=stack_slot offset=-34 size=4
-  frame_temp 11 temp[t11]:integer/dword storage=stack_slot offset=-38 size=4
-  frame_temp 12 temp[t12]:integer/dword storage=stack_slot offset=-42 size=4
-  frame_temp 13 temp[t13]:boolean/byte storage=stack_slot offset=-43 size=1
-  frame_temp 14 temp[t14]:integer/dword storage=stack_slot offset=-47 size=4
-  frame_temp 15 temp[t15]:integer/dword storage=stack_slot offset=-51 size=4
-  frame_temp 16 temp[t16]:integer/dword storage=stack_slot offset=-55 size=4
-  frame_temp 17 temp[t17]:boolean/byte storage=stack_slot offset=-56 size=1
-  frame_temp 18 temp[t18]:integer/dword storage=stack_slot offset=-60 size=4
+proc 1 calc return=none params=0 locals=4 temps=18 blocks=10 labels=6 instructions=33
+  local 1 global[op]:integer/dword
+  local 2 global[x]:integer/dword
+  local 3 global[y]:integer/dword
+  local 4 global[done]:integer/dword
+  frame params=0 locals=4 temps=18 temp_policy=stack_slots param_area=0 local_area=16 temp_area=60 frame_size=76
+  frame_local 1 global[op]:integer/dword offset=-4 size=4
+  frame_local 2 global[x]:integer/dword offset=-8 size=4
+  frame_local 3 global[y]:integer/dword offset=-12 size=4
+  frame_local 4 global[done]:integer/dword offset=-16 size=4
+  frame_temp 1 temp[t1]:integer/dword storage=stack_slot offset=-20 size=4
+  frame_temp 2 temp[t2]:integer/dword storage=stack_slot offset=-24 size=4
+  frame_temp 3 temp[t3]:integer/dword storage=stack_slot offset=-28 size=4
+  frame_temp 4 temp[t4]:integer/dword storage=stack_slot offset=-32 size=4
+  frame_temp 5 temp[t5]:boolean/byte storage=stack_slot offset=-33 size=1
+  frame_temp 6 temp[t6]:integer/dword storage=stack_slot offset=-37 size=4
+  frame_temp 7 temp[t7]:integer/dword storage=stack_slot offset=-41 size=4
+  frame_temp 8 temp[t8]:integer/dword storage=stack_slot offset=-45 size=4
+  frame_temp 9 temp[t9]:boolean/byte storage=stack_slot offset=-46 size=1
+  frame_temp 10 temp[t10]:integer/dword storage=stack_slot offset=-50 size=4
+  frame_temp 11 temp[t11]:integer/dword storage=stack_slot offset=-54 size=4
+  frame_temp 12 temp[t12]:integer/dword storage=stack_slot offset=-58 size=4
+  frame_temp 13 temp[t13]:boolean/byte storage=stack_slot offset=-59 size=1
+  frame_temp 14 temp[t14]:integer/dword storage=stack_slot offset=-63 size=4
+  frame_temp 15 temp[t15]:integer/dword storage=stack_slot offset=-67 size=4
+  frame_temp 16 temp[t16]:integer/dword storage=stack_slot offset=-71 size=4
+  frame_temp 17 temp[t17]:boolean/byte storage=stack_slot offset=-72 size=1
+  frame_temp 18 temp[t18]:integer/dword storage=stack_slot offset=-76 size=4
   block 1 label=L1 first=1 count=5
-   1 enter left=imm(60):integer/dword
+   1 enter left=imm(76):integer/dword
    2 copy result=temp[t1]:integer/dword left=imm(0):integer/dword
    3 store result=global[done]:integer/dword left=temp[t1]:integer/dword
    4 copy result=temp[t2]:integer/dword left=imm(20):integer/dword
@@ -83,6 +91,7 @@ proc 2 add return=none params=0 locals=0 temps=3 blocks=1 labels=1 instructions=
    5 store result=global[x]:integer/dword left=temp[t21]:integer/dword
    6 leave
    7 return
+  labelmap L7 block=1 first=1
 endproc
 proc 3 sub return=none params=0 locals=0 temps=3 blocks=1 labels=1 instructions=7
   frame params=0 locals=0 temps=3 temp_policy=stack_slots param_area=0 local_area=0 temp_area=12 frame_size=12
@@ -97,6 +106,7 @@ proc 3 sub return=none params=0 locals=0 temps=3 blocks=1 labels=1 instructions=
    5 store result=global[x]:integer/dword left=temp[t24]:integer/dword
    6 leave
    7 return
+  labelmap L8 block=1 first=1
 endproc
 proc 4 mult return=none params=0 locals=1 temps=3 blocks=1 labels=1 instructions=7
   local 1 local[c]:integer/dword
@@ -113,6 +123,7 @@ proc 4 mult return=none params=0 locals=1 temps=3 blocks=1 labels=1 instructions
    5 store result=global[x]:integer/dword left=temp[t27]:integer/dword
    6 leave
    7 return
+  labelmap L9 block=1 first=1
 endproc
 proc 5 div return=none params=0 locals=0 temps=10 blocks=5 labels=3 instructions=17
   frame params=0 locals=0 temps=10 temp_policy=stack_slots param_area=0 local_area=0 temp_area=34 frame_size=34
@@ -148,6 +159,9 @@ proc 5 div return=none params=0 locals=0 temps=10 blocks=5 labels=3 instructions
   block 5 label=L12 first=16 count=2
   16 leave
   17 return
+  labelmap L10 block=1 first=1
+  labelmap L11 block=3 first=10
+  labelmap L12 block=5 first=16
 endproc
 proc 6 calculate return=none params=0 locals=0 temps=12 blocks=9 labels=5 instructions=23
   frame params=0 locals=0 temps=12 temp_policy=stack_slots param_area=0 local_area=0 temp_area=36 frame_size=36
@@ -195,4 +209,9 @@ proc 6 calculate return=none params=0 locals=0 temps=12 blocks=9 labels=5 instru
   block 9 label=L17 first=22 count=2
   22 leave
   23 return
+  labelmap L13 block=1 first=1
+  labelmap L14 block=3 first=7
+  labelmap L15 block=5 first=12
+  labelmap L16 block=7 first=17
+  labelmap L17 block=9 first=22
 endproc

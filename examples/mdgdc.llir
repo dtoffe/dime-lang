@@ -1,15 +1,25 @@
 tac program
 procedures 4
-proc 1 mdgdc return=none params=0 locals=0 temps=6 blocks=1 labels=1 instructions=18
-  frame params=0 locals=0 temps=6 temp_policy=stack_slots param_area=0 local_area=0 temp_area=24 frame_size=24
-  frame_temp 1 temp[t1]:integer/dword storage=stack_slot offset=-4 size=4
-  frame_temp 2 temp[t2]:integer/dword storage=stack_slot offset=-8 size=4
-  frame_temp 3 temp[t3]:integer/dword storage=stack_slot offset=-12 size=4
-  frame_temp 4 temp[t4]:integer/dword storage=stack_slot offset=-16 size=4
-  frame_temp 5 temp[t5]:integer/dword storage=stack_slot offset=-20 size=4
-  frame_temp 6 temp[t6]:integer/dword storage=stack_slot offset=-24 size=4
+proc 1 mdgdc return=none params=0 locals=5 temps=6 blocks=1 labels=1 instructions=18
+  local 1 global[x]:integer/dword
+  local 2 global[y]:integer/dword
+  local 3 global[z]:integer/dword
+  local 4 global[q]:integer/dword
+  local 5 global[r]:integer/dword
+  frame params=0 locals=5 temps=6 temp_policy=stack_slots param_area=0 local_area=20 temp_area=24 frame_size=44
+  frame_local 1 global[x]:integer/dword offset=-4 size=4
+  frame_local 2 global[y]:integer/dword offset=-8 size=4
+  frame_local 3 global[z]:integer/dword offset=-12 size=4
+  frame_local 4 global[q]:integer/dword offset=-16 size=4
+  frame_local 5 global[r]:integer/dword offset=-20 size=4
+  frame_temp 1 temp[t1]:integer/dword storage=stack_slot offset=-24 size=4
+  frame_temp 2 temp[t2]:integer/dword storage=stack_slot offset=-28 size=4
+  frame_temp 3 temp[t3]:integer/dword storage=stack_slot offset=-32 size=4
+  frame_temp 4 temp[t4]:integer/dword storage=stack_slot offset=-36 size=4
+  frame_temp 5 temp[t5]:integer/dword storage=stack_slot offset=-40 size=4
+  frame_temp 6 temp[t6]:integer/dword storage=stack_slot offset=-44 size=4
   block 1 label=L1 first=1 count=18
-   1 enter left=imm(24):integer/dword
+   1 enter left=imm(44):integer/dword
    2 copy result=temp[t1]:integer/dword left=imm(7):integer/dword
    3 store result=global[x]:integer/dword left=temp[t1]:integer/dword
    4 copy result=temp[t2]:integer/dword left=imm(85):integer/dword

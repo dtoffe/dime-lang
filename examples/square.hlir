@@ -1,0 +1,39 @@
+hlir program square symbol=0 globals=2 routines=1 entry=TRUE
+globals
+  decl 1 var x#5:integer
+  decl 2 var squ#6:integer
+entry
+  routine 1 program square symbol=0 return=integer params=0 locals=0
+    body
+      stmt 1 compound
+        stmt 2 compound
+          stmt 3 assign
+            target x#5:integer
+            value
+              expr 1 int_lit type=integer value=1
+          stmt 4 while
+            condition
+              expr 2 binary type=boolean op=le
+                expr 3 symbol type=integer symbol=x#5:integer
+                expr 4 int_lit type=integer value=10
+            body
+              stmt 5 compound
+                stmt 6 call
+                  call target=calcsquare#7:integer argc=0
+                stmt 7 assign
+                  target x#5:integer
+                  value
+                    expr 5 binary type=integer op=add
+                      expr 6 symbol type=integer symbol=x#5:integer
+                      expr 7 int_lit type=integer value=1
+routines
+  routine 2 procedure calcsquare symbol=7 return=integer params=0 locals=0
+    body
+      stmt 8 compound
+        stmt 9 compound
+          stmt 10 assign
+            target squ#6:integer
+            value
+              expr 8 binary type=integer op=mul
+                expr 9 symbol type=integer symbol=x#5:integer
+                expr 10 symbol type=integer symbol=x#5:integer
