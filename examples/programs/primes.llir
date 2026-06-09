@@ -1,4 +1,4 @@
-tac program
+llir program
 procedures 3
 proc 1 primes return=none params=0 locals=2 temps=0 blocks=1 labels=1 instructions=4
   local 1 global[arg]:integer/dword

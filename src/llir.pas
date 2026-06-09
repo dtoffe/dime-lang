@@ -3,7 +3,7 @@
   Date: 2026-06-05
 
   Lower-level IR definitions and state management for the current normalized
-  TAC-based backend representation. This unit owns the current LLIR image,
+  LLIR-based backend representation. This unit owns the current LLIR image,
   issues temporary and label identifiers, appends procedures, basic blocks, and
   instructions, and can dump the generated IR for inspection. It deliberately
   stays data-only: flat records, fixed arrays, and counts. It does not know
@@ -25,15 +25,15 @@ const
   maxTacOperandsPerCall = maxProcedureParameters;
 
 type
-  tacInstructionIndex = 0..maxTacInstructions;
-  tacBasicBlockIndex = 0..maxTacBasicBlocks;
-  tacProcedureIndex = 0..maxTacProcedures;
-  tacTemporaryId = 0..maxTacInstructions;
-  tacLabelId = 0..maxTacInstructions;
-  tacTemporaryStoragePolicy = (
+  llirInstructionIndex = 0..maxTacInstructions;
+  llirBasicBlockIndex = 0..maxTacBasicBlocks;
+  llirProcedureIndex = 0..maxTacProcedures;
+  llirTemporaryId = 0..maxTacInstructions;
+  llirLabelId = 0..maxTacInstructions;
+  llirTemporaryStoragePolicy = (
     irTempsStackSlots
   );
-  tacIntrinsicKind = (
+  llirIntrinsicKind = (
     irIntrinsicNone,
     irIntrinsicReadInt,
     irIntrinsicReadChar,
@@ -43,12 +43,12 @@ type
     irIntrinsicWriteLn,
     irIntrinsicReadLn
   );
-  tacIntrinsicSideEffect = (
+  llirIntrinsicSideEffect = (
     irSideEffectNone,
     irSideEffectIO
   );
 
-  tacInstructionKind = (
+  llirInstructionKind = (
     irNoOp,
     irEnterFrame,
     irAdd,
@@ -87,7 +87,7 @@ type
     irReturn
   );
 
-  tacOperandKind = (
+  llirOperandKind = (
     irOperandNone,
     irOperandImmediate,
     irOperandLocal,
@@ -99,7 +99,7 @@ type
     irOperandIntrinsic
   );
 
-  tacOperandSize = (
+  llirOperandSize = (
     irSizeNone,
     irSizeByte,
     irSizeWord,
@@ -108,92 +108,92 @@ type
     irSizeAddress
   );
 
-  tacOperand = record
-    kind: tacOperandKind;
+  llirOperand = record
+    kind: llirOperandKind;
     valueType: typeValue;
-    size: tacOperandSize;
+    size: llirOperandSize;
     symbol: symbolIndex;
     name: identifier;
-    intrinsicKind: tacIntrinsicKind;
-    case tacOperandKind of
+    intrinsicKind: llirIntrinsicKind;
+    case llirOperandKind of
       irOperandNone:
         ();
       irOperandImmediate:
         (constantValue: integer);
       irOperandTemporary:
-        (temporaryId: tacTemporaryId)
+        (temporaryId: llirTemporaryId)
       ;
       irOperandLabel:
-        (labelId: tacLabelId)
+        (labelId: llirLabelId)
   end;
 
-  tacInstruction = record
-    kind: tacInstructionKind;
-    resultOperand: tacOperand;
-    leftOperand: tacOperand;
-    rightOperand: tacOperand;
-    targetOperand: tacOperand;
+  llirInstruction = record
+    kind: llirInstructionKind;
+    resultOperand: llirOperand;
+    leftOperand: llirOperand;
+    rightOperand: llirOperand;
+    targetOperand: llirOperand;
     positionIndex: integer;
     operatorSymbol: symbol;
     callArgumentCount: integer;
-    callArguments: array [1..maxTacOperandsPerCall] of tacOperand
+    callArguments: array [1..maxTacOperandsPerCall] of llirOperand
   end;
 
-  tacBasicBlock = record
-    labelId: tacLabelId;
-    firstInstruction: tacInstructionIndex;
+  llirBasicBlock = record
+    labelId: llirLabelId;
+    firstInstruction: llirInstructionIndex;
     instructionCount: integer
   end;
 
-  tacTemporaryInfo = record
-    temporaryId: tacTemporaryId;
+  llirTemporaryInfo = record
+    temporaryId: llirTemporaryId;
     valueType: typeValue;
-    size: tacOperandSize
+    size: llirOperandSize
   end;
 
-  tacFrameSlot = record
-    operand: tacOperand;
+  llirFrameSlot = record
+    operand: llirOperand;
     offset: integer;
     sizeInBytes: integer
   end;
 
-  tacFrameInfo = record
+  llirFrameInfo = record
     parameterCount: integer;
     localCount: integer;
     temporaryCount: integer;
-    temporaryStoragePolicy: tacTemporaryStoragePolicy;
+    temporaryStoragePolicy: llirTemporaryStoragePolicy;
     parameterAreaSize: integer;
     localAreaSize: integer;
     temporaryAreaSize: integer;
     frameSize: integer;
-    parameters: array [1..maxProcedureParameters] of tacFrameSlot;
-    locals: array [1..symbolTableMax] of tacFrameSlot;
-    temporaries: array [1..maxTacInstructions] of tacFrameSlot
+    parameters: array [1..maxProcedureParameters] of llirFrameSlot;
+    locals: array [1..symbolTableMax] of llirFrameSlot;
+    temporaries: array [1..maxTacInstructions] of llirFrameSlot
   end;
 
-  tacProcedure = record
+  llirProcedure = record
     name: identifier;
     symbol: symbolIndex;
     hasReturnValue: boolean;
     returnType: typeValue;
     parameterCount: integer;
-    parameters: array [1..maxProcedureParameters] of tacOperand;
+    parameters: array [1..maxProcedureParameters] of llirOperand;
     localCount: integer;
-    locals: array [1..symbolTableMax] of tacOperand;
-    temporaries: array [1..maxTacInstructions] of tacTemporaryInfo;
-    frameInfo: tacFrameInfo;
+    locals: array [1..symbolTableMax] of llirOperand;
+    temporaries: array [1..maxTacInstructions] of llirTemporaryInfo;
+    frameInfo: llirFrameInfo;
     basicBlockCount: integer;
-    basicBlocks: array [1..maxTacBasicBlocks] of tacBasicBlock;
-    labelBlockIndex: array [1..maxTacInstructions] of tacBasicBlockIndex;
+    basicBlocks: array [1..maxTacBasicBlocks] of llirBasicBlock;
+    labelBlockIndex: array [1..maxTacInstructions] of llirBasicBlockIndex;
     instructionCount: integer;
-    instructions: array [1..maxTacInstructions] of tacInstruction;
+    instructions: array [1..maxTacInstructions] of llirInstruction;
     labelCount: integer;
-    prologueInstruction: tacInstructionIndex
+    prologueInstruction: llirInstructionIndex
   end;
 
-  tacProgram = record
+  llirProgram = record
     procedureCount: integer;
-    procedures: array [1..maxTacProcedures] of tacProcedure;
+    procedures: array [1..maxTacProcedures] of llirProcedure;
     basicBlockCount: integer;
     instructionCount: integer;
     temporaryCount: integer;
@@ -203,43 +203,43 @@ type
 
 procedure initializeLlir;
 function llirOverflowed: boolean;
-procedure getLlirProgram(var targetProgram: tacProgram);
+procedure getLlirProgram(var targetProgram: llirProgram);
 
-function makeTacNoneOperand: tacOperand;
-function makeTacConstOperand(const constantValue: integer; valueType: typeValue): tacOperand;
+function makeTacNoneOperand: llirOperand;
+function makeTacConstOperand(const constantValue: integer; valueType: typeValue): llirOperand;
 function makeTacSymbolOperand(symbol: symbolIndex; const name: identifier;
-                              valueType: typeValue): tacOperand;
-function makeTacTempOperand(temporaryId: tacTemporaryId; valueType: typeValue): tacOperand;
-function makeTacLabelOperand(labelId: tacLabelId): tacOperand;
-function makeTacProcedureOperand(symbol: symbolIndex; const name: identifier): tacOperand;
-function makeTacIntrinsicOperand(intrinsicKind: tacIntrinsicKind): tacOperand;
-function makeTacAddressTempOperand(temporaryId: tacTemporaryId): tacOperand;
-function tacIntrinsicForReadType(valueType: typeValue): tacIntrinsicKind;
-function tacIntrinsicForWriteType(valueType: typeValue): tacIntrinsicKind;
+                              valueType: typeValue): llirOperand;
+function makeTacTempOperand(temporaryId: llirTemporaryId; valueType: typeValue): llirOperand;
+function makeTacLabelOperand(labelId: llirLabelId): llirOperand;
+function makeTacProcedureOperand(symbol: symbolIndex; const name: identifier): llirOperand;
+function makeTacIntrinsicOperand(intrinsicKind: llirIntrinsicKind): llirOperand;
+function makeTacAddressTempOperand(temporaryId: llirTemporaryId): llirOperand;
+function llirIntrinsicForReadType(valueType: typeValue): llirIntrinsicKind;
+function llirIntrinsicForWriteType(valueType: typeValue): llirIntrinsicKind;
 
-function newTacTemporary(valueType: typeValue): tacOperand;
-function newTacAddressTemporary: tacOperand;
-function newTacLabel: tacLabelId;
+function newTacTemporary(valueType: typeValue): llirOperand;
+function newTacAddressTemporary: llirOperand;
+function newTacLabel: llirLabelId;
 
-function newTacInstruction(kind: tacInstructionKind): tacInstruction;
+function newTacInstruction(kind: llirInstructionKind): llirInstruction;
 function appendTacProcedure(const procedureName: identifier;
-                            procedureSymbol: symbolIndex): tacProcedureIndex;
-procedure setTacProcedureReturnType(procedureIndex: tacProcedureIndex;
+                            procedureSymbol: symbolIndex): llirProcedureIndex;
+procedure setTacProcedureReturnType(procedureIndex: llirProcedureIndex;
                                     valueType: typeValue;
                                     hasReturnValue: boolean);
-procedure addTacProcedureParameter(procedureIndex: tacProcedureIndex;
+procedure addTacProcedureParameter(procedureIndex: llirProcedureIndex;
                                    parameterSymbol: symbolIndex);
-procedure addTacProcedureLocal(procedureIndex: tacProcedureIndex;
+procedure addTacProcedureLocal(procedureIndex: llirProcedureIndex;
                                localSymbol: symbolIndex);
-function appendTacBasicBlock(blockLabelId: tacLabelId): tacBasicBlockIndex;
-function appendTacInstruction(const instruction: tacInstruction): tacInstructionIndex;
-procedure setTacCallArgument(var instruction: tacInstruction; argumentIndex: integer;
-                             const argument: tacOperand);
-function findTacTemporaryFrameSlot(procedureIndex: tacProcedureIndex;
-                                   temporaryId: tacTemporaryId;
-                                   var slot: tacFrameSlot): boolean;
+function appendTacBasicBlock(blockLabelId: llirLabelId): llirBasicBlockIndex;
+function appendTacInstruction(const instruction: llirInstruction): llirInstructionIndex;
+procedure setTacCallArgument(var instruction: llirInstruction; argumentIndex: integer;
+                             const argument: llirOperand);
+function findTacTemporaryFrameSlot(procedureIndex: llirProcedureIndex;
+                                   temporaryId: llirTemporaryId;
+                                   var slot: llirFrameSlot): boolean;
 procedure dumpLlir(const outputFileName: string);
-procedure syncLlirProcedurePrologue(procedureIndex: tacProcedureIndex);
+procedure syncLlirProcedurePrologue(procedureIndex: llirProcedureIndex);
 
 implementation
 
@@ -247,11 +247,11 @@ uses
   SysUtils;
 
 var
-  currentProgram: tacProgram;
-  currentProcedure: tacProcedureIndex;
-  currentBasicBlock: tacBasicBlockIndex;
+  currentProgram: llirProgram;
+  currentProcedure: llirProcedureIndex;
+  currentBasicBlock: llirBasicBlockIndex;
 
-function instructionEndsBasicBlock(kind: tacInstructionKind): boolean;
+function instructionEndsBasicBlock(kind: llirInstructionKind): boolean;
 begin
   instructionEndsBasicBlock := kind in [irJump, irBranchTrue, irBranchFalse,
                                         irGoto, irReturn]
@@ -262,7 +262,7 @@ begin
   currentProcedureHasOpenBlock := (currentProcedure <> 0) and (currentBasicBlock <> 0)
 end;
 
-function operandSizeInBytes(size: tacOperandSize): integer;
+function operandSizeInBytes(size: llirOperandSize): integer;
 begin
   case size of
     irSizeByte:
@@ -287,28 +287,28 @@ begin
     currentBlockInstructionCount := 0
 end;
 
-function isStorageOperandKind(kind: tacOperandKind): boolean;
+function isStorageOperandKind(kind: llirOperandKind): boolean;
 begin
   isStorageOperandKind := kind in [irOperandLocal, irOperandParameter, irOperandGlobal]
 end;
 
-function isValueOperandKind(kind: tacOperandKind): boolean;
+function isValueOperandKind(kind: llirOperandKind): boolean;
 begin
   isValueOperandKind := kind in [irOperandImmediate, irOperandTemporary]
 end;
 
-function isAddressValueOperand(const operand: tacOperand): boolean;
+function isAddressValueOperand(const operand: llirOperand): boolean;
 begin
   isAddressValueOperand := (operand.kind = irOperandTemporary) and
                            (operand.size = irSizeAddress)
 end;
 
-function isValueOrNoneOperandKind(kind: tacOperandKind): boolean;
+function isValueOrNoneOperandKind(kind: llirOperandKind): boolean;
 begin
   isValueOrNoneOperandKind := (kind = irOperandNone) or isValueOperandKind(kind)
 end;
 
-function intrinsicParameterCount(kind: tacIntrinsicKind): integer;
+function intrinsicParameterCount(kind: llirIntrinsicKind): integer;
 begin
   case kind of
     irIntrinsicWriteInt,
@@ -320,12 +320,12 @@ begin
   end
 end;
 
-function intrinsicHasReturnValue(kind: tacIntrinsicKind): boolean;
+function intrinsicHasReturnValue(kind: llirIntrinsicKind): boolean;
 begin
   intrinsicHasReturnValue := kind in [irIntrinsicReadInt, irIntrinsicReadChar]
 end;
 
-function intrinsicReturnType(kind: tacIntrinsicKind): typeValue;
+function intrinsicReturnType(kind: llirIntrinsicKind): typeValue;
 begin
   case kind of
     irIntrinsicReadChar:
@@ -335,7 +335,7 @@ begin
   end
 end;
 
-function intrinsicSideEffect(kind: tacIntrinsicKind): tacIntrinsicSideEffect;
+function intrinsicSideEffect(kind: llirIntrinsicKind): llirIntrinsicSideEffect;
 begin
   if kind = irIntrinsicNone then
     intrinsicSideEffect := irSideEffectNone
@@ -343,7 +343,7 @@ begin
     intrinsicSideEffect := irSideEffectIO
 end;
 
-function intrinsicParameterType(kind: tacIntrinsicKind; parameterIndex: integer): typeValue;
+function intrinsicParameterType(kind: llirIntrinsicKind; parameterIndex: integer): typeValue;
 begin
   intrinsicParameterType := typeInteger;
   if parameterIndex <> 1 then
@@ -359,7 +359,7 @@ begin
   end
 end;
 
-function intrinsicAcceptsValueType(kind: tacIntrinsicKind; valueType: typeValue): boolean;
+function intrinsicAcceptsValueType(kind: llirIntrinsicKind; valueType: typeValue): boolean;
 begin
   case kind of
     irIntrinsicWriteInt:
@@ -373,10 +373,10 @@ begin
   end
 end;
 
-function validateTacIntrinsicCall(const instruction: tacInstruction): boolean;
+function validateTacIntrinsicCall(const instruction: llirInstruction): boolean;
 var
   argumentIndex, expectedCount: integer;
-  kind: tacIntrinsicKind;
+  kind: llirIntrinsicKind;
 begin
   kind := instruction.targetOperand.intrinsicKind;
   validateTacIntrinsicCall := (kind <> irIntrinsicNone) and
@@ -417,9 +417,9 @@ begin
   end
 end;
 
-procedure syncLlirProcedurePrologue(procedureIndex: tacProcedureIndex);
+procedure syncLlirProcedurePrologue(procedureIndex: llirProcedureIndex);
 var
-  prologueIndex: tacInstructionIndex;
+  prologueIndex: llirInstructionIndex;
 begin
   if (procedureIndex < 1) or (procedureIndex > currentProgram.procedureCount) then
     exit;
@@ -434,13 +434,13 @@ begin
         makeTacConstOperand(frameInfo.frameSize, typeInteger)
 end;
 
-function instructionUsesStorageOperands(kind: tacInstructionKind): boolean;
+function instructionUsesStorageOperands(kind: llirInstructionKind): boolean;
 begin
   instructionUsesStorageOperands := kind in [irAddrLocal, irAddrParam, irAddrGlobal,
                                              irLoadVar, irStoreVar]
 end;
 
-function validateTacInstruction(const instruction: tacInstruction): boolean;
+function validateTacInstruction(const instruction: llirInstruction): boolean;
 begin
   validateTacInstruction := true;
   case instruction.kind of
@@ -555,7 +555,7 @@ begin
                                 not isStorageOperandKind(instruction.targetOperand.kind)
 end;
 
-procedure bindLabelToCurrentBlock(labelId: tacLabelId);
+procedure bindLabelToCurrentBlock(labelId: llirLabelId);
 begin
   if (labelId = 0) or not currentProcedureHasOpenBlock then
     exit;
@@ -565,7 +565,7 @@ begin
     currentProgram.procedures[currentProcedure].basicBlocks[currentBasicBlock].labelId := labelId
 end;
 
-function createTacBasicBlock(blockLabelId: tacLabelId): tacBasicBlockIndex;
+function createTacBasicBlock(blockLabelId: llirLabelId): llirBasicBlockIndex;
 begin
   createTacBasicBlock := 0;
   if currentProcedure = 0 then
@@ -609,7 +609,7 @@ begin
   identifierToString := TrimRight(identifierToString)
 end;
 
-function instructionKindToString(kind: tacInstructionKind): string;
+function instructionKindToString(kind: llirInstructionKind): string;
 begin
   case kind of
     irNoOp: instructionKindToString := 'noop';
@@ -660,7 +660,7 @@ begin
   end
 end;
 
-function typeToOperandSize(valueType: typeValue): tacOperandSize;
+function typeToOperandSize(valueType: typeValue): llirOperandSize;
 begin
   case valueType of
     typeBoolean, typeChar:
@@ -670,7 +670,7 @@ begin
   end
 end;
 
-function operandSizeToString(size: tacOperandSize): string;
+function operandSizeToString(size: llirOperandSize): string;
 begin
   case size of
     irSizeByte: operandSizeToString := 'byte';
@@ -683,7 +683,7 @@ begin
   end
 end;
 
-function temporaryStoragePolicyToString(policy: tacTemporaryStoragePolicy): string;
+function temporaryStoragePolicyToString(policy: llirTemporaryStoragePolicy): string;
 begin
   case policy of
     irTempsStackSlots:
@@ -722,7 +722,7 @@ begin
   end
 end;
 
-function intrinsicKindToString(kind: tacIntrinsicKind): string;
+function intrinsicKindToString(kind: llirIntrinsicKind): string;
 begin
   case kind of
     irIntrinsicReadInt: intrinsicKindToString := 'read_int';
@@ -737,20 +737,20 @@ begin
   end
 end;
 
-function tacIntrinsicForReadType(valueType: typeValue): tacIntrinsicKind;
+function llirIntrinsicForReadType(valueType: typeValue): llirIntrinsicKind;
 begin
   if valueType = typeChar then
-    tacIntrinsicForReadType := irIntrinsicReadChar
+    llirIntrinsicForReadType := irIntrinsicReadChar
   else
-    tacIntrinsicForReadType := irIntrinsicReadInt
+    llirIntrinsicForReadType := irIntrinsicReadInt
 end;
 
-function tacIntrinsicForWriteType(valueType: typeValue): tacIntrinsicKind;
+function llirIntrinsicForWriteType(valueType: typeValue): llirIntrinsicKind;
 begin
   if valueType = typeChar then
-    tacIntrinsicForWriteType := irIntrinsicWriteChar
+    llirIntrinsicForWriteType := irIntrinsicWriteChar
   else
-    tacIntrinsicForWriteType := irIntrinsicWriteInt
+    llirIntrinsicForWriteType := irIntrinsicWriteInt
 end;
 
 function routineOwnsSymbol(routineSymbol, operandSymbol: symbolIndex): boolean;
@@ -765,7 +765,7 @@ begin
                        getDeclarationLevel(routineSymbol) + 1
 end;
 
-procedure rebuildTacProcedureFrameLayout(procedureIndex: tacProcedureIndex);
+procedure rebuildTacProcedureFrameLayout(procedureIndex: llirProcedureIndex);
 var
   itemIndex, nextParameterOffset, nextStackOffset, slotSize: integer;
 begin
@@ -820,7 +820,7 @@ begin
   syncLlirProcedurePrologue(procedureIndex)
 end;
 
-function classifySymbolOperand(symbol: symbolIndex): tacOperandKind;
+function classifySymbolOperand(symbol: symbolIndex): llirOperandKind;
 var
   routineSymbol: symbolIndex;
 begin
@@ -857,7 +857,7 @@ begin
   end
 end;
 
-function operandToString(const operand: tacOperand): string;
+function operandToString(const operand: llirOperand): string;
 begin
   case operand.kind of
     irOperandNone:
@@ -907,12 +907,12 @@ begin
   llirOverflowed := currentProgram.overflow
 end;
 
-procedure getLlirProgram(var targetProgram: tacProgram);
+procedure getLlirProgram(var targetProgram: llirProgram);
 begin
   targetProgram := currentProgram
 end;
 
-function makeTacNoneOperand: tacOperand;
+function makeTacNoneOperand: llirOperand;
 begin
   FillChar(makeTacNoneOperand, SizeOf(makeTacNoneOperand), 0);
   makeTacNoneOperand.kind := irOperandNone;
@@ -921,7 +921,7 @@ begin
   makeTacNoneOperand.intrinsicKind := irIntrinsicNone
 end;
 
-function makeTacConstOperand(const constantValue: integer; valueType: typeValue): tacOperand;
+function makeTacConstOperand(const constantValue: integer; valueType: typeValue): llirOperand;
 begin
   FillChar(makeTacConstOperand, SizeOf(makeTacConstOperand), 0);
   makeTacConstOperand.kind := irOperandImmediate;
@@ -932,7 +932,7 @@ begin
 end;
 
 function makeTacSymbolOperand(symbol: symbolIndex; const name: identifier;
-                              valueType: typeValue): tacOperand;
+                              valueType: typeValue): llirOperand;
 begin
   FillChar(makeTacSymbolOperand, SizeOf(makeTacSymbolOperand), 0);
   makeTacSymbolOperand.kind := classifySymbolOperand(symbol);
@@ -943,7 +943,7 @@ begin
   makeTacSymbolOperand.intrinsicKind := irIntrinsicNone
 end;
 
-function makeTacTempOperand(temporaryId: tacTemporaryId; valueType: typeValue): tacOperand;
+function makeTacTempOperand(temporaryId: llirTemporaryId; valueType: typeValue): llirOperand;
 begin
   FillChar(makeTacTempOperand, SizeOf(makeTacTempOperand), 0);
   makeTacTempOperand.kind := irOperandTemporary;
@@ -953,13 +953,13 @@ begin
   makeTacTempOperand.temporaryId := temporaryId
 end;
 
-function makeTacAddressTempOperand(temporaryId: tacTemporaryId): tacOperand;
+function makeTacAddressTempOperand(temporaryId: llirTemporaryId): llirOperand;
 begin
   makeTacAddressTempOperand := makeTacTempOperand(temporaryId, typeInteger);
   makeTacAddressTempOperand.size := irSizeAddress
 end;
 
-function makeTacLabelOperand(labelId: tacLabelId): tacOperand;
+function makeTacLabelOperand(labelId: llirLabelId): llirOperand;
 begin
   FillChar(makeTacLabelOperand, SizeOf(makeTacLabelOperand), 0);
   makeTacLabelOperand.kind := irOperandLabel;
@@ -969,7 +969,7 @@ begin
   makeTacLabelOperand.labelId := labelId
 end;
 
-function makeTacProcedureOperand(symbol: symbolIndex; const name: identifier): tacOperand;
+function makeTacProcedureOperand(symbol: symbolIndex; const name: identifier): llirOperand;
 begin
   FillChar(makeTacProcedureOperand, SizeOf(makeTacProcedureOperand), 0);
   makeTacProcedureOperand.kind := irOperandProcedure;
@@ -980,7 +980,7 @@ begin
   makeTacProcedureOperand.intrinsicKind := irIntrinsicNone
 end;
 
-function makeTacIntrinsicOperand(intrinsicKind: tacIntrinsicKind): tacOperand;
+function makeTacIntrinsicOperand(intrinsicKind: llirIntrinsicKind): llirOperand;
 begin
   FillChar(makeTacIntrinsicOperand, SizeOf(makeTacIntrinsicOperand), 0);
   makeTacIntrinsicOperand.kind := irOperandIntrinsic;
@@ -989,7 +989,7 @@ begin
   makeTacIntrinsicOperand.intrinsicKind := intrinsicKind
 end;
 
-function newTacTemporary(valueType: typeValue): tacOperand;
+function newTacTemporary(valueType: typeValue): llirOperand;
 begin
   if currentProgram.temporaryCount >= maxTacInstructions then
   begin
@@ -1018,7 +1018,7 @@ begin
   newTacTemporary := makeTacTempOperand(currentProgram.temporaryCount, valueType)
 end;
 
-function newTacAddressTemporary: tacOperand;
+function newTacAddressTemporary: llirOperand;
 begin
   if currentProgram.temporaryCount >= maxTacInstructions then
   begin
@@ -1047,7 +1047,7 @@ begin
   newTacAddressTemporary := makeTacAddressTempOperand(currentProgram.temporaryCount)
 end;
 
-function newTacLabel: tacLabelId;
+function newTacLabel: llirLabelId;
 begin
   if currentProgram.labelCount >= maxTacInstructions then
   begin
@@ -1063,7 +1063,7 @@ begin
   newTacLabel := currentProgram.labelCount
 end;
 
-function newTacInstruction(kind: tacInstructionKind): tacInstruction;
+function newTacInstruction(kind: llirInstructionKind): llirInstruction;
 var
   argumentIndex: integer;
 begin
@@ -1081,7 +1081,7 @@ begin
 end;
 
 function appendTacProcedure(const procedureName: identifier;
-                            procedureSymbol: symbolIndex): tacProcedureIndex;
+                            procedureSymbol: symbolIndex): llirProcedureIndex;
 begin
   appendTacProcedure := 0;
   if currentProgram.procedureCount >= maxTacProcedures then
@@ -1117,7 +1117,7 @@ begin
   end
 end;
 
-procedure setTacProcedureReturnType(procedureIndex: tacProcedureIndex;
+procedure setTacProcedureReturnType(procedureIndex: llirProcedureIndex;
                                     valueType: typeValue;
                                     hasReturnValue: boolean);
 begin
@@ -1131,7 +1131,7 @@ begin
   currentProgram.procedures[procedureIndex].hasReturnValue := hasReturnValue
 end;
 
-procedure addTacProcedureParameter(procedureIndex: tacProcedureIndex;
+procedure addTacProcedureParameter(procedureIndex: llirProcedureIndex;
                                    parameterSymbol: symbolIndex);
 begin
   if (procedureIndex < 1) or (procedureIndex > currentProgram.procedureCount) or
@@ -1159,7 +1159,7 @@ begin
   end
 end;
 
-procedure addTacProcedureLocal(procedureIndex: tacProcedureIndex;
+procedure addTacProcedureLocal(procedureIndex: llirProcedureIndex;
                                localSymbol: symbolIndex);
 begin
   if (procedureIndex < 1) or (procedureIndex > currentProgram.procedureCount) or
@@ -1187,7 +1187,7 @@ begin
   end
 end;
 
-function appendTacBasicBlock(blockLabelId: tacLabelId): tacBasicBlockIndex;
+function appendTacBasicBlock(blockLabelId: llirLabelId): llirBasicBlockIndex;
 begin
   if currentProcedure = 0 then
   begin
@@ -1211,7 +1211,7 @@ begin
   bindLabelToCurrentBlock(blockLabelId)
 end;
 
-function appendTacInstruction(const instruction: tacInstruction): tacInstructionIndex;
+function appendTacInstruction(const instruction: llirInstruction): llirInstructionIndex;
 begin
   appendTacInstruction := 0;
   if currentProcedure = 0 then
@@ -1265,8 +1265,8 @@ begin
     currentBasicBlock := 0
 end;
 
-procedure setTacCallArgument(var instruction: tacInstruction; argumentIndex: integer;
-                             const argument: tacOperand);
+procedure setTacCallArgument(var instruction: llirInstruction; argumentIndex: integer;
+                             const argument: llirOperand);
 begin
   if (argumentIndex < 1) or (argumentIndex > maxTacOperandsPerCall) then
   begin
@@ -1279,9 +1279,9 @@ begin
     instruction.callArgumentCount := argumentIndex
 end;
 
-function findTacTemporaryFrameSlot(procedureIndex: tacProcedureIndex;
-                                   temporaryId: tacTemporaryId;
-                                   var slot: tacFrameSlot): boolean;
+function findTacTemporaryFrameSlot(procedureIndex: llirProcedureIndex;
+                                   temporaryId: llirTemporaryId;
+                                   var slot: llirFrameSlot): boolean;
 var
   temporaryIndex: integer;
 begin
@@ -1301,7 +1301,7 @@ begin
 end;
 
 procedure dumpTacInstruction(var outputFile: Text; instructionIndex: integer;
-                             const instruction: tacInstruction);
+                             const instruction: llirInstruction);
 var
   argumentIndex: integer;
 begin
@@ -1333,7 +1333,7 @@ var
 begin
   Assign(outputFile, outputFileName);
   Rewrite(outputFile);
-  writeln(outputFile, 'tac program');
+  writeln(outputFile, 'llir program');
   writeln(outputFile, 'procedures ', currentProgram.procedureCount);
   for procedureIndex := 1 to currentProgram.procedureCount do
     with currentProgram.procedures[procedureIndex] do
@@ -1420,3 +1420,4 @@ initialization
   initializeLlir;
 
 end.
+

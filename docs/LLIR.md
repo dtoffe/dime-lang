@@ -62,7 +62,7 @@ An `.llir` file is a textual dump of the current LLIR program. A simplified
 example:
 
 ```text
-tac program
+llir program
 procedures 2
 proc 1 procparams return=none params=0 locals=3 temps=6 blocks=1 labels=1 instructions=18
   local 1 global[total]:integer/dword
@@ -78,8 +78,8 @@ proc 1 procparams return=none params=0 locals=3 temps=6 blocks=1 labels=1 instru
 endproc
 ```
 
-The first line still says `tac program` for historical reasons, but the file
-is now emitted as `.llir` and documents the lower-level IR stage.
+The first line identifies the dump as `llir program`, matching the current file
+format and stage name.
 
 Each procedure dump contains:
 
@@ -390,7 +390,7 @@ LLIR is already lower than HLIR, but it is not yet final target code.
 Current limits worth keeping in mind:
 
 - The textual dump still uses some legacy `tac*` names internally.
-- The file header still says `tac program`.
+- The file header still says `llir program`.
 - `write_string` exists in the intrinsic model but is not implemented by the
   interpreter yet.
 - Addressing instructions are modeled in LLIR but not heavily exercised by the
@@ -400,3 +400,4 @@ Current limits worth keeping in mind:
 
 That is the intended tradeoff for this stage: LLIR should be explicit,
 verifiable, and boring enough to support the upcoming assembler backend.
+

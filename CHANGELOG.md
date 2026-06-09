@@ -16,6 +16,7 @@ and this project is expected to follow [Semantic Versioning](https://semver.org/
 
 ### [Changed]
 
+- Polish LLIR naming and dump header.
 - Rewrite and update the LLIR documentation.
 - Rename `.tac` file extension to `.llir`.
 - Rewire LLIR to be generated from HLIR instead of AST.

@@ -4,7 +4,7 @@
 
   HLIR-to-LLIR lowering support for the compiler pipeline. This unit walks the
   structured high-level IR and uses llir as a low-level service to build the
-  current normalized TAC-shaped backend image. It owns structural lowering only:
+  current normalized LLIR backend image. It owns structural lowering only:
   expressions become temporaries, and structured control flow becomes labels and
   jumps. It does not parse source text, perform semantic checks, allocate
   registers, assign final stack slots, or emit target code. }
@@ -27,9 +27,9 @@ uses
 
 var
   currentLoweredFunctionSymbol: symbolIndex;
-  loopBreakLabels: array [1..maxTacInstructions] of tacLabelId;
+  loopBreakLabels: array [1..maxTacInstructions] of llirLabelId;
   loopBreakLabelCount: integer;
-  loopContinueLabels: array [1..maxTacInstructions] of tacLabelId;
+  loopContinueLabels: array [1..maxTacInstructions] of llirLabelId;
   loopContinueLabelCount: integer;
 
 function hirScalarType(const typeRef: hirTypeRef): typeValue;
@@ -37,7 +37,7 @@ begin
   hirScalarType := typeRef.scalarType
 end;
 
-function symbolOperandFromRef(const symbolRef: hirSymbolRef): tacOperand;
+function symbolOperandFromRef(const symbolRef: hirSymbolRef): llirOperand;
 begin
   if symbolRef.symbol = 0 then
     symbolOperandFromRef := makeTacNoneOperand
@@ -47,7 +47,7 @@ begin
                                                  hirScalarType(symbolRef.valueType))
 end;
 
-function storageOperandFromRef(const symbolRef: hirSymbolRef): tacOperand;
+function storageOperandFromRef(const symbolRef: hirSymbolRef): llirOperand;
 begin
   storageOperandFromRef := makeTacNoneOperand;
   if symbolRef.symbol = 0 then
@@ -61,7 +61,7 @@ begin
                                                 hirScalarType(symbolRef.valueType))
 end;
 
-procedure recordRoutineLocals(const routineNode: hirRoutine; procedureIndex: tacProcedureIndex);
+procedure recordRoutineLocals(const routineNode: hirRoutine; procedureIndex: llirProcedureIndex);
 var
   declarationNode: hirDeclaration;
 begin
@@ -79,7 +79,7 @@ begin
 end;
 
 procedure recordProgramGlobalsAsLocals(const programData: hirProgramRecord;
-                                       procedureIndex: tacProcedureIndex);
+                                       procedureIndex: llirProcedureIndex);
 var
   declarationNode: hirDeclaration;
 begin
@@ -96,7 +96,7 @@ begin
   end
 end;
 
-procedure describeRoutine(procedureIndex: tacProcedureIndex; routineNode: hirRoutine);
+procedure describeRoutine(procedureIndex: llirProcedureIndex; routineNode: hirRoutine);
 var
   declarationNode: hirDeclaration;
 begin
@@ -118,23 +118,23 @@ begin
   recordRoutineLocals(routineNode, procedureIndex)
 end;
 
-procedure appendLabel(labelId: tacLabelId);
+procedure appendLabel(labelId: llirLabelId);
 begin
   appendTacBasicBlock(labelId)
 end;
 
-procedure appendGoto(labelId: tacLabelId);
+procedure appendGoto(labelId: llirLabelId);
 var
-  instruction: tacInstruction;
+  instruction: llirInstruction;
 begin
   instruction := newTacInstruction(irJump);
   instruction.targetOperand := makeTacLabelOperand(labelId);
   appendTacInstruction(instruction)
 end;
 
-procedure appendGotoIfZero(const conditionOperand: tacOperand; labelId: tacLabelId);
+procedure appendGotoIfZero(const conditionOperand: llirOperand; labelId: llirLabelId);
 var
-  instruction: tacInstruction;
+  instruction: llirInstruction;
 begin
   instruction := newTacInstruction(irBranchFalse);
   instruction.leftOperand := conditionOperand;
@@ -144,7 +144,7 @@ end;
 
 procedure appendProcedureEnter;
 var
-  instruction: tacInstruction;
+  instruction: llirInstruction;
 begin
   instruction := newTacInstruction(irEnterFrame);
   instruction.leftOperand := makeTacConstOperand(0, typeInteger);
@@ -153,7 +153,7 @@ end;
 
 procedure appendProcedureLeaveAndReturn;
 var
-  instruction: tacInstruction;
+  instruction: llirInstruction;
 begin
   instruction := newTacInstruction(irLeaveFrame);
   appendTacInstruction(instruction);
@@ -161,9 +161,9 @@ begin
   appendTacInstruction(instruction)
 end;
 
-function loadSymbolValue(const symbolRef: hirSymbolRef): tacOperand;
+function loadSymbolValue(const symbolRef: hirSymbolRef): llirOperand;
 var
-  instruction: tacInstruction;
+  instruction: llirInstruction;
 begin
   loadSymbolValue := newTacTemporary(hirScalarType(symbolRef.valueType));
   instruction := newTacInstruction(irLoadVar);
@@ -172,11 +172,11 @@ begin
   appendTacInstruction(instruction)
 end;
 
-procedure appendIntrinsicCall(intrinsicKind: tacIntrinsicKind;
-                              const resultOperand: tacOperand;
-                              const argumentOperands: array of tacOperand);
+procedure appendIntrinsicCall(intrinsicKind: llirIntrinsicKind;
+                              const resultOperand: llirOperand;
+                              const argumentOperands: array of llirOperand);
 var
-  instruction: tacInstruction;
+  instruction: llirInstruction;
   argumentIndex: integer;
 begin
   instruction := newTacInstruction(irIntrinsicCall);
@@ -187,9 +187,9 @@ begin
   appendTacInstruction(instruction)
 end;
 
-procedure appendCallArgument(argumentIndex: integer; const argumentOperand: tacOperand);
+procedure appendCallArgument(argumentIndex: integer; const argumentOperand: llirOperand);
 var
-  instruction: tacInstruction;
+  instruction: llirInstruction;
 begin
   instruction := newTacInstruction(irArg);
   instruction.positionIndex := argumentIndex;
@@ -197,7 +197,7 @@ begin
   appendTacInstruction(instruction)
 end;
 
-procedure pushLoopBreakLabel(labelId: tacLabelId);
+procedure pushLoopBreakLabel(labelId: llirLabelId);
 begin
   loopBreakLabelCount := loopBreakLabelCount + 1;
   loopBreakLabels[loopBreakLabelCount] := labelId
@@ -209,7 +209,7 @@ begin
     loopBreakLabelCount := loopBreakLabelCount - 1
 end;
 
-function currentLoopBreakLabel: tacLabelId;
+function currentLoopBreakLabel: llirLabelId;
 begin
   if loopBreakLabelCount > 0 then
     currentLoopBreakLabel := loopBreakLabels[loopBreakLabelCount]
@@ -217,7 +217,7 @@ begin
     currentLoopBreakLabel := 0
 end;
 
-procedure pushLoopContinueLabel(labelId: tacLabelId);
+procedure pushLoopContinueLabel(labelId: llirLabelId);
 begin
   loopContinueLabelCount := loopContinueLabelCount + 1;
   loopContinueLabels[loopContinueLabelCount] := labelId
@@ -229,7 +229,7 @@ begin
     loopContinueLabelCount := loopContinueLabelCount - 1
 end;
 
-function currentLoopContinueLabel: tacLabelId;
+function currentLoopContinueLabel: llirLabelId;
 begin
   if loopContinueLabelCount > 0 then
     currentLoopContinueLabel := loopContinueLabels[loopContinueLabelCount]
@@ -237,15 +237,15 @@ begin
     currentLoopContinueLabel := 0
 end;
 
-function lowerExpression(expressionNode: hirExpression; var errorCount: integer): tacOperand; forward;
+function lowerExpression(expressionNode: hirExpression; var errorCount: integer): llirOperand; forward;
 function lowerCall(const callSite: hirCallSite; resultType: typeValue;
-                   expectsResult: boolean; var errorCount: integer): tacOperand; forward;
+                   expectsResult: boolean; var errorCount: integer): llirOperand; forward;
 procedure lowerStatement(statementNode: hirStatement; var errorCount: integer); forward;
 procedure lowerRoutineBody(routineNode: hirRoutine; var errorCount: integer); forward;
 
-function lowerSymbolReference(expressionNode: hirExpression): tacOperand;
+function lowerSymbolReference(expressionNode: hirExpression): llirOperand;
 var
-  instruction: tacInstruction;
+  instruction: llirInstruction;
   resolvedSymbol: symbolIndex;
 begin
   lowerSymbolReference := makeTacNoneOperand;
@@ -276,9 +276,9 @@ begin
   end
 end;
 
-function lowerLiteral(expressionNode: hirExpression): tacOperand;
+function lowerLiteral(expressionNode: hirExpression): llirOperand;
 var
-  instruction: tacInstruction;
+  instruction: llirInstruction;
 begin
   lowerLiteral := newTacTemporary(hirScalarType(expressionNode^.valueType));
   instruction := newTacInstruction(irCopy);
@@ -288,7 +288,7 @@ begin
   appendTacInstruction(instruction)
 end;
 
-function comparisonOpcodeFor(op: hirBinaryOperator): tacInstructionKind;
+function comparisonOpcodeFor(op: hirBinaryOperator): llirInstructionKind;
 begin
   case op of
     hirBinaryEq: comparisonOpcodeFor := irCmpEq;
@@ -302,7 +302,7 @@ begin
   end
 end;
 
-function arithmeticOpcodeFor(op: hirBinaryOperator): tacInstructionKind;
+function arithmeticOpcodeFor(op: hirBinaryOperator): llirInstructionKind;
 begin
   case op of
     hirBinaryAdd: arithmeticOpcodeFor := irAdd;
@@ -314,11 +314,11 @@ begin
   end
 end;
 
-function lowerUnaryExpression(expressionNode: hirExpression; var errorCount: integer): tacOperand;
+function lowerUnaryExpression(expressionNode: hirExpression; var errorCount: integer): llirOperand;
 var
-  operand: tacOperand;
-  instruction: tacInstruction;
-  zeroOperand: tacOperand;
+  operand: llirOperand;
+  instruction: llirInstruction;
+  zeroOperand: llirOperand;
 begin
   operand := lowerExpression(expressionNode^.operand, errorCount);
   lowerUnaryExpression := newTacTemporary(hirScalarType(expressionNode^.valueType));
@@ -335,11 +335,11 @@ begin
   appendTacInstruction(instruction)
 end;
 
-function lowerBinaryExpression(expressionNode: hirExpression; var errorCount: integer): tacOperand;
+function lowerBinaryExpression(expressionNode: hirExpression; var errorCount: integer): llirOperand;
 var
-  leftOperand, rightOperand: tacOperand;
-  instruction: tacInstruction;
-  sumOperand, oneOperand, zeroOperand: tacOperand;
+  leftOperand, rightOperand: llirOperand;
+  instruction: llirInstruction;
+  sumOperand, oneOperand, zeroOperand: llirOperand;
 begin
   leftOperand := lowerExpression(expressionNode^.leftOperand, errorCount);
   rightOperand := lowerExpression(expressionNode^.rightOperand, errorCount);
@@ -395,12 +395,12 @@ begin
   appendTacInstruction(instruction)
 end;
 
-function lowerCaseExpression(expressionNode: hirExpression; var errorCount: integer): tacOperand;
+function lowerCaseExpression(expressionNode: hirExpression; var errorCount: integer): llirOperand;
 var
-  selectorOperand, conditionOperand, whenOperand, branchOperand: tacOperand;
-  resultOperand: tacOperand;
-  nextLabel, endLabel: tacLabelId;
-  instruction: tacInstruction;
+  selectorOperand, conditionOperand, whenOperand, branchOperand: llirOperand;
+  resultOperand: llirOperand;
+  nextLabel, endLabel: llirLabelId;
+  instruction: llirInstruction;
   caseArmNode: hirCaseArm;
 begin
   selectorOperand := makeTacNoneOperand;
@@ -446,7 +446,7 @@ begin
   lowerCaseExpression := resultOperand
 end;
 
-function lowerExpression(expressionNode: hirExpression; var errorCount: integer): tacOperand;
+function lowerExpression(expressionNode: hirExpression; var errorCount: integer): llirOperand;
 begin
   lowerExpression := makeTacNoneOperand;
   if expressionNode = nil then
@@ -475,8 +475,8 @@ end;
 
 procedure lowerAssignmentStatement(statementNode: hirStatement; var errorCount: integer);
 var
-  valueOperand: tacOperand;
-  instruction: tacInstruction;
+  valueOperand: llirOperand;
+  instruction: llirInstruction;
 begin
   valueOperand := lowerExpression(statementNode^.valueExpression, errorCount);
   instruction := newTacInstruction(irStoreVar);
@@ -486,12 +486,12 @@ begin
 end;
 
 function lowerCall(const callSite: hirCallSite; resultType: typeValue;
-                   expectsResult: boolean; var errorCount: integer): tacOperand;
+                   expectsResult: boolean; var errorCount: integer): llirOperand;
 var
-  argumentOperand: tacOperand;
-  instruction, storeInstruction: tacInstruction;
+  argumentOperand: llirOperand;
+  instruction, storeInstruction: llirInstruction;
   argumentIndex: integer;
-  readResult: tacOperand;
+  readResult: llirOperand;
   argumentNode: hirExpression;
 begin
   lowerCall := makeTacNoneOperand;
@@ -503,7 +503,7 @@ begin
       if callSite.firstArgument <> nil then
       begin
         argumentOperand := lowerExpression(callSite.firstArgument, errorCount);
-        appendIntrinsicCall(tacIntrinsicForWriteType(argumentOperand.valueType),
+        appendIntrinsicCall(llirIntrinsicForWriteType(argumentOperand.valueType),
                             makeTacNoneOperand,
                             [argumentOperand])
       end;
@@ -515,7 +515,7 @@ begin
       if callSite.firstArgument <> nil then
       begin
         readResult := newTacTemporary(hirScalarType(callSite.firstArgument^.valueType));
-        appendIntrinsicCall(tacIntrinsicForReadType(hirScalarType(callSite.firstArgument^.valueType)),
+        appendIntrinsicCall(llirIntrinsicForReadType(hirScalarType(callSite.firstArgument^.valueType)),
                             readResult,
                             []);
         storeInstruction := newTacInstruction(irStoreVar);
@@ -561,8 +561,8 @@ end;
 
 procedure lowerReturnStatement(statementNode: hirStatement; var errorCount: integer);
 var
-  valueOperand: tacOperand;
-  instruction: tacInstruction;
+  valueOperand: llirOperand;
+  instruction: llirInstruction;
 begin
   valueOperand := makeTacNoneOperand;
   if statementNode^.valueExpression <> nil then
@@ -586,8 +586,8 @@ end;
 
 procedure lowerIfStatement(statementNode: hirStatement; var errorCount: integer);
 var
-  conditionOperand: tacOperand;
-  elseLabel, endLabel: tacLabelId;
+  conditionOperand: llirOperand;
+  elseLabel, endLabel: llirLabelId;
 begin
   conditionOperand := lowerExpression(statementNode^.conditionExpression, errorCount);
   elseLabel := newTacLabel;
@@ -608,8 +608,8 @@ end;
 
 procedure lowerWhileStatement(statementNode: hirStatement; var errorCount: integer);
 var
-  startLabel, exitLabel: tacLabelId;
-  conditionOperand: tacOperand;
+  startLabel, exitLabel: llirLabelId;
+  conditionOperand: llirOperand;
 begin
   startLabel := newTacLabel;
   exitLabel := newTacLabel;
@@ -627,8 +627,8 @@ end;
 
 procedure lowerRepeatStatement(statementNode: hirStatement; var errorCount: integer);
 var
-  startLabel, continueLabel, exitLabel: tacLabelId;
-  conditionOperand: tacOperand;
+  startLabel, continueLabel, exitLabel: llirLabelId;
+  conditionOperand: llirOperand;
 begin
   startLabel := newTacLabel;
   continueLabel := newTacLabel;
@@ -647,10 +647,10 @@ end;
 
 procedure lowerForStatement(statementNode: hirStatement; var errorCount: integer);
 var
-  counterOperand, startOperand, endOperand, stepOperand: tacOperand;
-  comparisonOperand, incrementOperand: tacOperand;
-  startLabel, continueLabel, exitLabel: tacLabelId;
-  instruction: tacInstruction;
+  counterOperand, startOperand, endOperand, stepOperand: llirOperand;
+  comparisonOperand, incrementOperand: llirOperand;
+  startLabel, continueLabel, exitLabel: llirLabelId;
+  instruction: llirInstruction;
 begin
   counterOperand := storageOperandFromRef(statementNode^.targetSymbol);
   startOperand := lowerExpression(statementNode^.startExpression, errorCount);
@@ -699,11 +699,11 @@ end;
 
 procedure lowerSwitchStatement(statementNode: hirStatement; var errorCount: integer);
 var
-  selectorOperand, labelOperand, comparisonOperand: tacOperand;
-  nextLabel, endLabel, defaultLabel: tacLabelId;
-  bodyLabels: array [1..maxTacInstructions] of tacLabelId;
+  selectorOperand, labelOperand, comparisonOperand: llirOperand;
+  nextLabel, endLabel, defaultLabel: llirLabelId;
+  bodyLabels: array [1..maxTacInstructions] of llirLabelId;
   bodyLabelCount: integer;
-  instruction: tacInstruction;
+  instruction: llirInstruction;
   switchArmNode: hirSwitchArm;
   labelNode: hirSwitchLabel;
 begin
@@ -813,7 +813,7 @@ end;
 
 procedure lowerRoutineDeclaration(routineNode: hirRoutine; var errorCount: integer);
 var
-  procedureIndex: tacProcedureIndex;
+  procedureIndex: llirProcedureIndex;
 begin
   if routineNode = nil then
     exit;
@@ -833,7 +833,7 @@ end;
 procedure generateLlirProgram(const programData: hirProgramRecord;
                               var errorCount: integer);
 var
-  procedureIndex: tacProcedureIndex;
+  procedureIndex: llirProcedureIndex;
   routineNode: hirRoutine;
 begin
   initializeLlir;
@@ -857,3 +857,4 @@ begin
 end;
 
 end.
+

@@ -3,8 +3,8 @@
   Date: 2026-06-09
 
   LLIR interpreter. This standalone program reads the textual .llir image
-  dumped by llir, reconstructs procedure-scoped TAC units, and executes them
-  directly. It stays intentionally close to the staged TAC model: variables
+  dumped by llir, reconstructs procedure-scoped LLIR units, and executes them
+  directly. It stays intentionally close to the staged LLIR model: variables
   remain symbolic, temporaries are numeric slots, labels are symbolic jump
   targets, and procedure calls use a small return-address stack. }
 program llirint;
@@ -25,7 +25,7 @@ const
   maxCallDepth = 64;
 
 type
-  tacRuntimeInstructionKind = (
+  llirRuntimeInstructionKind = (
     rtNoOp,
     rtEnterFrame,
     rtAdd,
@@ -64,7 +64,7 @@ type
     rtReturn
   );
 
-  tacRuntimeOperandKind = (
+  llirRuntimeOperandKind = (
     rtOperandNone,
     rtOperandImmediate,
     rtOperandLocal,
@@ -76,66 +76,66 @@ type
     rtOperandIntrinsic
   );
 
-  tacRuntimeOperand = record
-    kind: tacRuntimeOperandKind;
+  llirRuntimeOperand = record
+    kind: llirRuntimeOperandKind;
     valueType: string;
     name: string;
     value: integer;
     temporaryId: integer
   end;
 
-  tacRuntimeInstruction = record
-    kind: tacRuntimeInstructionKind;
-    resultOperand: tacRuntimeOperand;
-    leftOperand: tacRuntimeOperand;
-    rightOperand: tacRuntimeOperand;
-    targetOperand: tacRuntimeOperand;
+  llirRuntimeInstruction = record
+    kind: llirRuntimeInstructionKind;
+    resultOperand: llirRuntimeOperand;
+    leftOperand: llirRuntimeOperand;
+    rightOperand: llirRuntimeOperand;
+    targetOperand: llirRuntimeOperand;
     positionIndex: integer;
     operatorText: string;
     callArgumentCount: integer;
-    callArguments: array [1..maxProcedureParameters] of tacRuntimeOperand
+    callArguments: array [1..maxProcedureParameters] of llirRuntimeOperand
   end;
 
-  tacRuntimeProcedure = record
+  llirRuntimeProcedure = record
     name: string;
     parameterCount: integer;
-    parameters: array [1..maxProcedureParameters] of tacRuntimeOperand;
+    parameters: array [1..maxProcedureParameters] of llirRuntimeOperand;
     instructionCount: integer;
-    instructions: array [1..maxTacInstructions] of tacRuntimeInstruction;
+    instructions: array [1..maxTacInstructions] of llirRuntimeInstruction;
     labelTargets: array [1..maxTacLabels] of integer
   end;
 
-  tacRuntimeVariable = record
+  llirRuntimeVariable = record
     name: string;
     address: integer;
     value: integer
   end;
 
-  tacRuntimeMemoryCell = record
+  llirRuntimeMemoryCell = record
     address: integer;
     value: integer
   end;
 
-  tacReturnAddress = record
+  llirReturnAddress = record
     procedureIndex: integer;
     instructionIndex: integer;
-    resultOperand: tacRuntimeOperand;
+    resultOperand: llirRuntimeOperand;
     calleeProcedureIndex: integer
   end;
 
 var
-  tacFile: Text;
-  tacFileName: string;
+  llirFile: Text;
+  llirFileName: string;
   verbosity: diagnosticVerbosity;
-  procedures: array [1..maxTacProcedures] of tacRuntimeProcedure;
+  procedures: array [1..maxTacProcedures] of llirRuntimeProcedure;
   procedureCount: integer;
-  variables: array [1..maxTacVariables] of tacRuntimeVariable;
+  variables: array [1..maxTacVariables] of llirRuntimeVariable;
   variableCount: integer;
   nextVariableAddress: integer;
-  memoryCells: array [1..maxTacMemoryCells] of tacRuntimeMemoryCell;
+  memoryCells: array [1..maxTacMemoryCells] of llirRuntimeMemoryCell;
   memoryCellCount: integer;
   temporaries: array [1..maxTacTemporaries] of integer;
-  returnStack: array [1..maxCallDepth] of tacReturnAddress;
+  returnStack: array [1..maxCallDepth] of llirReturnAddress;
   returnStackTop: integer;
   pendingCallArguments: array [1..maxProcedureParameters] of integer;
   pendingCallArgumentCount: integer;
@@ -144,7 +144,7 @@ var
   lastCallResultIsValue: boolean;
   hasLastCallResult: boolean;
 
-function makeNoneOperand: tacRuntimeOperand;
+function makeNoneOperand: llirRuntimeOperand;
 begin
   makeNoneOperand.kind := rtOperandNone;
   makeNoneOperand.valueType := '';
@@ -192,7 +192,7 @@ begin
     parseLabelId := 0
 end;
 
-function parseOperand(const operandText: string): tacRuntimeOperand;
+function parseOperand(const operandText: string): llirRuntimeOperand;
 var
   separatorIndex, slashIndex, openIndex, closeIndex: integer;
   atomText, typeText, payloadText: string;
@@ -280,7 +280,7 @@ begin
   end
 end;
 
-function instructionKindFromText(const kindText: string): tacRuntimeInstructionKind;
+function instructionKindFromText(const kindText: string): llirRuntimeInstructionKind;
 begin
   if kindText = 'enter' then
     instructionKindFromText := rtEnterFrame
@@ -546,7 +546,7 @@ end;
 
 procedure loadTacFile;
 var
-  tacLine: string;
+  llirLine: string;
   tokens: TStringList;
   currentProcedureIndex: integer;
   instructionTotal: integer;
@@ -555,10 +555,10 @@ begin
   instructionTotal := 0;
   tokens := TStringList.Create;
   try
-    while not EOF(tacFile) do
+    while not EOF(llirFile) do
     begin
-      ReadLn(tacFile, tacLine);
-      splitLine(Trim(tacLine), tokens);
+      ReadLn(llirFile, llirLine);
+      splitLine(Trim(llirLine), tokens);
       if tokens.Count = 0 then
         continue;
 
@@ -582,7 +582,7 @@ begin
     tokens.Free
   end;
 
-  Close(tacFile);
+  Close(llirFile);
   emitDiagnostic(status, STATUS_PCODE_READING_COMPLETE + IntToStr(instructionTotal))
 end;
 
@@ -650,7 +650,7 @@ begin
   ensureMemoryCell := memoryCellCount
 end;
 
-function addressValue(const operand: tacRuntimeOperand): integer;
+function addressValue(const operand: llirRuntimeOperand): integer;
 var
   variableIndex: integer;
 begin
@@ -681,7 +681,7 @@ begin
   memoryCells[ensureMemoryCell(address)].value := value
 end;
 
-function operandValue(const operand: tacRuntimeOperand): integer;
+function operandValue(const operand: llirRuntimeOperand): integer;
 var
   variableIndex: integer;
 begin
@@ -712,7 +712,7 @@ begin
   variables[variableIndex].value := variableValueByName
 end;
 
-procedure assignOperand(const operand: tacRuntimeOperand; value: integer);
+procedure assignOperand(const operand: llirRuntimeOperand; value: integer);
 var
   variableIndex: integer;
 begin
@@ -883,7 +883,7 @@ begin
     readValueByIntrinsic := readIntegerValueOrHalt(consumeLineRemainder)
 end;
 
-procedure executeIntrinsicCall(const instruction: tacRuntimeInstruction);
+procedure executeIntrinsicCall(const instruction: llirRuntimeInstruction);
 var
   value: integer;
 begin
@@ -954,7 +954,7 @@ end;
 procedure executeTac;
 var
   currentProcedureIndex, programCounter, calleeProcedureIndex, argumentIndex: integer;
-  instruction: tacRuntimeInstruction;
+  instruction: llirRuntimeInstruction;
 begin
   emitDiagnostic(status, STATUS_PCODEINT_START);
   initializeRuntimeState;
@@ -1243,9 +1243,10 @@ begin
     setDiagnosticVerbosity(verbosity)
   end;
 
-  tacFileName := ParamStr(1);
-  Assign(tacFile, tacFileName);
-  Reset(tacFile);
+  llirFileName := ParamStr(1);
+  Assign(llirFile, llirFileName);
+  Reset(llirFile);
   loadTacFile;
   executeTac
 end.
+
