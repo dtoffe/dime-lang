@@ -7,6 +7,10 @@ and this project is expected to follow [Semantic Versioning](https://semver.org/
 
 ## [Unreleased]
 
+### [Added]
+
+- Define and document the intended LIR contract.
+
 ### [Changed]
 
 - Update and reorganize roadmap.

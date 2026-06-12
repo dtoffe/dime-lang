@@ -15,6 +15,10 @@ program.pcode
 flow, loads/stores, procedure boundaries, frame layout, calls, and intrinsics
 explicit while still staying target-neutral.
 
+For the intended `v0.0.13` boundary, see [LIR-Contract.md](./LIR-Contract.md).
+That page freezes what should belong in target-neutral LIR even where the
+current LLIR dump still contains transitional frame details.
+
 ## Pipeline Position
 
 The current compiler stages are:
