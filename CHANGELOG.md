@@ -9,6 +9,7 @@ and this project is expected to follow [Semantic Versioning](https://semver.org/
 
 ### [Added]
 
+- Document the current LIR features that do not comply with the contract.
 - Define and document the intended LIR contract.
 
 ### [Changed]
