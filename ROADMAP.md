@@ -4,98 +4,84 @@ This roadmap is intentionally conservative. The goal is to build the project in 
 
 ## Main Short Term Milestones
 
-### v0.0.26 - Cleanup and First Optimizations
+### v0.0.24 - Cleanup and First Optimizations
 
 - Add small, safe optimization passes only after the assembler path is stable.
 - Fold obvious constants in the high-level IR.
 - Remove trivially dead blocks in the lowered IR.
 - Add minimal copy cleanup where it is clearly correct.
 
-### v0.0.25 - Language Reference Draft
+### v0.0.23 - Language Reference Draft
 
 - Start consolidating grammar, semantics, and implementation notes into a proper language guide.
 - Document the high-level IR and lowered IR contracts.
 - Record calling convention, frame layout, and intrinsic behavior.
 
-### v0.0.24 - Data Layout Consolidation
+### v0.0.22 - Data Layout Consolidation
 
 - Centralize layout rules for scalars, strings, arrays, records, and sets.
 - Make backend code query layout metadata instead of re-deriving it ad hoc.
 - Prepare for size, alignment, and offset queries to become first-class services.
 
-### v0.0.23 - Sets
+### v0.0.21 - Sets
 
 - Add set datatypes.
 - Decide on a concrete first representation before implementing the full feature.
 - Introduce membership and basic set operations incrementally.
 
-### v0.0.22 - Records
+### v0.0.20 - Records
 
 - Add record datatypes.
 - Add field access to the high-level IR.
 - Lower field access into explicit offsets and address arithmetic in the lowered IR.
 
-### v0.0.21 - Arrays
+### v0.0.19 - Arrays
 
 - Add array datatypes.
 - Add indexing semantics to the high-level IR.
 - Lower indexing into explicit address arithmetic in the lowered IR.
 
-### v0.0.20 - String Type
+### v0.0.18 - String Type
 
 - Add the `string` datatype.
 - Decide on the first string representation early.
 - Add runtime or intrinsic support needed to read, write, and carry strings through the pipeline.
 - Use strings in examples once the representation stabilizes.
 
-### v0.0.19 - Enumerations and Subranges
+### v0.0.17 - Enumerations and Subranges
 
 - Add enumeration datatypes.
 - Add subrange datatypes.
 - Define their representation and comparison rules clearly in lowering and runtime behavior.
 
-### v0.0.18 - Type System Refactor
+### v0.0.16 - Type System Refactor
 
 - Rework the type table into a stronger representation.
 - Add explicit size, layout, and type-category queries.
 - Prepare the compiler for non-scalar types without rewriting the frontend later.
 
-### v0.0.17 - Backend Validation
+### v0.0.15 - Runtime Boundary and Backend Validation
 
-- Expand examples and golden-style output checks for both interpreter and assembler paths.
-- Cross-check the TAC interpreter backend against the assembler backend.
+- Lower target-neutral intrinsics to a runtime or syscall boundary.
+- Implement read/write through the first supported OS interface.
+- Cross-check interpreter and native backend behavior.
+- Expand examples and golden-style output tests.
 - Stabilize frame layout and calling convention behavior with broader coverage.
 
-### v0.0.16 - Intrinsics to Runtime / Syscall Layer
+### v0.0.14 - First Native Backend
 
-- Lower TAC intrinsics to a clean runtime or syscall boundary.
-- Implement read and write using the target OS interface.
-- Preserve the target-neutral intrinsic model above that boundary.
+- Emit first x86-64 assembly for scalar programs.
+- Use stack-slot temporaries and simple scratch-register lowering.
+- Support locals, parameters, calls, branches, returns, and basic intrinsics.
+- Add assembling and linking flow.
+- Produce runnable native executables.
+- Keep the p-code/interpreter backend in parallel.
 
-### v0.0.15 - Toolchain Integration
+### v0.0.13 - Backend Lowering Contract
 
-- Add assembling and linking flow for generated assembly.
-- Produce runnable executables from the assembler backend.
-- Keep the pcode backend in parallel while the native path matures.
-
-### v0.0.14 - First Assembler Backend
-
-- Emit a first x86/x64 text assembly backend for scalar programs.
-- Use the current stack-slot temporary policy and simple scratch-register lowering.
-- Support locals, parameters, calls, branches, returns, and intrinsics well enough to run real examples.
-
-### v0.0.13 - LIR / Assembler Boundary
-
-- Define a clear boundary between the lowered IR and the assembler emitter.
-- Separate target-neutral assembly emission logic from target-specific ABI and OS concerns.
-- Freeze a small backend-ready lowered IR surface before codegen grows further.
-
-### v0.0.12 - IR Split
-
-- Introduce explicit high-level IR and lowered IR concepts.
-- Treat the current TAC shape as the seed of the lowered IR.
-- Add an initial high-level-IR-to-lowered-IR lowering pass.
-- Keep frame layout and backend preparation below the high-level IR boundary.
-- Preserve current behavior while making the stages conceptually explicit.
+- Define the backend-ready lowered IR surface.
+- Make HIR-to-LIR lowering explicit and inspectable.
+- Keep frame layout, ABI, and OS concerns below the LIR boundary.
+- Preserve current interpreter behavior while preparing for native codegen.
 
 For older releases, see [CHANGELOG.md](./CHANGELOG.md).
