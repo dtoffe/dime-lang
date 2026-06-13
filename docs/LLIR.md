@@ -66,13 +66,13 @@ example:
 ```text
 llir program
 globals 1
-global 1 global[total]:integer/dword
+global 1 global[total]:integer/bits32
 procedures 2
 proc 1 procparams return=none params=0 locals=0 temps=6 blocks=1 labels=1 instructions=18
-  temp 1 temp[t1]:integer/dword
+  temp 1 temp[t1]:integer/bits32
   block 1 label=L1 first=1 count=18
-   1 copy result=temp[t1]:integer/dword left=imm(65):integer/dword
-   2 call target=proc[store]:address arg1=temp[t1]:integer/dword
+   1 copy result=temp[t1]:integer/bits32 left=imm(65):integer/bits32
+   2 call target=proc[store]:pointer arg1=temp[t1]:integer/bits32
   labelmap L1 block=1 first=1
 endproc
 ```
@@ -108,10 +108,10 @@ Example:
 
 ```text
 proc 2 store return=none params=3 locals=0 temps=3 blocks=1 labels=1 instructions=9
-  param 1 param[value]:integer/dword
-  param 2 param[flag]:boolean/byte
-  param 3 param[ch]:char/byte
-  temp 1 temp[t7]:integer/dword
+  param 1 param[value]:integer/bits32
+  param 2 param[flag]:boolean/bits8
+  param 3 param[ch]:char/bits8
+  temp 1 temp[t7]:integer/bits32
 ```
 
 ## Basic Blocks
@@ -157,22 +157,22 @@ are:
 
 | Form | Meaning |
 | --- | --- |
-| `imm(12):integer/dword` | immediate integer constant |
-| `imm(1):boolean/byte` | immediate boolean value |
-| `imm(65):char/byte` | immediate char value as code point |
-| `local[x]:integer/dword` | procedure-local storage |
-| `param[value]:integer/dword` | procedure parameter storage |
-| `global[n]:integer/dword` | top-level storage seen from a procedure |
-| `temp[t4]:boolean/byte` | temporary value |
-| `label[L3]:address` | control-flow label |
-| `proc[store]:address` | user procedure/function target |
-| `intrinsic[write_int]:address` | compiler-known intrinsic target |
+| `imm(12):integer/bits32` | immediate integer constant |
+| `imm(1):boolean/bits8` | immediate boolean value |
+| `imm(65):char/bits8` | immediate char value as code point |
+| `local[x]:integer/bits32` | procedure-local storage |
+| `param[value]:integer/bits32` | procedure parameter storage |
+| `global[n]:integer/bits32` | top-level storage seen from a procedure |
+| `temp[t4]:boolean/bits8` | temporary value |
+| `label[L3]:pointer` | control-flow label |
+| `proc[store]:pointer` | user procedure/function target |
+| `intrinsic[write_int]:pointer` | compiler-known intrinsic target |
 
 Each operand carries:
 
 - kind
 - source-level type
-- size class (`byte`, `word`, `dword`, `qword`, `address`)
+- size class (`bits8`, `bits16`, `bits32`, `bits64`, `pointer`)
 - optional symbol or intrinsic identity
 
 ## Instruction Set
@@ -247,9 +247,9 @@ HLIR: x + 1
 becomes:
 
 ```text
-load result=temp[t1]:integer/dword left=local[x]:integer/dword
-copy result=temp[t2]:integer/dword left=imm(1):integer/dword
-add result=temp[t3]:integer/dword left=temp[t1]:integer/dword right=temp[t2]:integer/dword
+load result=temp[t1]:integer/bits32 left=local[x]:integer/bits32
+copy result=temp[t2]:integer/bits32 left=imm(1):integer/bits32
+add result=temp[t3]:integer/bits32 left=temp[t1]:integer/bits32 right=temp[t2]:integer/bits32
 ```
 
 ### Assignments
@@ -257,7 +257,7 @@ add result=temp[t3]:integer/dword left=temp[t1]:integer/dword right=temp[t2]:int
 Assignments separate computed values from storage:
 
 ```text
-store result=local[x]:integer/dword left=temp[t3]:integer/dword
+store result=local[x]:integer/bits32 left=temp[t3]:integer/bits32
 ```
 
 ### Structured control flow
@@ -269,9 +269,9 @@ Example `if` shape:
 
 ```text
 ... condition into temp[t1] ...
-brfalse left=temp[t1]:boolean/byte target=label[Lelse]:address
+brfalse left=temp[t1]:boolean/bits8 target=label[Lelse]:pointer
 ... then block ...
-jump target=label[Lend]:address
+jump target=label[Lend]:pointer
 block ... label=Lelse
 ... else block ...
 block ... label=Lend
@@ -300,9 +300,9 @@ HLIR still knows about source builtins such as `write`, `writeln`, `read`, and
 Example:
 
 ```text
-load result=temp[t4]:integer/dword left=global[total]:integer/dword
-intrinsic_call target=intrinsic[write_int]:address arg1=temp[t4]:integer/dword
-intrinsic_call target=intrinsic[writeln]:address
+load result=temp[t4]:integer/bits32 left=global[total]:integer/bits32
+intrinsic_call target=intrinsic[write_int]:pointer arg1=temp[t4]:integer/bits32
+intrinsic_call target=intrinsic[writeln]:pointer
 ```
 
 ## Call Shape in LLIR
@@ -311,17 +311,17 @@ User routine calls carry their argument operands directly on the `call`
 instruction:
 
 ```text
-copy result=temp[t1]:integer/dword left=imm(65):integer/dword
-copy result=temp[t2]:boolean/byte left=imm(1):boolean/byte
-copy result=temp[t3]:char/byte left=imm(65):char/byte
-call target=proc[store]:address arg1=temp[t1]:integer/dword arg2=temp[t2]:boolean/byte arg3=temp[t3]:char/byte
+copy result=temp[t1]:integer/bits32 left=imm(65):integer/bits32
+copy result=temp[t2]:boolean/bits8 left=imm(1):boolean/bits8
+copy result=temp[t3]:char/bits8 left=imm(65):char/bits8
+call target=proc[store]:pointer arg1=temp[t1]:integer/bits32 arg2=temp[t2]:boolean/bits8 arg3=temp[t3]:char/bits8
 ```
 
 If a call returns a value, the destination temporary is attached directly to the
 same instruction:
 
 ```text
-call result=temp[t4]:integer/dword target=proc[compute]:address arg1=temp[t1]:integer/dword
+call result=temp[t4]:integer/bits32 target=proc[compute]:pointer arg1=temp[t1]:integer/bits32
 ```
 
 Intrinsic calls use the same basic shape:

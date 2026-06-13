@@ -80,11 +80,11 @@ type
 
   llirOperandSize = (
     irSizeNone,
-    irSizeByte,
-    irSizeWord,
-    irSizeDWord,
-    irSizeQWord,
-    irSizeAddress
+    irSizeBits8,
+    irSizeBits16,
+    irSizeBits32,
+    irSizeBits64,
+    irSizePointer
   );
 
   llirOperand = record
@@ -237,7 +237,7 @@ end;
 function isAddressValueOperand(const operand: llirOperand): boolean;
 begin
   isAddressValueOperand := (operand.kind = irOperandTemporary) and
-                           (operand.size = irSizeAddress)
+                           (operand.size = irSizePointer)
 end;
 
 function validateTacIntrinsicCall(const instruction: llirInstruction): boolean;
@@ -495,20 +495,20 @@ function typeToOperandSize(valueType: typeValue): llirOperandSize;
 begin
   case valueType of
     typeBoolean, typeChar:
-      typeToOperandSize := irSizeByte;
+      typeToOperandSize := irSizeBits8;
     typeInteger:
-      typeToOperandSize := irSizeDWord
+      typeToOperandSize := irSizeBits32
   end
 end;
 
 function operandSizeToString(size: llirOperandSize): string;
 begin
   case size of
-    irSizeByte: operandSizeToString := 'byte';
-    irSizeWord: operandSizeToString := 'word';
-    irSizeDWord: operandSizeToString := 'dword';
-    irSizeQWord: operandSizeToString := 'qword';
-    irSizeAddress: operandSizeToString := 'address';
+    irSizeBits8: operandSizeToString := 'bits8';
+    irSizeBits16: operandSizeToString := 'bits16';
+    irSizeBits32: operandSizeToString := 'bits32';
+    irSizeBits64: operandSizeToString := 'bits64';
+    irSizePointer: operandSizeToString := 'pointer';
   else
     operandSizeToString := 'none'
   end
@@ -693,7 +693,7 @@ end;
 function makeTacAddressTempOperand(temporaryId: llirTemporaryId): llirOperand;
 begin
   makeTacAddressTempOperand := makeTacTempOperand(temporaryId, typeInteger);
-  makeTacAddressTempOperand.size := irSizeAddress
+  makeTacAddressTempOperand.size := irSizePointer
 end;
 
 function makeTacLabelOperand(labelId: llirLabelId): llirOperand;
@@ -701,7 +701,7 @@ begin
   FillChar(makeTacLabelOperand, SizeOf(makeTacLabelOperand), 0);
   makeTacLabelOperand.kind := irOperandLabel;
   makeTacLabelOperand.valueType := typeInteger;
-  makeTacLabelOperand.size := irSizeAddress;
+  makeTacLabelOperand.size := irSizePointer;
   makeTacLabelOperand.intrinsicKind := irIntrinsicNone;
   makeTacLabelOperand.labelId := labelId
 end;
@@ -711,7 +711,7 @@ begin
   FillChar(makeTacProcedureOperand, SizeOf(makeTacProcedureOperand), 0);
   makeTacProcedureOperand.kind := irOperandProcedure;
   makeTacProcedureOperand.valueType := typeInteger;
-  makeTacProcedureOperand.size := irSizeAddress;
+  makeTacProcedureOperand.size := irSizePointer;
   makeTacProcedureOperand.symbol := symbol;
   makeTacProcedureOperand.name := name;
   makeTacProcedureOperand.intrinsicKind := irIntrinsicNone
@@ -722,7 +722,7 @@ begin
   FillChar(makeTacIntrinsicOperand, SizeOf(makeTacIntrinsicOperand), 0);
   makeTacIntrinsicOperand.kind := irOperandIntrinsic;
   makeTacIntrinsicOperand.valueType := typeInteger;
-  makeTacIntrinsicOperand.size := irSizeAddress;
+  makeTacIntrinsicOperand.size := irSizePointer;
   makeTacIntrinsicOperand.intrinsicKind := intrinsicKind
 end;
 
@@ -777,7 +777,7 @@ begin
       temporaryCount := temporaryCount + 1;
       temporaries[temporaryCount].temporaryId := currentProgram.temporaryCount;
       temporaries[temporaryCount].valueType := typeInteger;
-      temporaries[temporaryCount].size := irSizeAddress
+      temporaries[temporaryCount].size := irSizePointer
     end;
   newTacAddressTemporary := makeTacAddressTempOperand(currentProgram.temporaryCount)
 end;

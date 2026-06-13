@@ -16,6 +16,7 @@ and this project is expected to follow [Semantic Versioning](https://semver.org/
 
 ### [Changed]
 
+- Rename LLIR operand size classes from machine-flavored terms to abstract width categories such as `bits32` and `pointer`.
 - Remove legacy `arg`/`result` call artifacts and `positionIndex` from the LLIR core model.
 - Treat `llirint` intrinsic execution as an interpreter-side testing backend while keeping LLIR intrinsic identities target-neutral.
 - Lower user LLIR calls to carry inline `argN` operands and optional `result` instead of separate `arg`/`result` transport steps.
