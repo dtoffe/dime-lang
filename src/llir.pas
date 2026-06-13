@@ -165,6 +165,8 @@ type
   end;
 
   llirProgram = record
+    globalCount: integer;
+    globals: array [1..symbolTableMax] of llirOperand;
     procedureCount: integer;
     procedures: array [1..maxTacProcedures] of llirProcedure;
     basicBlockCount: integer;
@@ -204,6 +206,7 @@ procedure addTacProcedureParameter(procedureIndex: llirProcedureIndex;
                                    parameterSymbol: symbolIndex);
 procedure addTacProcedureLocal(procedureIndex: llirProcedureIndex;
                                localSymbol: symbolIndex);
+procedure addTacGlobal(globalSymbol: symbolIndex);
 function appendTacBasicBlock(blockLabelId: llirLabelId): llirBasicBlockIndex;
 function appendTacInstruction(const instruction: llirInstruction): llirInstructionIndex;
 procedure setTacCallArgument(var instruction: llirInstruction; argumentIndex: integer;
@@ -1029,6 +1032,27 @@ begin
   end
 end;
 
+procedure addTacGlobal(globalSymbol: symbolIndex);
+begin
+  if globalSymbol = 0 then
+  begin
+    currentProgram.overflow := true;
+    exit
+  end;
+
+  if currentProgram.globalCount >= symbolTableMax then
+  begin
+    currentProgram.overflow := true;
+    exit
+  end;
+
+  currentProgram.globalCount := currentProgram.globalCount + 1;
+  currentProgram.globals[currentProgram.globalCount] := makeTacSymbolOperand(
+    globalSymbol,
+    getDeclarationIdentifier(globalSymbol),
+    getDeclarationType(globalSymbol))
+end;
+
 function appendTacBasicBlock(blockLabelId: llirLabelId): llirBasicBlockIndex;
 begin
   if currentProcedure = 0 then
@@ -1153,6 +1177,10 @@ begin
   Assign(outputFile, outputFileName);
   Rewrite(outputFile);
   writeln(outputFile, 'llir program');
+  writeln(outputFile, 'globals ', currentProgram.globalCount);
+  for itemIndex := 1 to currentProgram.globalCount do
+    writeln(outputFile, 'global ', itemIndex, ' ',
+            operandToString(currentProgram.globals[itemIndex]));
   writeln(outputFile, 'procedures ', currentProgram.procedureCount);
   for procedureIndex := 1 to currentProgram.procedureCount do
     with currentProgram.procedures[procedureIndex] do

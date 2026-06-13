@@ -78,20 +78,16 @@ begin
   end
 end;
 
-procedure recordProgramGlobalsAsLocals(const programData: hirProgramRecord;
-                                       procedureIndex: llirProcedureIndex);
+procedure recordProgramGlobals(const programData: hirProgramRecord);
 var
   declarationNode: hirDeclaration;
 begin
-  if procedureIndex = 0 then
-    exit;
-
   declarationNode := programData.firstGlobal;
   while declarationNode <> nil do
   begin
     if (declarationNode^.kind = hirDeclVariable) and
        (declarationNode^.symbolInfo.symbol <> 0) then
-      addTacProcedureLocal(procedureIndex, declarationNode^.symbolInfo.symbol);
+      addTacGlobal(declarationNode^.symbolInfo.symbol);
     declarationNode := declarationNode^.nextSibling
   end
 end;
@@ -827,9 +823,9 @@ begin
   loopBreakLabelCount := 0;
   loopContinueLabelCount := 0;
 
+  recordProgramGlobals(programData);
   procedureIndex := appendTacProcedure(programData.name, 0);
   setTacProcedureReturnType(procedureIndex, typeInteger, false);
-  recordProgramGlobalsAsLocals(programData, procedureIndex);
   appendLabel(newTacLabel);
   lowerRoutineBody(programData.entryRoutine, errorCount);
 

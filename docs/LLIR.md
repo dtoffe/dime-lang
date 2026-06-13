@@ -65,9 +65,10 @@ example:
 
 ```text
 llir program
+globals 1
+global 1 global[total]:integer/dword
 procedures 2
-proc 1 procparams return=none params=0 locals=3 temps=6 blocks=1 labels=1 instructions=18
-  local 1 global[total]:integer/dword
+proc 1 procparams return=none params=0 locals=0 temps=6 blocks=1 labels=1 instructions=18
   temp 1 temp[t1]:integer/dword
   block 1 label=L1 first=1 count=18
    1 copy result=temp[t1]:integer/dword left=imm(65):integer/dword
@@ -82,6 +83,7 @@ format and stage name.
 
 Each procedure dump contains:
 
+- An optional top-level `global` summary section for program storage.
 - A procedure header with name, return type, and counts.
 - Optional `param`, `local`, and `temp` summaries.
 - `block` summaries with labels and aliases.
@@ -99,6 +101,9 @@ LLIR is procedure-based. Each procedure carries:
 - temporary list
 - basic blocks
 - instructions
+
+Program-wide global storage is listed once at the top of the dump rather than
+being repeated as fake locals on the entry procedure.
 
 Example:
 

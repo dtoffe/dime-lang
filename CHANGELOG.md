@@ -14,6 +14,7 @@ and this project is expected to follow [Semantic Versioning](https://semver.org/
 
 ### [Changed]
 
+- Add explicit top-level global summaries to LLIR dumps for readability.
 - Remove frame layout and stack-slot policy from structural LLIR.
 - Remove `enter` and `leave` from LLIR and keep procedure flow target-neutral.
 - Update LLIR and HLIR docs to reflect the target-neutral structural IR boundary.

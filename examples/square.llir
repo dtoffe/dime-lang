@@ -1,8 +1,9 @@
 llir program
+globals 2
+global 1 global[x]:integer/dword
+global 2 global[squ]:integer/dword
 procedures 2
-proc 1 square return=none params=0 locals=2 temps=7 blocks=4 labels=3 instructions=13
-  local 1 global[x]:integer/dword
-  local 2 global[squ]:integer/dword
+proc 1 square return=none params=0 locals=0 temps=7 blocks=4 labels=3 instructions=13
   temp 1 temp[t1]:integer/dword
   temp 2 temp[t2]:integer/dword
   temp 3 temp[t3]:integer/dword

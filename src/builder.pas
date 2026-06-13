@@ -2,9 +2,9 @@
   License: MIT. See LICENSE in the project root.
   Date: 2026-05-31
 
-  Build pipeline orchestration for the command-line compiler.  This unit owns
-  the flow from source file to generated intermediate and p-code images while
-  keeping parsing, semantic analysis, TAC lowering, and p-code generation in
+  Build pipeline orchestration for the command-line compiler. This unit owns
+  the flow from source file to generated HLIR, LLIR, and p-code images while
+  keeping parsing, semantic analysis, IR lowering, and p-code generation in
   their own units. }
 unit builder;
 
