@@ -347,13 +347,6 @@ begin
   if not validateTacIntrinsicCall then
     exit;
 
-  if intrinsicHasReturnValue(kind) and
-     (instruction.resultOperand.valueType <> intrinsicReturnType(kind)) then
-  begin
-    validateTacIntrinsicCall := false;
-    exit
-  end;
-
   for argumentIndex := 1 to instruction.callArgumentCount do
   begin
     validateTacIntrinsicCall := isValueOperandKind(instruction.callArguments[argumentIndex].kind);
@@ -423,9 +416,10 @@ begin
       begin
         validateTacInstruction := instruction.targetOperand.kind = irOperandIntrinsic;
         if validateTacInstruction then
-          validateTacInstruction := (instruction.resultOperand.kind = irOperandNone) and
-                                    (instruction.leftOperand.kind = irOperandNone) and
-                                    (instruction.rightOperand.kind = irOperandNone)
+          validateTacInstruction := (instruction.leftOperand.kind = irOperandNone) and
+                                    (instruction.rightOperand.kind = irOperandNone);
+        if validateTacInstruction then
+          validateTacInstruction := validateTacIntrinsicCall(instruction)
       end;
     irAddrGlobal:
       validateTacInstruction := isAddressValueOperand(instruction.resultOperand) and

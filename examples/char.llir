@@ -1,9 +1,10 @@
 llir program
+globals 3
+global 1 global[first]:char/byte
+global 2 global[last]:char/byte
+global 3 global[ordered]:boolean/byte
 procedures 1
-proc 1 chardemo return=none params=0 locals=3 temps=12 blocks=1 labels=1 instructions=17
-  local 1 global[first]:char/byte
-  local 2 global[last]:char/byte
-  local 3 global[ordered]:boolean/byte
+proc 1 chardemo return=none params=0 locals=0 temps=12 blocks=1 labels=1 instructions=17
   temp 1 temp[t1]:char/byte
   temp 2 temp[t2]:char/byte
   temp 3 temp[t3]:char/byte

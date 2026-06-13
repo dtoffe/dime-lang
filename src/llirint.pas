@@ -3,10 +3,11 @@
   Date: 2026-06-09
 
   LLIR interpreter. This standalone program reads the textual .llir image
-  dumped by llir, reconstructs procedure-scoped LLIR units, and executes them
-  directly. It stays intentionally close to the staged LLIR model: variables
-  remain symbolic, temporaries are numeric slots, labels are symbolic jump
-  targets, and procedure calls use a small return-address stack. }
+  dumped by llir, reconstructs the target-neutral LLIR summaries and
+  procedure-scoped units, and executes them directly. It stays intentionally
+  close to the staged LLIR model: variables remain symbolic, temporaries are
+  numeric slots, labels are symbolic jump targets, and procedure calls use a
+  small return-address stack. }
 program llirint;
 
 {$mode objfpc}
@@ -344,6 +345,8 @@ begin
     instructionKindFromText := rtNoOp
 end;
 
+procedure readGlobalSummary(const tokens: TStrings); forward;
+
 function beginProcedure(const tokens: TStrings): integer;
 begin
   if procedureCount >= maxTacProcedures then
@@ -556,10 +559,18 @@ begin
       if tokens.Count = 0 then
         continue;
 
-      if tokens[0] = 'proc' then
+      if tokens[0] = 'globals' then
+        continue
+      else if tokens[0] = 'global' then
+        readGlobalSummary(tokens)
+      else if tokens[0] = 'procedures' then
+        continue
+      else if tokens[0] = 'proc' then
         currentProcedureIndex := beginProcedure(tokens)
       else if tokens[0] = 'param' then
         readProcedureParameter(currentProcedureIndex, tokens)
+      else if (tokens[0] = 'local') or (tokens[0] = 'temp') then
+        continue
       else if tokens[0] = 'block' then
         readBlockSummary(currentProcedureIndex, tokens)
       else if tokens[0] = 'labelmap' then
@@ -611,6 +622,18 @@ begin
   variables[variableCount].value := 0;
   nextVariableAddress := nextVariableAddress + 1;
   ensureVariable := variableCount
+end;
+
+procedure readGlobalSummary(const tokens: TStrings);
+var
+  operand: llirRuntimeOperand;
+begin
+  if tokens.Count < 3 then
+    exit;
+
+  operand := parseOperand(tokens[2]);
+  if operand.kind = rtOperandGlobal then
+    ensureVariable(operand.name)
 end;
 
 function findMemoryCell(address: integer): integer;
@@ -880,10 +903,15 @@ end;
 procedure executeIntrinsicCall(const instruction: llirRuntimeInstruction);
 var
   value: integer;
+  resultValueType: string;
 begin
+  resultValueType := instruction.resultOperand.valueType;
+  if resultValueType = '' then
+    resultValueType := 'integer';
+
   if instruction.targetOperand.name = 'read_int' then
   begin
-    value := readValueByIntrinsic('read_int', 'integer');
+    value := readValueByIntrinsic('read_int', resultValueType);
     if instruction.resultOperand.kind <> rtOperandNone then
       assignOperand(instruction.resultOperand, value)
     else
