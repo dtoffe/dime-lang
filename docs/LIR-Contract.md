@@ -186,9 +186,7 @@ to later lowering.
 
 ## Relation to Current LLIR
 
-The current `LLIR.md` describes the implementation as it exists today. That
-implementation still includes frame metadata and a fixed temporary stack-slot
-policy in the dump.
+The current `LLIR.md` describes the implementation as it exists today.
 
 For `v0.0.13`, this contract is the design target:
 
@@ -198,84 +196,19 @@ For `v0.0.13`, this contract is the design target:
 Any current LLIR detail that violates this boundary should be treated as
 transitional implementation state, not as the intended long-term contract.
 
-## Current Violation Inventory
+## Current Boundary Status
 
-The current implementation does not fully satisfy the contract above yet. This
-section inventories the main below-boundary details that still leak into LLIR.
+The structural LLIR layer now satisfies the main `v0.0.13` split:
 
-### Frame layout is embedded in the IR model
+- frame offsets no longer live in `llir.pas`
+- stack-slot policy no longer lives in `llir.pas`
+- `enter` and `leave` are no longer part of structural LLIR
+- the `.llir` dump no longer emits frame summaries or slot assignments
 
-Current LLIR stores explicit frame-layout data in `llirFrameInfo`, including:
+What still remains below full backend separation is narrower and mostly concerns
+call/runtime behavior rather than frame layout.
 
-- parameter counts and parameter-area size
-- local-area size
-- temporary-area size
-- total frame size
-- per-parameter, per-local, and per-temporary slot offsets
-
-Evidence in code:
-
-- `src/llir.pas`: `llirFrameSlot` and `llirFrameInfo`
-- `src/llir.pas`: `llirProcedure.frameInfo`
-- `src/llir.pas`: `rebuildTacProcedureFrameLayout`
-- `src/llir.pas`: `dumpLlir` emits `frame`, `frame_param`, `frame_local`, and
-  `frame_temp`
-
-Why this violates the contract:
-
-- frame offsets and frame-size computation are backend-lowering decisions
-- LIR should expose logical locals, params, and temps without fixing their
-  machine placement
-
-### A concrete frame-pointer convention is already chosen
-
-Current LLIR hardcodes a concrete stack-frame shape:
-
-- parameters use positive offsets
-- locals use negative offsets
-- temporaries use negative offsets
-- `enter` carries the computed frame size directly
-
-Evidence in docs and code:
-
-- `docs/LLIR.md`: "Parameters live at positive offsets from the frame
-  pointer"
-- `docs/LLIR.md`: "Locals and temporaries live at negative offsets"
-- `src/llir.pas`: `rebuildTacProcedureFrameLayout` assigns positive parameter
-  offsets and descending stack offsets for locals and temporaries
-- `src/llir.pas`: `syncLlirProcedurePrologue` rewrites `enter` with
-  `frameInfo.frameSize`
-- `src/llircgen.pas`: `appendProcedureEnter` and
-  `appendProcedureLeaveAndReturn`
-
-Why this violates the contract:
-
-- LIR should not require a frame-pointer-based layout policy
-- another backend should be free to place params and temps differently without
-  first undoing LIR decisions
-
-### Temporary storage policy is fixed too early
-
-Current LLIR does not model temporaries as abstract values only. It also fixes
-their storage policy as stack slots.
-
-Evidence in docs and code:
-
-- `src/llir.pas`: `llirTemporaryStoragePolicy = (irTempsStackSlots)`
-- `src/llir.pas`: `frameInfo.temporaryStoragePolicy := irTempsStackSlots`
-- `src/llir.pas`: `newTacTemporary` and `newTacAddressTemporary` immediately
-  register temporaries into frame-owned temporary tables
-- `src/llir.pas`: `findTacTemporaryFrameSlot`
-- `docs/LLIR.md`: "A fixed temporary storage policy: every temporary currently
-  gets a stack slot"
-- `docs/LLIR.md`: dumped `frame_temp ... storage=stack_slot offset=...`
-
-Why this violates the contract:
-
-- temps above backend-specific lowering should be logical compiler values
-- choosing stack slots versus registers versus mixed homes belongs below LIR
-
-### The current call shape still leaks ABI-facing decisions
+### The current call shape still leaks some ABI-facing decisions
 
 The contract allows explicit calls, but the current LLIR still bakes in more of
 the calling sequence than the intended boundary should promise.
@@ -285,7 +218,6 @@ Still-present details:
 - `arg` instructions carry ordered argument positions
 - calls require exact argument-count agreement with callee parameter count
 - `result` models a distinct post-call value retrieval step
-- `enter` and `leave` expose a callee-managed frame discipline
 
 Evidence in code:
 
@@ -301,8 +233,8 @@ Evidence in code:
 Why this is only partially compatible with the contract:
 
 - explicit call sequencing is acceptable at LIR
-- tying it to one concrete frame-entry/exit discipline and one exact runtime
-  argument-transfer model is still more backend-shaped than intended
+- tying it to one exact runtime argument-transfer model is still more
+  backend-shaped than intended
 
 ### Intrinsics are coupled to the current runtime model
 

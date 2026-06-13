@@ -348,9 +348,8 @@ Each HLIR routine becomes one LLIR procedure with:
 - a procedure header
 - parameter/local metadata
 - temporary allocation
-- frame information
 - an entry basic block
-- `enter` / `leave` / `return`
+- `return`
 
 ### Expression lowering
 
@@ -422,21 +421,21 @@ result ...
 Intrinsic calls currently carry their arguments directly on the
 `intrinsic_call` instruction.
 
-### Frame-aware lowering
+### Target-neutral lowering
 
-HLIR does not know stack layout. LLIR does.
+HLIR does not know stack layout. LLIR now stays target-neutral as well.
 
 During HLIR-to-LLIR lowering and LLIR construction, the compiler records:
 
 - parameters
 - locals
 - temporaries
-- frame slot sizes
-- frame offsets
-- total frame size
+- blocks
+- labels
+- instructions
 
-That makes LLIR suitable for later assembler emission without forcing those
-concerns into the frontend.
+Frame layout, stack-slot policy, and calling-convention details are left for a
+later backend stage.
 
 ## Design Boundary
 

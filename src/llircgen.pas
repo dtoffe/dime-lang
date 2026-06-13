@@ -142,21 +142,10 @@ begin
   appendTacInstruction(instruction)
 end;
 
-procedure appendProcedureEnter;
+procedure appendProcedureReturn;
 var
   instruction: llirInstruction;
 begin
-  instruction := newTacInstruction(irEnterFrame);
-  instruction.leftOperand := makeTacConstOperand(0, typeInteger);
-  appendTacInstruction(instruction)
-end;
-
-procedure appendProcedureLeaveAndReturn;
-var
-  instruction: llirInstruction;
-begin
-  instruction := newTacInstruction(irLeaveFrame);
-  appendTacInstruction(instruction);
   instruction := newTacInstruction(irReturn);
   appendTacInstruction(instruction)
 end;
@@ -578,8 +567,6 @@ begin
     appendTacInstruction(instruction)
   end;
 
-  instruction := newTacInstruction(irLeaveFrame);
-  appendTacInstruction(instruction);
   instruction := newTacInstruction(irReturn);
   appendTacInstruction(instruction)
 end;
@@ -808,7 +795,7 @@ begin
     exit;
 
   lowerStatement(routineNode^.body, errorCount);
-  appendProcedureLeaveAndReturn
+  appendProcedureReturn
 end;
 
 procedure lowerRoutineDeclaration(routineNode: hirRoutine; var errorCount: integer);
@@ -821,7 +808,6 @@ begin
   procedureIndex := appendTacProcedure(routineNode^.name, routineNode^.symbol);
   describeRoutine(procedureIndex, routineNode);
   appendLabel(newTacLabel);
-  appendProcedureEnter;
   if routineNode^.hasReturnValue then
     currentLoweredFunctionSymbol := routineNode^.symbol
   else
@@ -845,7 +831,6 @@ begin
   setTacProcedureReturnType(procedureIndex, typeInteger, false);
   recordProgramGlobalsAsLocals(programData, procedureIndex);
   appendLabel(newTacLabel);
-  appendProcedureEnter;
   lowerRoutineBody(programData.entryRoutine, errorCount);
 
   routineNode := programData.firstRoutine;

@@ -27,7 +27,6 @@ const
 type
   llirRuntimeInstructionKind = (
     rtNoOp,
-    rtEnterFrame,
     rtAdd,
     rtSub,
     rtMul,
@@ -60,7 +59,6 @@ type
     rtLabel,
     rtLoadVar,
     rtStoreVar,
-    rtLeaveFrame,
     rtReturn
   );
 
@@ -282,9 +280,7 @@ end;
 
 function instructionKindFromText(const kindText: string): llirRuntimeInstructionKind;
 begin
-  if kindText = 'enter' then
-    instructionKindFromText := rtEnterFrame
-  else if kindText = 'add' then
+  if kindText = 'add' then
     instructionKindFromText := rtAdd
   else if kindText = 'sub' then
     instructionKindFromText := rtSub
@@ -342,8 +338,6 @@ begin
     instructionKindFromText := rtLoadVar
   else if kindText = 'store' then
     instructionKindFromText := rtStoreVar
-  else if kindText = 'leave' then
-    instructionKindFromText := rtLeaveFrame
   else if kindText = 'return' then
     instructionKindFromText := rtReturn
   else
@@ -974,8 +968,6 @@ begin
 
     instruction := procedures[currentProcedureIndex].instructions[programCounter];
     case instruction.kind of
-      rtEnterFrame:
-        programCounter := programCounter + 1;
       rtAdd:
         begin
           assignOperand(instruction.resultOperand,
@@ -1197,8 +1189,6 @@ begin
           assignOperand(instruction.resultOperand, operandValue(instruction.leftOperand));
           programCounter := programCounter + 1
         end;
-      rtLeaveFrame:
-        programCounter := programCounter + 1;
       rtReturn:
         begin
           if returnStackTop = 0 then

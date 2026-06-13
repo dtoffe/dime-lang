@@ -12,12 +12,12 @@ program.pcode
 
 `HLIR` is the structured frontend IR built from the semantically checked AST.
 `LLIR` is the lower, backend-facing IR dumped by `llir.pas`. It makes control
-flow, loads/stores, procedure boundaries, frame layout, calls, and intrinsics
-explicit while still staying target-neutral.
+flow, loads/stores, procedure boundaries, calls, and intrinsics explicit while
+staying target-neutral.
 
 For the intended `v0.0.13` boundary, see [LIR-Contract.md](./LIR-Contract.md).
-That page freezes what should belong in target-neutral LIR even where the
-current LLIR dump still contains transitional frame details.
+That page freezes what belongs in target-neutral LIR and what stays below the
+backend boundary.
 
 ## Pipeline Position
 
@@ -54,11 +54,9 @@ Compared with HLIR, LLIR introduces these backend-oriented details:
 - Explicit operand kinds: immediates, locals, parameters, temporaries, globals,
   labels, procedures, and intrinsics.
 - Explicit `load` and `store` operations for memory-backed symbols.
-- Explicit procedure prologue/epilogue pseudo-ops: `enter`, `leave`, `return`.
 - Explicit call preparation for user routines with `arg` and `call`.
 - Explicit intrinsic calls for `read`, `readln`, `write`, and `writeln`.
-- Frame metadata, including parameter, local, and temporary stack slots.
-- A fixed temporary storage policy: every temporary currently gets a stack slot.
+- Explicit `return` instructions.
 
 ## File Shape
 
@@ -70,14 +68,11 @@ llir program
 procedures 2
 proc 1 procparams return=none params=0 locals=3 temps=6 blocks=1 labels=1 instructions=18
   local 1 global[total]:integer/dword
-  frame params=0 locals=3 temps=6 temp_policy=stack_slots param_area=0 local_area=6 temp_area=12 frame_size=18
-  frame_local 1 global[total]:integer/dword offset=-4 size=4
-  frame_temp 1 temp[t1]:integer/dword storage=stack_slot offset=-10 size=4
+  temp 1 temp[t1]:integer/dword
   block 1 label=L1 first=1 count=18
-   1 enter left=imm(18):integer/dword
-   2 copy result=temp[t1]:integer/dword left=imm(65):integer/dword
-   3 arg left=temp[t1]:integer/dword index=0
-   8 call target=proc[store]:address
+   1 copy result=temp[t1]:integer/dword left=imm(65):integer/dword
+   2 arg left=temp[t1]:integer/dword index=0
+   7 call target=proc[store]:address
   labelmap L1 block=1 first=1
 endproc
 ```
@@ -88,14 +83,12 @@ format and stage name.
 Each procedure dump contains:
 
 - A procedure header with name, return type, and counts.
-- Optional `param` and `local` summaries.
-- A `frame` summary.
-- `frame_param`, `frame_local`, and `frame_temp` slot assignments.
+- Optional `param`, `local`, and `temp` summaries.
 - `block` summaries with labels and aliases.
 - The instruction lines that belong to each block.
 - A `labelmap` section mapping symbolic labels to blocks/instruction indexes.
 
-## Procedures and Frames
+## Procedures and Temporaries
 
 LLIR is procedure-based. Each procedure carries:
 
@@ -105,13 +98,7 @@ LLIR is procedure-based. Each procedure carries:
 - local list
 - temporary list
 - basic blocks
-- frame layout metadata
-
-The current frame convention is:
-
-- Parameters live at positive offsets from the frame pointer.
-- Locals and temporaries live at negative offsets.
-- Every temporary gets a stack slot.
+- instructions
 
 Example:
 
@@ -120,15 +107,8 @@ proc 2 store return=none params=3 locals=0 temps=3 blocks=1 labels=1 instruction
   param 1 param[value]:integer/dword
   param 2 param[flag]:boolean/byte
   param 3 param[ch]:char/byte
-  frame params=3 locals=0 temps=3 temp_policy=stack_slots param_area=6 local_area=0 temp_area=6 frame_size=6
-  frame_param 1 param[value]:integer/dword offset=+8 size=4
-  frame_param 2 param[flag]:boolean/byte offset=+12 size=1
-  frame_param 3 param[ch]:char/byte offset=+13 size=1
-  frame_temp 1 temp[t7]:integer/dword storage=stack_slot offset=-4 size=4
+  temp 1 temp[t7]:integer/dword
 ```
-
-`frame_size` is the local-plus-temporary area reserved by `enter`. Parameters
-sit in a separate positive-offset area.
 
 ## Basic Blocks
 
@@ -230,8 +210,7 @@ The current normalized LLIR instruction families are:
 - `arg`
 - `call`
 - `result`
-- `enter`
-- `leave`
+- `return`
 
 ### Addressing
 
@@ -301,9 +280,7 @@ block ... label=Lend
 Each lowered procedure gets:
 
 - an entry block
-- `enter left=imm(frameSize):integer/dword`
 - body instructions
-- `leave`
 - `return`
 
 ### Builtins become intrinsics
@@ -378,8 +355,7 @@ The interpreter is intentionally small and still more symbolic than a real
 backend:
 
 - It executes the textual `.llir` dump, not a binary IR image.
-- Variables are still interpreted symbolically, even though frame metadata is
-  present in the dump.
+- Variables are still interpreted symbolically.
 - Temporary slots exist as indexed runtime cells.
 - Calls use a return stack rather than a full machine model.
 - Intrinsics are interpreted directly rather than lowered to syscalls yet.
@@ -400,7 +376,6 @@ Current limits worth keeping in mind:
 - Addressing instructions are modeled in LLIR but not heavily exercised by the
   current scalar-only language subset.
 - There is no register allocation yet.
-- Temporaries always live in stack slots.
 
 That is the intended tradeoff for this stage: LLIR should be explicit,
 verifiable, and boring enough to support the upcoming assembler backend.

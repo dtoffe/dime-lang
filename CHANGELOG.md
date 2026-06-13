@@ -14,6 +14,9 @@ and this project is expected to follow [Semantic Versioning](https://semver.org/
 
 ### [Changed]
 
+- Remove frame layout and stack-slot policy from structural LLIR.
+- Remove `enter` and `leave` from LLIR and keep procedure flow target-neutral.
+- Update LLIR and HLIR docs to reflect the target-neutral structural IR boundary.
 - Update and reorganize roadmap.
 
 ## [v0.0.12] - 2026-06-09

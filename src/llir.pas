@@ -7,8 +7,8 @@
   issues temporary and label identifiers, appends procedures, basic blocks, and
   instructions, and can dump the generated IR for inspection. It deliberately
   stays data-only: flat records, fixed arrays, and counts. It does not know
-  about AST nodes, parsing, register allocation, stack slots, or target-code
-  emission. }
+  about AST nodes, parsing, register allocation, stack slots, frame offsets, or
+  target-code emission. }
 unit llir;
 
 {$mode objfpc}
@@ -30,9 +30,6 @@ type
   llirProcedureIndex = 0..maxTacProcedures;
   llirTemporaryId = 0..maxTacInstructions;
   llirLabelId = 0..maxTacInstructions;
-  llirTemporaryStoragePolicy = (
-    irTempsStackSlots
-  );
   llirIntrinsicKind = (
     irIntrinsicNone,
     irIntrinsicReadInt,
@@ -50,7 +47,6 @@ type
 
   llirInstructionKind = (
     irNoOp,
-    irEnterFrame,
     irAdd,
     irSub,
     irMul,
@@ -83,7 +79,6 @@ type
     irLabel,
     irLoadVar,
     irStoreVar,
-    irLeaveFrame,
     irReturn
   );
 
@@ -121,8 +116,7 @@ type
       irOperandImmediate:
         (constantValue: integer);
       irOperandTemporary:
-        (temporaryId: llirTemporaryId)
-      ;
+        (temporaryId: llirTemporaryId);
       irOperandLabel:
         (labelId: llirLabelId)
   end;
@@ -151,26 +145,6 @@ type
     size: llirOperandSize
   end;
 
-  llirFrameSlot = record
-    operand: llirOperand;
-    offset: integer;
-    sizeInBytes: integer
-  end;
-
-  llirFrameInfo = record
-    parameterCount: integer;
-    localCount: integer;
-    temporaryCount: integer;
-    temporaryStoragePolicy: llirTemporaryStoragePolicy;
-    parameterAreaSize: integer;
-    localAreaSize: integer;
-    temporaryAreaSize: integer;
-    frameSize: integer;
-    parameters: array [1..maxProcedureParameters] of llirFrameSlot;
-    locals: array [1..symbolTableMax] of llirFrameSlot;
-    temporaries: array [1..maxTacInstructions] of llirFrameSlot
-  end;
-
   llirProcedure = record
     name: identifier;
     symbol: symbolIndex;
@@ -180,15 +154,14 @@ type
     parameters: array [1..maxProcedureParameters] of llirOperand;
     localCount: integer;
     locals: array [1..symbolTableMax] of llirOperand;
+    temporaryCount: integer;
     temporaries: array [1..maxTacInstructions] of llirTemporaryInfo;
-    frameInfo: llirFrameInfo;
     basicBlockCount: integer;
     basicBlocks: array [1..maxTacBasicBlocks] of llirBasicBlock;
     labelBlockIndex: array [1..maxTacInstructions] of llirBasicBlockIndex;
     instructionCount: integer;
     instructions: array [1..maxTacInstructions] of llirInstruction;
-    labelCount: integer;
-    prologueInstruction: llirInstructionIndex
+    labelCount: integer
   end;
 
   llirProgram = record
@@ -235,11 +208,7 @@ function appendTacBasicBlock(blockLabelId: llirLabelId): llirBasicBlockIndex;
 function appendTacInstruction(const instruction: llirInstruction): llirInstructionIndex;
 procedure setTacCallArgument(var instruction: llirInstruction; argumentIndex: integer;
                              const argument: llirOperand);
-function findTacTemporaryFrameSlot(procedureIndex: llirProcedureIndex;
-                                   temporaryId: llirTemporaryId;
-                                   var slot: llirFrameSlot): boolean;
 procedure dumpLlir(const outputFileName: string);
-procedure syncLlirProcedurePrologue(procedureIndex: llirProcedureIndex);
 
 implementation
 
@@ -260,22 +229,6 @@ end;
 function currentProcedureHasOpenBlock: boolean;
 begin
   currentProcedureHasOpenBlock := (currentProcedure <> 0) and (currentBasicBlock <> 0)
-end;
-
-function operandSizeInBytes(size: llirOperandSize): integer;
-begin
-  case size of
-    irSizeByte:
-      operandSizeInBytes := 1;
-    irSizeWord:
-      operandSizeInBytes := 2;
-    irSizeDWord, irSizeAddress:
-      operandSizeInBytes := 4;
-    irSizeQWord:
-      operandSizeInBytes := 8;
-  else
-    operandSizeInBytes := 0
-  end
 end;
 
 function currentBlockInstructionCount: integer;
@@ -301,11 +254,6 @@ function isAddressValueOperand(const operand: llirOperand): boolean;
 begin
   isAddressValueOperand := (operand.kind = irOperandTemporary) and
                            (operand.size = irSizeAddress)
-end;
-
-function isValueOrNoneOperandKind(kind: llirOperandKind): boolean;
-begin
-  isValueOrNoneOperandKind := (kind = irOperandNone) or isValueOperandKind(kind)
 end;
 
 function intrinsicParameterCount(kind: llirIntrinsicKind): integer;
@@ -417,23 +365,6 @@ begin
   end
 end;
 
-procedure syncLlirProcedurePrologue(procedureIndex: llirProcedureIndex);
-var
-  prologueIndex: llirInstructionIndex;
-begin
-  if (procedureIndex < 1) or (procedureIndex > currentProgram.procedureCount) then
-    exit;
-
-  prologueIndex := currentProgram.procedures[procedureIndex].prologueInstruction;
-  if prologueIndex = 0 then
-    exit;
-
-  with currentProgram.procedures[procedureIndex] do
-    if instructions[prologueIndex].kind = irEnterFrame then
-      instructions[prologueIndex].leftOperand :=
-        makeTacConstOperand(frameInfo.frameSize, typeInteger)
-end;
-
 function instructionUsesStorageOperands(kind: llirInstructionKind): boolean;
 begin
   instructionUsesStorageOperands := kind in [irAddrLocal, irAddrParam, irAddrGlobal,
@@ -444,11 +375,6 @@ function validateTacInstruction(const instruction: llirInstruction): boolean;
 begin
   validateTacInstruction := true;
   case instruction.kind of
-    irEnterFrame:
-      validateTacInstruction := (instruction.resultOperand.kind = irOperandNone) and
-                                (instruction.leftOperand.kind = irOperandImmediate) and
-                                (instruction.rightOperand.kind = irOperandNone) and
-                                (instruction.targetOperand.kind = irOperandNone);
     irAdd,
     irSub,
     irMul,
@@ -537,11 +463,6 @@ begin
     irStoreVar:
       validateTacInstruction := isStorageOperandKind(instruction.resultOperand.kind) and
                                 isValueOperandKind(instruction.leftOperand.kind);
-    irLeaveFrame:
-      validateTacInstruction := (instruction.resultOperand.kind = irOperandNone) and
-                                (instruction.leftOperand.kind = irOperandNone) and
-                                (instruction.rightOperand.kind = irOperandNone) and
-                                (instruction.targetOperand.kind = irOperandNone);
     irReturn,
     irNoOp,
     irLabel:
@@ -613,7 +534,6 @@ function instructionKindToString(kind: llirInstructionKind): string;
 begin
   case kind of
     irNoOp: instructionKindToString := 'noop';
-    irEnterFrame: instructionKindToString := 'enter';
     irAdd: instructionKindToString := 'add';
     irSub: instructionKindToString := 'sub';
     irMul: instructionKindToString := 'mul';
@@ -646,7 +566,6 @@ begin
     irLabel: instructionKindToString := 'label';
     irLoadVar: instructionKindToString := 'load';
     irStoreVar: instructionKindToString := 'store';
-    irLeaveFrame: instructionKindToString := 'leave';
     irReturn: instructionKindToString := 'return'
   end
 end;
@@ -680,14 +599,6 @@ begin
     irSizeAddress: operandSizeToString := 'address';
   else
     operandSizeToString := 'none'
-  end
-end;
-
-function temporaryStoragePolicyToString(policy: llirTemporaryStoragePolicy): string;
-begin
-  case policy of
-    irTempsStackSlots:
-      temporaryStoragePolicyToString := 'stack_slots'
   end
 end;
 
@@ -763,61 +674,6 @@ begin
 
   routineOwnsSymbol := getDeclarationLevel(operandSymbol) =
                        getDeclarationLevel(routineSymbol) + 1
-end;
-
-procedure rebuildTacProcedureFrameLayout(procedureIndex: llirProcedureIndex);
-var
-  itemIndex, nextParameterOffset, nextStackOffset, slotSize: integer;
-begin
-  if (procedureIndex < 1) or (procedureIndex > currentProgram.procedureCount) then
-    exit;
-
-  with currentProgram.procedures[procedureIndex] do
-  begin
-    frameInfo.parameterCount := parameterCount;
-    frameInfo.localCount := localCount;
-
-    nextParameterOffset := 8;
-    frameInfo.parameterAreaSize := 0;
-    for itemIndex := 1 to parameterCount do
-    begin
-      slotSize := operandSizeInBytes(parameters[itemIndex].size);
-      frameInfo.parameters[itemIndex].operand := parameters[itemIndex];
-      frameInfo.parameters[itemIndex].offset := nextParameterOffset;
-      frameInfo.parameters[itemIndex].sizeInBytes := slotSize;
-      nextParameterOffset := nextParameterOffset + slotSize;
-      frameInfo.parameterAreaSize := frameInfo.parameterAreaSize + slotSize
-    end;
-
-    nextStackOffset := 0;
-    frameInfo.localAreaSize := 0;
-    for itemIndex := 1 to localCount do
-    begin
-      slotSize := operandSizeInBytes(locals[itemIndex].size);
-      nextStackOffset := nextStackOffset - slotSize;
-      frameInfo.locals[itemIndex].operand := locals[itemIndex];
-      frameInfo.locals[itemIndex].offset := nextStackOffset;
-      frameInfo.locals[itemIndex].sizeInBytes := slotSize;
-      frameInfo.localAreaSize := frameInfo.localAreaSize + slotSize
-    end;
-
-    frameInfo.temporaryAreaSize := 0;
-    for itemIndex := 1 to frameInfo.temporaryCount do
-    begin
-      slotSize := operandSizeInBytes(temporaries[itemIndex].size);
-      nextStackOffset := nextStackOffset - slotSize;
-      frameInfo.temporaries[itemIndex].operand :=
-        makeTacTempOperand(temporaries[itemIndex].temporaryId,
-                           temporaries[itemIndex].valueType);
-      frameInfo.temporaries[itemIndex].operand.size := temporaries[itemIndex].size;
-      frameInfo.temporaries[itemIndex].offset := nextStackOffset;
-      frameInfo.temporaries[itemIndex].sizeInBytes := slotSize;
-      frameInfo.temporaryAreaSize := frameInfo.temporaryAreaSize + slotSize
-    end;
-
-    frameInfo.frameSize := frameInfo.localAreaSize + frameInfo.temporaryAreaSize
-  end;
-  syncLlirProcedurePrologue(procedureIndex)
 end;
 
 function classifySymbolOperand(symbol: symbolIndex): llirOperandKind;
@@ -1002,18 +858,17 @@ begin
   if currentProcedure <> 0 then
     with currentProgram.procedures[currentProcedure] do
     begin
-      if frameInfo.temporaryCount >= maxTacInstructions then
+      if temporaryCount >= maxTacInstructions then
       begin
         currentProgram.overflow := true;
         newTacTemporary := makeTacNoneOperand;
         exit
       end;
 
-      frameInfo.temporaryCount := frameInfo.temporaryCount + 1;
-      temporaries[frameInfo.temporaryCount].temporaryId := currentProgram.temporaryCount;
-      temporaries[frameInfo.temporaryCount].valueType := valueType;
-      temporaries[frameInfo.temporaryCount].size := typeToOperandSize(valueType);
-      rebuildTacProcedureFrameLayout(currentProcedure)
+      temporaryCount := temporaryCount + 1;
+      temporaries[temporaryCount].temporaryId := currentProgram.temporaryCount;
+      temporaries[temporaryCount].valueType := valueType;
+      temporaries[temporaryCount].size := typeToOperandSize(valueType)
     end;
   newTacTemporary := makeTacTempOperand(currentProgram.temporaryCount, valueType)
 end;
@@ -1031,18 +886,17 @@ begin
   if currentProcedure <> 0 then
     with currentProgram.procedures[currentProcedure] do
     begin
-      if frameInfo.temporaryCount >= maxTacInstructions then
+      if temporaryCount >= maxTacInstructions then
       begin
         currentProgram.overflow := true;
         newTacAddressTemporary := makeTacNoneOperand;
         exit
       end;
 
-      frameInfo.temporaryCount := frameInfo.temporaryCount + 1;
-      temporaries[frameInfo.temporaryCount].temporaryId := currentProgram.temporaryCount;
-      temporaries[frameInfo.temporaryCount].valueType := typeInteger;
-      temporaries[frameInfo.temporaryCount].size := irSizeAddress;
-      rebuildTacProcedureFrameLayout(currentProcedure)
+      temporaryCount := temporaryCount + 1;
+      temporaries[temporaryCount].temporaryId := currentProgram.temporaryCount;
+      temporaries[temporaryCount].valueType := typeInteger;
+      temporaries[temporaryCount].size := irSizeAddress
     end;
   newTacAddressTemporary := makeTacAddressTempOperand(currentProgram.temporaryCount)
 end;
@@ -1102,18 +956,10 @@ begin
     returnType := typeInteger;
     parameterCount := 0;
     localCount := 0;
+    temporaryCount := 0;
     basicBlockCount := 0;
     instructionCount := 0;
-    labelCount := 0;
-    frameInfo.parameterCount := 0;
-    frameInfo.localCount := 0;
-    frameInfo.temporaryCount := 0;
-    frameInfo.temporaryStoragePolicy := irTempsStackSlots;
-    frameInfo.parameterAreaSize := 0;
-    frameInfo.localAreaSize := 0;
-    frameInfo.temporaryAreaSize := 0;
-    frameInfo.frameSize := 0;
-    prologueInstruction := 0
+    labelCount := 0
   end
 end;
 
@@ -1153,9 +999,7 @@ begin
     parameters[parameterCount] := makeTacSymbolOperand(
       parameterSymbol,
       getDeclarationIdentifier(parameterSymbol),
-      getDeclarationType(parameterSymbol));
-    frameInfo.parameterCount := parameterCount;
-    rebuildTacProcedureFrameLayout(procedureIndex)
+      getDeclarationType(parameterSymbol))
   end
 end;
 
@@ -1181,9 +1025,7 @@ begin
     locals[localCount] := makeTacSymbolOperand(
       localSymbol,
       getDeclarationIdentifier(localSymbol),
-      getDeclarationType(localSymbol));
-    frameInfo.localCount := localCount;
-    rebuildTacProcedureFrameLayout(procedureIndex)
+      getDeclarationType(localSymbol))
   end
 end;
 
@@ -1246,9 +1088,7 @@ begin
 
     instructionCount := instructionCount + 1;
     appendTacInstruction := instructionCount;
-    instructions[appendTacInstruction] := instruction;
-    if (instruction.kind = irEnterFrame) and (prologueInstruction = 0) then
-      prologueInstruction := appendTacInstruction
+    instructions[appendTacInstruction] := instruction
   end;
 
   currentProgram.instructionCount := currentProgram.instructionCount + 1;
@@ -1277,27 +1117,6 @@ begin
   instruction.callArguments[argumentIndex] := argument;
   if instruction.callArgumentCount < argumentIndex then
     instruction.callArgumentCount := argumentIndex
-end;
-
-function findTacTemporaryFrameSlot(procedureIndex: llirProcedureIndex;
-                                   temporaryId: llirTemporaryId;
-                                   var slot: llirFrameSlot): boolean;
-var
-  temporaryIndex: integer;
-begin
-  findTacTemporaryFrameSlot := false;
-  if (procedureIndex < 1) or (procedureIndex > currentProgram.procedureCount) then
-    exit;
-
-  rebuildTacProcedureFrameLayout(procedureIndex);
-  with currentProgram.procedures[procedureIndex].frameInfo do
-    for temporaryIndex := 1 to temporaryCount do
-      if temporaries[temporaryIndex].operand.temporaryId = temporaryId then
-      begin
-        slot := temporaries[temporaryIndex];
-        findTacTemporaryFrameSlot := true;
-        exit
-      end
 end;
 
 procedure dumpTacInstruction(var outputFile: Text; instructionIndex: integer;
@@ -1338,13 +1157,12 @@ begin
   for procedureIndex := 1 to currentProgram.procedureCount do
     with currentProgram.procedures[procedureIndex] do
     begin
-      rebuildTacProcedureFrameLayout(procedureIndex);
       writeln(outputFile, 'proc ', procedureIndex, ' ',
               identifierToString(name),
               ' return=', procedureReturnTypeToString(hasReturnValue, returnType),
               ' params=', parameterCount,
               ' locals=', localCount,
-              ' temps=', frameInfo.temporaryCount,
+              ' temps=', temporaryCount,
               ' blocks=', basicBlockCount,
               ' labels=', labelCount,
               ' instructions=', instructionCount);
@@ -1354,30 +1172,10 @@ begin
       for itemIndex := 1 to localCount do
         writeln(outputFile, '  local ', itemIndex, ' ',
                 operandToString(locals[itemIndex]));
-      writeln(outputFile, '  frame params=', frameInfo.parameterCount,
-              ' locals=', frameInfo.localCount,
-              ' temps=', frameInfo.temporaryCount,
-              ' temp_policy=', temporaryStoragePolicyToString(frameInfo.temporaryStoragePolicy),
-              ' param_area=', frameInfo.parameterAreaSize,
-              ' local_area=', frameInfo.localAreaSize,
-              ' temp_area=', frameInfo.temporaryAreaSize,
-              ' frame_size=', frameInfo.frameSize);
-      for itemIndex := 1 to frameInfo.parameterCount do
-        writeln(outputFile, '  frame_param ', itemIndex, ' ',
-                operandToString(frameInfo.parameters[itemIndex].operand),
-                ' offset=+', frameInfo.parameters[itemIndex].offset,
-                ' size=', frameInfo.parameters[itemIndex].sizeInBytes);
-      for itemIndex := 1 to frameInfo.localCount do
-        writeln(outputFile, '  frame_local ', itemIndex, ' ',
-                operandToString(frameInfo.locals[itemIndex].operand),
-                ' offset=', frameInfo.locals[itemIndex].offset,
-                ' size=', frameInfo.locals[itemIndex].sizeInBytes);
-      for itemIndex := 1 to frameInfo.temporaryCount do
-        writeln(outputFile, '  frame_temp ', itemIndex, ' ',
-                operandToString(frameInfo.temporaries[itemIndex].operand),
-                ' storage=stack_slot',
-                ' offset=', frameInfo.temporaries[itemIndex].offset,
-                ' size=', frameInfo.temporaries[itemIndex].sizeInBytes);
+      for itemIndex := 1 to temporaryCount do
+        writeln(outputFile, '  temp ', itemIndex, ' ',
+                operandToString(makeTacTempOperand(temporaries[itemIndex].temporaryId,
+                                                   temporaries[itemIndex].valueType)));
       for itemIndex := 1 to basicBlockCount do
         with basicBlocks[itemIndex] do
         begin
@@ -1420,4 +1218,3 @@ initialization
   initializeLlir;
 
 end.
-
