@@ -16,6 +16,7 @@ and this project is expected to follow [Semantic Versioning](https://semver.org/
 
 ### [Changed]
 
+- Remove legacy `arg`/`result` call artifacts and `positionIndex` from the LLIR core model.
 - Treat `llirint` intrinsic execution as an interpreter-side testing backend while keeping LLIR intrinsic identities target-neutral.
 - Lower user LLIR calls to carry inline `argN` operands and optional `result` instead of separate `arg`/`result` transport steps.
 - Route builtin `read` lowering through explicit LLIR result handling.

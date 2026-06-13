@@ -239,6 +239,9 @@ Evidence in code:
 - `src/llirint.pas`: `rtReturn` writes the function result directly to that
   destination
 
+The legacy `arg` and `result` transport instructions have now been removed from
+the structural LLIR core rather than merely left unused.
+
 Why this is a better contract fit:
 
 - LIR still exposes explicit calls and ordered operands

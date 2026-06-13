@@ -43,9 +43,7 @@ type
     rtJump,
     rtBranchTrue,
     rtBranchFalse,
-    rtArg,
     rtCall,
-    rtResult,
     rtIntrinsicCall,
     rtAddrGlobal,
     rtLoadConst,
@@ -89,7 +87,6 @@ type
     leftOperand: llirRuntimeOperand;
     rightOperand: llirRuntimeOperand;
     targetOperand: llirRuntimeOperand;
-    positionIndex: integer;
     operatorText: string;
     callArgumentCount: integer;
     callArguments: array [1..maxProcedureParameters] of llirRuntimeOperand
@@ -304,12 +301,8 @@ begin
     instructionKindFromText := rtBranchTrue
   else if kindText = 'brfalse' then
     instructionKindFromText := rtBranchFalse
-  else if kindText = 'arg' then
-    instructionKindFromText := rtArg
   else if kindText = 'call' then
     instructionKindFromText := rtCall
-  else if kindText = 'result' then
-    instructionKindFromText := rtResult
   else if kindText = 'intrinsic_call' then
     instructionKindFromText := rtIntrinsicCall
   else if kindText = 'addr_global' then
@@ -479,7 +472,6 @@ begin
   procedures[procedureIndex].instructions[instructionIndex].leftOperand := makeNoneOperand;
   procedures[procedureIndex].instructions[instructionIndex].rightOperand := makeNoneOperand;
   procedures[procedureIndex].instructions[instructionIndex].targetOperand := makeNoneOperand;
-  procedures[procedureIndex].instructions[instructionIndex].positionIndex := 0;
   procedures[procedureIndex].instructions[instructionIndex].operatorText := '';
   procedures[procedureIndex].instructions[instructionIndex].callArgumentCount := 0;
   for argumentIndex := 1 to maxProcedureParameters do
@@ -511,11 +503,6 @@ begin
     if valueText <> '' then
       procedures[procedureIndex].instructions[instructionIndex].targetOperand :=
         parseOperand(valueText);
-
-    valueText := tokenValue(tokens[tokenIndex], 'index');
-    if valueText <> '' then
-      procedures[procedureIndex].instructions[instructionIndex].positionIndex :=
-        parseIntegerOrHalt(valueText, 'Invalid TAC argument index.');
 
     for argumentIndex := 1 to maxProcedureParameters do
     begin
@@ -1066,11 +1053,6 @@ begin
           else
             programCounter := programCounter + 1
         end;
-      rtArg:
-        begin
-          reportRuntimeError('Legacy TAC arg instruction is no longer supported.');
-          halt(1)
-        end;
       rtCall:
         begin
           calleeProcedureIndex := findProcedure(instruction.targetOperand.name);
@@ -1099,11 +1081,6 @@ begin
           returnStack[returnStackTop].calleeProcedureIndex := calleeProcedureIndex;
           currentProcedureIndex := calleeProcedureIndex;
           programCounter := 1
-        end;
-      rtResult:
-        begin
-          reportRuntimeError('Legacy TAC result instruction is no longer supported.');
-          halt(1)
         end;
       rtIntrinsicCall:
         begin

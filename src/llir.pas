@@ -48,9 +48,7 @@ type
     irJump,
     irBranchTrue,
     irBranchFalse,
-    irArg,
     irCall,
-    irResult,
     irIntrinsicCall,
     irAddrGlobal,
     irLoadConst,
@@ -113,7 +111,6 @@ type
     leftOperand: llirOperand;
     rightOperand: llirOperand;
     targetOperand: llirOperand;
-    positionIndex: integer;
     operatorSymbol: symbol;
     callArgumentCount: integer;
     callArguments: array [1..maxTacOperandsPerCall] of llirOperand
@@ -316,13 +313,6 @@ begin
     irBranchFalse:
       validateTacInstruction := isValueOperandKind(instruction.leftOperand.kind) and
                                 (instruction.targetOperand.kind = irOperandLabel);
-    irArg:
-      validateTacInstruction := (instruction.resultOperand.kind = irOperandNone) and
-                                isValueOperandKind(instruction.leftOperand.kind) and
-                                (instruction.rightOperand.kind = irOperandNone) and
-                                (instruction.targetOperand.kind = irOperandNone) and
-                                (instruction.positionIndex >= 0) and
-                                (instruction.positionIndex < maxTacOperandsPerCall);
     irCall:
       begin
         validateTacInstruction := (instruction.targetOperand.kind = irOperandProcedure) and
@@ -339,11 +329,6 @@ begin
               exit
           end
       end;
-    irResult:
-      validateTacInstruction := (instruction.resultOperand.kind = irOperandTemporary) and
-                                (instruction.leftOperand.kind = irOperandNone) and
-                                (instruction.rightOperand.kind = irOperandNone) and
-                                (instruction.targetOperand.kind = irOperandNone);
     irIntrinsicCall:
       begin
         validateTacInstruction := instruction.targetOperand.kind = irOperandIntrinsic;
@@ -478,9 +463,7 @@ begin
     irJump: instructionKindToString := 'jump';
     irBranchTrue: instructionKindToString := 'brtrue';
     irBranchFalse: instructionKindToString := 'brfalse';
-    irArg: instructionKindToString := 'arg';
     irCall: instructionKindToString := 'call';
-    irResult: instructionKindToString := 'result';
     irIntrinsicCall: instructionKindToString := 'intrinsic_call';
     irAddrGlobal: instructionKindToString := 'addr_global';
     irLoadConst: instructionKindToString := 'load_const';
@@ -825,7 +808,6 @@ begin
   newTacInstruction.leftOperand := makeTacNoneOperand;
   newTacInstruction.rightOperand := makeTacNoneOperand;
   newTacInstruction.targetOperand := makeTacNoneOperand;
-  newTacInstruction.positionIndex := 0;
   newTacInstruction.operatorSymbol := nul;
   newTacInstruction.callArgumentCount := 0;
   for argumentIndex := 1 to maxTacOperandsPerCall do
@@ -1052,10 +1034,6 @@ begin
     write(outputFile, ' right=', operandToString(instruction.rightOperand));
   if instruction.targetOperand.kind <> irOperandNone then
     write(outputFile, ' target=', operandToString(instruction.targetOperand));
-  if instruction.positionIndex <> 0 then
-    write(outputFile, ' index=', instruction.positionIndex);
-  if (instruction.kind = irArg) and (instruction.positionIndex = 0) then
-    write(outputFile, ' index=0');
   if instruction.operatorSymbol <> nul then
     write(outputFile, ' op=', operatorToString(instruction.operatorSymbol));
   for argumentIndex := 1 to instruction.callArgumentCount do
