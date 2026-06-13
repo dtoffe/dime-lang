@@ -48,9 +48,8 @@ end;
 
 begin
     done := 0;
-    x := 20;
     while done = 0 do
-        op := 1;
+        read(op);
         if op < 1 then
             done := 1;
         endif;
@@ -58,7 +57,8 @@ begin
             done := 1;
         endif;
         if done = 0 then
-            y := 4;
+            read(x);
+            read(y);
             calculate();
         endif;
     endwhile;

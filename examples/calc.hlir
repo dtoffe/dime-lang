@@ -17,54 +17,54 @@ entry
             target done#12:integer
             value
               expr 1 int_lit type=integer value=0
-          stmt 4 assign
-            target x#10:integer
-            value
-              expr 2 int_lit type=integer value=20
-          stmt 5 while
+          stmt 4 while
             condition
-              expr 3 binary type=boolean op=eq
-                expr 4 symbol type=integer symbol=done#12:integer
-                expr 5 int_lit type=integer value=0
+              expr 2 binary type=boolean op=eq
+                expr 3 symbol type=integer symbol=done#12:integer
+                expr 4 int_lit type=integer value=0
             body
-              stmt 6 compound
-                stmt 7 assign
-                  target op#9:integer
-                  value
-                    expr 6 int_lit type=integer value=1
-                stmt 8 if
+              stmt 5 compound
+                stmt 6 call
+                  call builtin target=read#1:integer builtin=read argc=1
+                    arg 0
+                      expr 5 symbol type=integer symbol=op#9:integer
+                stmt 7 if
                   condition
-                    expr 7 binary type=boolean op=lt
-                      expr 8 symbol type=integer symbol=op#9:integer
-                      expr 9 int_lit type=integer value=1
+                    expr 6 binary type=boolean op=lt
+                      expr 7 symbol type=integer symbol=op#9:integer
+                      expr 8 int_lit type=integer value=1
                   then
-                    stmt 9 compound
-                      stmt 10 assign
+                    stmt 8 compound
+                      stmt 9 assign
                         target done#12:integer
                         value
-                          expr 10 int_lit type=integer value=1
-                stmt 11 if
+                          expr 9 int_lit type=integer value=1
+                stmt 10 if
                   condition
-                    expr 11 binary type=boolean op=gt
-                      expr 12 symbol type=integer symbol=op#9:integer
-                      expr 13 int_lit type=integer value=4
+                    expr 10 binary type=boolean op=gt
+                      expr 11 symbol type=integer symbol=op#9:integer
+                      expr 12 int_lit type=integer value=4
                   then
-                    stmt 12 compound
-                      stmt 13 assign
+                    stmt 11 compound
+                      stmt 12 assign
                         target done#12:integer
                         value
-                          expr 14 int_lit type=integer value=1
-                stmt 14 if
+                          expr 13 int_lit type=integer value=1
+                stmt 13 if
                   condition
-                    expr 15 binary type=boolean op=eq
-                      expr 16 symbol type=integer symbol=done#12:integer
-                      expr 17 int_lit type=integer value=0
+                    expr 14 binary type=boolean op=eq
+                      expr 15 symbol type=integer symbol=done#12:integer
+                      expr 16 int_lit type=integer value=0
                   then
-                    stmt 15 compound
-                      stmt 16 assign
-                        target y#11:integer
-                        value
-                          expr 18 int_lit type=integer value=4
+                    stmt 14 compound
+                      stmt 15 call
+                        call builtin target=read#1:integer builtin=read argc=1
+                          arg 0
+                            expr 17 symbol type=integer symbol=x#10:integer
+                      stmt 16 call
+                        call builtin target=read#1:integer builtin=read argc=1
+                          arg 0
+                            expr 18 symbol type=integer symbol=y#11:integer
                       stmt 17 call
                         call target=calculate#18:integer argc=0
 routines

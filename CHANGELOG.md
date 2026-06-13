@@ -9,6 +9,7 @@ and this project is expected to follow [Semantic Versioning](https://semver.org/
 
 ### [Added]
 
+- Add explicit top-level global summaries to LLIR dumps for readability.
 - Document the current LIR features that do not comply with the contract.
 - Define and document the intended LIR contract.
 
@@ -16,7 +17,6 @@ and this project is expected to follow [Semantic Versioning](https://semver.org/
 
 - Route builtin `read` lowering through explicit LLIR result handling.
 - Adapt `llirint` to consume the target-neutral LLIR dump shape, including top-level globals.
-- Add explicit top-level global summaries to LLIR dumps for readability.
 - Remove frame layout and stack-slot policy from structural LLIR.
 - Remove `enter` and `leave` from LLIR and keep procedure flow target-neutral.
 - Update LLIR and HLIR docs to reflect the target-neutral structural IR boundary.
@@ -24,6 +24,7 @@ and this project is expected to follow [Semantic Versioning](https://semver.org/
 
 ### [Fixed]
 
+- Fix `calc` example add `read()` to get operation input.
 - Fix LLIR intrinsic validation so target-neutral `read` operations are preserved in lowered output.
 - Fix `llirint` boolean `read` behavior so scalar observable output stays aligned with the p-code path.
 

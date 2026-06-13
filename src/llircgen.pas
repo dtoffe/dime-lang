@@ -474,7 +474,7 @@ function lowerCall(const callSite: hirCallSite; resultType: typeValue;
                    expectsResult: boolean; var errorCount: integer): llirOperand;
 var
   argumentOperand: llirOperand;
-  instruction, storeInstruction, resultInstruction: llirInstruction;
+  instruction, storeInstruction: llirInstruction;
   argumentIndex: integer;
   readResult: llirOperand;
   argumentNode: hirExpression;
@@ -501,11 +501,8 @@ begin
       begin
         readResult := newTacTemporary(hirScalarType(callSite.firstArgument^.valueType));
         appendIntrinsicCall(llirIntrinsicForReadType(hirScalarType(callSite.firstArgument^.valueType)),
-                            makeTacNoneOperand,
+                            readResult,
                             []);
-        resultInstruction := newTacInstruction(irResult);
-        resultInstruction.resultOperand := readResult;
-        appendTacInstruction(resultInstruction);
         storeInstruction := newTacInstruction(irStoreVar);
         storeInstruction.resultOperand := storageOperandFromRef(callSite.firstArgument^.symbolInfo);
         storeInstruction.leftOperand := readResult;
