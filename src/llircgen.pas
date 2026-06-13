@@ -172,16 +172,6 @@ begin
   appendTacInstruction(instruction)
 end;
 
-procedure appendCallArgument(argumentIndex: integer; const argumentOperand: llirOperand);
-var
-  instruction: llirInstruction;
-begin
-  instruction := newTacInstruction(irArg);
-  instruction.positionIndex := argumentIndex;
-  instruction.leftOperand := argumentOperand;
-  appendTacInstruction(instruction)
-end;
-
 procedure pushLoopBreakLabel(labelId: llirLabelId);
 begin
   loopBreakLabelCount := loopBreakLabelCount + 1;
@@ -518,25 +508,22 @@ begin
   instruction.targetOperand := makeTacProcedureOperand(callSite.targetSymbol.symbol,
                                                        callSite.targetSymbol.name);
   if expectsResult then
+  begin
     lowerCall := newTacTemporary(resultType);
+    instruction.resultOperand := lowerCall
+  end;
 
   argumentIndex := 0;
   argumentNode := callSite.firstArgument;
   while argumentNode <> nil do
   begin
     argumentOperand := lowerExpression(argumentNode, errorCount);
-    appendCallArgument(argumentIndex, argumentOperand);
+    setTacCallArgument(instruction, argumentIndex + 1, argumentOperand);
     argumentIndex := argumentIndex + 1;
     argumentNode := argumentNode^.nextSibling
   end;
 
-  appendTacInstruction(instruction);
-  if lowerCall.kind <> irOperandNone then
-  begin
-    instruction := newTacInstruction(irResult);
-    instruction.resultOperand := lowerCall;
-    appendTacInstruction(instruction)
-  end
+  appendTacInstruction(instruction)
 end;
 
 procedure lowerCallStatement(statementNode: hirStatement; var errorCount: integer);

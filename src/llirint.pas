@@ -136,13 +136,6 @@ var
   temporaries: array [1..maxTacTemporaries] of integer;
   returnStack: array [1..maxCallDepth] of llirReturnAddress;
   returnStackTop: integer;
-  pendingCallArguments: array [1..maxProcedureParameters] of integer;
-  pendingCallArgumentCount: integer;
-  lastCallResultValue: integer;
-  lastCallResultProcedureIndex: integer;
-  lastCallResultIsValue: boolean;
-  hasLastCallResult: boolean;
-
 function makeNoneOperand: llirRuntimeOperand;
 begin
   makeNoneOperand.kind := rtOperandNone;
@@ -753,13 +746,7 @@ begin
   nextVariableAddress := 1;
   memoryCellCount := 0;
   FillChar(temporaries, SizeOf(temporaries), 0);
-  returnStackTop := 0;
-  pendingCallArgumentCount := 0;
-  FillChar(pendingCallArguments, SizeOf(pendingCallArguments), 0);
-  lastCallResultValue := 0;
-  lastCallResultProcedureIndex := 0;
-  lastCallResultIsValue := false;
-  hasLastCallResult := false
+  returnStackTop := 0
 end;
 
 function findProcedure(const procedureName: string): integer;
@@ -914,31 +901,19 @@ begin
     value := readValueByIntrinsic('read_int', resultValueType);
     if instruction.resultOperand.kind <> rtOperandNone then
       assignOperand(instruction.resultOperand, value)
-    else
-    begin
-      lastCallResultValue := value;
-      lastCallResultIsValue := true;
-      hasLastCallResult := true
-    end
   end
   else if instruction.targetOperand.name = 'read_char' then
   begin
     value := readValueByIntrinsic('read_char', 'char');
     if instruction.resultOperand.kind <> rtOperandNone then
       assignOperand(instruction.resultOperand, value)
-    else
-    begin
-      lastCallResultValue := value;
-      lastCallResultIsValue := true;
-      hasLastCallResult := true
-    end
   end
   else if instruction.targetOperand.name = 'write_int' then
   begin
     if instruction.callArgumentCount >= 1 then
       value := operandValue(instruction.callArguments[1])
     else
-      value := pendingCallArguments[1];
+      value := 0;
     Write(value)
   end
   else if instruction.targetOperand.name = 'write_char' then
@@ -946,7 +921,7 @@ begin
     if instruction.callArgumentCount >= 1 then
       value := operandValue(instruction.callArguments[1])
     else
-      value := pendingCallArguments[1];
+      value := 0;
     Write(Chr(value))
   end
   else if instruction.targetOperand.name = 'write_string' then
@@ -964,13 +939,6 @@ begin
     halt(1)
   end;
 
-  if (instruction.targetOperand.name = 'write_int') or
-     (instruction.targetOperand.name = 'write_char') or
-     (instruction.targetOperand.name = 'write_string') or
-     (instruction.targetOperand.name = 'writeln') or
-     (instruction.targetOperand.name = 'readln') then
-    hasLastCallResult := false;
-  pendingCallArgumentCount := 0
 end;
 
 procedure executeTac;
@@ -1097,17 +1065,8 @@ begin
         end;
       rtArg:
         begin
-          if (instruction.positionIndex < 0) or
-             (instruction.positionIndex >= maxProcedureParameters) then
-          begin
-            reportRuntimeError('TAC argument index out of range.');
-            halt(1)
-          end;
-          pendingCallArguments[instruction.positionIndex + 1] :=
-            operandValue(instruction.leftOperand);
-          if pendingCallArgumentCount < instruction.positionIndex + 1 then
-            pendingCallArgumentCount := instruction.positionIndex + 1;
-          programCounter := programCounter + 1
+          reportRuntimeError('Legacy TAC arg instruction is no longer supported.');
+          halt(1)
         end;
       rtCall:
         begin
@@ -1122,36 +1081,26 @@ begin
             reportRuntimeError('TAC call stack overflow.');
             halt(1)
           end;
-          if pendingCallArgumentCount <> procedures[calleeProcedureIndex].parameterCount then
+          if instruction.callArgumentCount <> procedures[calleeProcedureIndex].parameterCount then
           begin
             reportRuntimeError('TAC call argument count does not match procedure parameters.');
             halt(1)
           end;
-          for argumentIndex := 1 to pendingCallArgumentCount do
+          for argumentIndex := 1 to instruction.callArgumentCount do
             assignOperand(procedures[calleeProcedureIndex].parameters[argumentIndex],
-                          pendingCallArguments[argumentIndex]);
-          pendingCallArgumentCount := 0;
+                          operandValue(instruction.callArguments[argumentIndex]));
           returnStackTop := returnStackTop + 1;
           returnStack[returnStackTop].procedureIndex := currentProcedureIndex;
           returnStack[returnStackTop].instructionIndex := programCounter + 1;
+          returnStack[returnStackTop].resultOperand := instruction.resultOperand;
           returnStack[returnStackTop].calleeProcedureIndex := calleeProcedureIndex;
           currentProcedureIndex := calleeProcedureIndex;
           programCounter := 1
         end;
       rtResult:
         begin
-          if not hasLastCallResult then
-          begin
-            reportRuntimeError('Missing TAC call result.');
-            halt(1)
-          end;
-          if lastCallResultIsValue then
-            assignOperand(instruction.resultOperand, lastCallResultValue)
-          else
-            assignOperand(instruction.resultOperand,
-                          variableValueByName(procedures[lastCallResultProcedureIndex].name));
-          hasLastCallResult := false;
-          programCounter := programCounter + 1
+          reportRuntimeError('Legacy TAC result instruction is no longer supported.');
+          halt(1)
         end;
       rtIntrinsicCall:
         begin
@@ -1230,9 +1179,6 @@ begin
               assignOperand(returnStack[returnStackTop].resultOperand,
                             variableValueByName(
                               procedures[returnStack[returnStackTop].calleeProcedureIndex].name));
-            lastCallResultProcedureIndex := returnStack[returnStackTop].calleeProcedureIndex;
-            lastCallResultIsValue := false;
-            hasLastCallResult := true;
             currentProcedureIndex := returnStack[returnStackTop].procedureIndex;
             programCounter := returnStack[returnStackTop].instructionIndex;
             returnStackTop := returnStackTop - 1

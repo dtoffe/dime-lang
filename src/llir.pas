@@ -368,6 +368,8 @@ begin
 end;
 
 function validateTacInstruction(const instruction: llirInstruction): boolean;
+var
+  argumentIndex: integer;
 begin
   validateTacInstruction := true;
   case instruction.kind of
@@ -403,10 +405,21 @@ begin
                                 (instruction.positionIndex >= 0) and
                                 (instruction.positionIndex < maxTacOperandsPerCall);
     irCall:
-      validateTacInstruction := (instruction.targetOperand.kind = irOperandProcedure) and
-                                (instruction.resultOperand.kind = irOperandNone) and
-                                (instruction.leftOperand.kind = irOperandNone) and
-                                (instruction.rightOperand.kind = irOperandNone);
+      begin
+        validateTacInstruction := (instruction.targetOperand.kind = irOperandProcedure) and
+                                  (instruction.leftOperand.kind = irOperandNone) and
+                                  (instruction.rightOperand.kind = irOperandNone) and
+                                  ((instruction.resultOperand.kind = irOperandNone) or
+                                   (instruction.resultOperand.kind = irOperandTemporary));
+        if validateTacInstruction then
+          for argumentIndex := 1 to instruction.callArgumentCount do
+          begin
+            validateTacInstruction :=
+              isValueOperandKind(instruction.callArguments[argumentIndex].kind);
+            if not validateTacInstruction then
+              exit
+          end
+      end;
     irResult:
       validateTacInstruction := (instruction.resultOperand.kind = irOperandTemporary) and
                                 (instruction.leftOperand.kind = irOperandNone) and

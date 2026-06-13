@@ -15,6 +15,7 @@ and this project is expected to follow [Semantic Versioning](https://semver.org/
 
 ### [Changed]
 
+- Lower user LLIR calls to carry inline `argN` operands and optional `result` instead of separate `arg`/`result` transport steps.
 - Route builtin `read` lowering through explicit LLIR result handling.
 - Adapt `llirint` to consume the target-neutral LLIR dump shape, including top-level globals.
 - Remove frame layout and stack-slot policy from structural LLIR.

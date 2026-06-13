@@ -54,7 +54,7 @@ Compared with HLIR, LLIR introduces these backend-oriented details:
 - Explicit operand kinds: immediates, locals, parameters, temporaries, globals,
   labels, procedures, and intrinsics.
 - Explicit `load` and `store` operations for memory-backed symbols.
-- Explicit call preparation for user routines with `arg` and `call`.
+- Explicit user routine calls with inline arguments and optional result binding.
 - Explicit intrinsic calls for `read`, `readln`, `write`, and `writeln`.
 - Explicit `return` instructions.
 
@@ -72,8 +72,7 @@ proc 1 procparams return=none params=0 locals=0 temps=6 blocks=1 labels=1 instru
   temp 1 temp[t1]:integer/dword
   block 1 label=L1 first=1 count=18
    1 copy result=temp[t1]:integer/dword left=imm(65):integer/dword
-   2 arg left=temp[t1]:integer/dword index=0
-   7 call target=proc[store]:address
+   2 call target=proc[store]:address arg1=temp[t1]:integer/dword
   labelmap L1 block=1 first=1
 endproc
 ```
@@ -212,9 +211,7 @@ The current normalized LLIR instruction families are:
 
 ### Calls and procedure shape
 
-- `arg`
 - `call`
-- `result`
 - `return`
 
 ### Addressing
@@ -308,30 +305,31 @@ intrinsic_call target=intrinsic[write_int]:address arg1=temp[t4]:integer/dword
 intrinsic_call target=intrinsic[writeln]:address
 ```
 
-## Call Convention in LLIR
+## Call Shape in LLIR
 
-User routine calls currently use explicit argument setup:
+User routine calls carry their argument operands directly on the `call`
+instruction:
 
 ```text
 copy result=temp[t1]:integer/dword left=imm(65):integer/dword
-arg left=temp[t1]:integer/dword index=0
 copy result=temp[t2]:boolean/byte left=imm(1):boolean/byte
-arg left=temp[t2]:boolean/byte index=1
 copy result=temp[t3]:char/byte left=imm(65):char/byte
-arg left=temp[t3]:char/byte index=2
-call target=proc[store]:address
+call target=proc[store]:address arg1=temp[t1]:integer/dword arg2=temp[t2]:boolean/byte arg3=temp[t3]:char/byte
 ```
 
-If a call returns a value, the lowerer emits `result` into a temporary after
-the `call`.
+If a call returns a value, the destination temporary is attached directly to the
+same instruction:
 
-Intrinsic calls are slightly different in the current LLIR:
+```text
+call result=temp[t4]:integer/dword target=proc[compute]:address arg1=temp[t1]:integer/dword
+```
 
-- user routines use `arg` + `call` + optional `result`
-- intrinsics carry their arguments directly as `arg1=...`, `arg2=...`, and so
-  on inside `intrinsic_call`
+Intrinsic calls use the same basic shape:
 
-That asymmetry is intentional for now and may be unified later.
+- user routines use `call`
+- intrinsics use `intrinsic_call`
+- both carry `argN=...` operands inline
+- both may carry `result=...` when they produce a value
 
 ## Interpreter
 

@@ -121,9 +121,7 @@ The intended LIR instruction set above backend-specific lowering is:
 
 ### Calls
 
-- `arg`
 - `call`
-- `result`
 - `intrinsic_call`
 
 ### Address formation
@@ -208,33 +206,45 @@ The structural LLIR layer now satisfies the main `v0.0.13` split:
 What still remains below full backend separation is narrower and mostly concerns
 call/runtime behavior rather than frame layout.
 
-### The current call shape still leaks some ABI-facing decisions
+### The user-call shape is now structural rather than transport-shaped
 
-The contract allows explicit calls, but the current LLIR still bakes in more of
-the calling sequence than the intended boundary should promise.
+The original LLIR call model leaked ABI-shaped details in two ways:
 
-Still-present details:
+- `arg` instructions staged arguments one position at a time before the call
+- `result` modeled call return pickup as a separate post-call transport step
 
-- `arg` instructions carry ordered argument positions
-- calls require exact argument-count agreement with callee parameter count
-- `result` models a distinct post-call value retrieval step
+That shape described a particular argument-transfer and return-transfer protocol
+rather than the structural meaning of "call this procedure with these operands
+and optionally bind the result here".
+
+The current LLIR fixes that boundary by making user calls match the same
+structural pattern already used by intrinsics:
+
+- the `call` instruction now carries its argument operands directly as `arg1=`,
+  `arg2=`, and so on
+- a value-returning call writes its destination directly through the `call`
+  instruction `result=...` operand
+- the interpreter now binds procedure parameters from the `call` instruction
+  itself and writes the returned function value directly to the caller-provided
+  result operand on return
 
 Evidence in code:
 
-- `src/llir.pas`: `llirInstruction.positionIndex`, `callArgumentCount`, and
-  `callArguments`
-- `src/llircgen.pas`: `appendCallArgument`
-- `src/llircgen.pas`: `lowerCall` emits `arg`, `call`, and optional `result`
-- `src/llirint.pas`: `pendingCallArguments`
-- `src/llirint.pas`: `rtCall` checks `pendingCallArgumentCount` against callee
-  `parameterCount`
-- `src/llirint.pas`: `rtResult` consumes saved call result state
+- `src/llir.pas`: `irCall` validation accepts inline call arguments and an
+  optional temporary result operand
+- `src/llircgen.pas`: `lowerCall` emits one `call` carrying both arguments and
+  optional result
+- `src/llirint.pas`: `rtCall` consumes `callArguments` directly and stores the
+  pending result destination on the return stack
+- `src/llirint.pas`: `rtReturn` writes the function result directly to that
+  destination
 
-Why this is only partially compatible with the contract:
+Why this is a better contract fit:
 
-- explicit call sequencing is acceptable at LIR
-- tying it to one exact runtime argument-transfer model is still more
-  backend-shaped than intended
+- LIR still exposes explicit calls and ordered operands
+- but it no longer commits structural LLIR to one staged runtime transfer model
+- a native backend can now consume one call node and decide later how argument
+  movement and return-value placement are realized physically
 
 ### Intrinsics are coupled to the current runtime model
 
