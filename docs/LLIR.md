@@ -361,10 +361,13 @@ backend:
 - Variables are still interpreted symbolically.
 - Temporary slots exist as indexed runtime cells.
 - Calls use a return stack rather than a full machine model.
-- Intrinsics are interpreted directly rather than lowered to syscalls yet.
+- Intrinsics are executed through an interpreter-specific testing adapter rather
+  than lowered to syscalls yet.
 
 This is still useful because it gives the compiler a checkable backend-facing
-IR before assembler generation lands.
+IR before assembler generation lands, while keeping the intrinsic names
+themselves target-neutral. The native backend in later milestones can consume
+the same `intrinsic_call` operations and lower them differently.
 
 ## Current Limits
 

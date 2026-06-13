@@ -246,36 +246,45 @@ Why this is a better contract fit:
 - a native backend can now consume one call node and decide later how argument
   movement and return-value placement are realized physically
 
-### Intrinsics are coupled to the current runtime model
+### Intrinsics now stay target-neutral while backends choose the implementation
 
-The contract allows target-neutral intrinsics, but the current LLIR and
-interpreter couple those intrinsics directly to a concrete runtime execution
-path.
+The intended boundary for this project is:
 
-Still-present details:
+- LLIR keeps target-neutral intrinsic identities for testing and inspection
+- `llirint` may continue to execute those intrinsics directly as a fake testing
+  backend
+- later native backends may lower the same intrinsic identities to syscalls or
+  runtime helpers without changing frontend lowering
 
-- LLIR names a fixed compiler-known intrinsic set in the core IR model
-- intrinsic validation hardcodes argument counts, return types, and side-effect
-  classification in `llir.pas`
-- HLIR-to-LLIR lowering maps source builtins directly onto those concrete
-  intrinsic names
-- `llirint` executes those intrinsic names directly instead of consuming a
-  lower runtime/backend boundary
+That means LLIR describes which intrinsic operation is requested, but not how a
+particular backend realizes it.
+
+The implementation now reflects that boundary more clearly:
+
+- shared intrinsic identifiers, names, and signature rules live in a dedicated
+  intrinsic-contract unit
+- HLIR-to-LLIR lowering maps builtins onto those shared target-neutral
+  identifiers
+- structural LLIR validation consumes that shared intrinsic contract
+- `llirint` implements those identifiers in an interpreter-side adapter used to
+  test `.llir` directly
 
 Evidence in code and docs:
 
-- `src/llir.pas`: `llirIntrinsicKind`
-- `src/llir.pas`: `intrinsicParameterCount`, `intrinsicReturnType`,
-  `intrinsicSideEffect`, `intrinsicParameterType`,
-  `intrinsicAcceptsValueType`, `validateTacIntrinsicCall`
-- `src/llircgen.pas`: `appendIntrinsicCall`, builtin lowering in `lowerCall`
-- `src/llirint.pas`: `executeIntrinsicCall`
-- `docs/LLIR.md`: "Intrinsics are interpreted directly rather than lowered to
-  syscalls yet"
+- `src/llirintrinsics.pas`: shared intrinsic identifiers, names, and
+  validation metadata
+- `src/llir.pas`: LLIR validation consumes the shared intrinsic contract
+- `src/llircgen.pas`: builtin lowering targets the shared intrinsic contract
+- `src/llirint.pas`: `executeInterpreterIntrinsicCall` is an interpreter-side
+  backend adapter, not part of structural LLIR
+- `docs/LLIR.md`: documents direct intrinsic execution as an interpreter
+  testing path rather than the meaning of LLIR itself
 
-Why this is a contract leak:
+Why this is a better contract fit:
 
-- target-neutral intrinsic identity is fine at LIR
-- direct execution semantics in the LLIR interpreter mean the current stage is
-  still acting as both IR boundary and runtime boundary
-- that makes it harder to keep runtime/OS concerns cleanly below LIR
+- target-neutral intrinsic identity stays available in LLIR for debugging and
+  regression testing
+- the interpreter can keep faking `read` and `write` behavior before syscall
+  and runtime milestones land
+- frontend lowering will not need to reopen semantics when native intrinsic
+  lowering appears later

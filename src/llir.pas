@@ -16,7 +16,7 @@ unit llir;
 interface
 
 uses
-  tokens, typetable, symboltable;
+  tokens, typetable, symboltable, llirintrinsics;
 
 const
   maxTacInstructions = 500;
@@ -30,20 +30,6 @@ type
   llirProcedureIndex = 0..maxTacProcedures;
   llirTemporaryId = 0..maxTacInstructions;
   llirLabelId = 0..maxTacInstructions;
-  llirIntrinsicKind = (
-    irIntrinsicNone,
-    irIntrinsicReadInt,
-    irIntrinsicReadChar,
-    irIntrinsicWriteInt,
-    irIntrinsicWriteChar,
-    irIntrinsicWriteString,
-    irIntrinsicWriteLn,
-    irIntrinsicReadLn
-  );
-  llirIntrinsicSideEffect = (
-    irSideEffectNone,
-    irSideEffectIO
-  );
 
   llirInstructionKind = (
     irNoOp,
@@ -189,8 +175,6 @@ function makeTacLabelOperand(labelId: llirLabelId): llirOperand;
 function makeTacProcedureOperand(symbol: symbolIndex; const name: identifier): llirOperand;
 function makeTacIntrinsicOperand(intrinsicKind: llirIntrinsicKind): llirOperand;
 function makeTacAddressTempOperand(temporaryId: llirTemporaryId): llirOperand;
-function llirIntrinsicForReadType(valueType: typeValue): llirIntrinsicKind;
-function llirIntrinsicForWriteType(valueType: typeValue): llirIntrinsicKind;
 
 function newTacTemporary(valueType: typeValue): llirOperand;
 function newTacAddressTemporary: llirOperand;
@@ -257,71 +241,6 @@ function isAddressValueOperand(const operand: llirOperand): boolean;
 begin
   isAddressValueOperand := (operand.kind = irOperandTemporary) and
                            (operand.size = irSizeAddress)
-end;
-
-function intrinsicParameterCount(kind: llirIntrinsicKind): integer;
-begin
-  case kind of
-    irIntrinsicWriteInt,
-    irIntrinsicWriteChar,
-    irIntrinsicWriteString:
-      intrinsicParameterCount := 1;
-  else
-    intrinsicParameterCount := 0
-  end
-end;
-
-function intrinsicHasReturnValue(kind: llirIntrinsicKind): boolean;
-begin
-  intrinsicHasReturnValue := kind in [irIntrinsicReadInt, irIntrinsicReadChar]
-end;
-
-function intrinsicReturnType(kind: llirIntrinsicKind): typeValue;
-begin
-  case kind of
-    irIntrinsicReadChar:
-      intrinsicReturnType := typeChar;
-  else
-    intrinsicReturnType := typeInteger
-  end
-end;
-
-function intrinsicSideEffect(kind: llirIntrinsicKind): llirIntrinsicSideEffect;
-begin
-  if kind = irIntrinsicNone then
-    intrinsicSideEffect := irSideEffectNone
-  else
-    intrinsicSideEffect := irSideEffectIO
-end;
-
-function intrinsicParameterType(kind: llirIntrinsicKind; parameterIndex: integer): typeValue;
-begin
-  intrinsicParameterType := typeInteger;
-  if parameterIndex <> 1 then
-    exit;
-
-  case kind of
-    irIntrinsicWriteChar:
-      intrinsicParameterType := typeChar;
-    irIntrinsicWriteString:
-      intrinsicParameterType := typeChar;
-  else
-    intrinsicParameterType := typeInteger
-  end
-end;
-
-function intrinsicAcceptsValueType(kind: llirIntrinsicKind; valueType: typeValue): boolean;
-begin
-  case kind of
-    irIntrinsicWriteInt:
-      intrinsicAcceptsValueType := valueType in [typeInteger, typeBoolean];
-    irIntrinsicWriteChar:
-      intrinsicAcceptsValueType := valueType = typeChar;
-    irIntrinsicWriteString:
-      intrinsicAcceptsValueType := valueType = typeChar;
-  else
-    intrinsicAcceptsValueType := true
-  end
 end;
 
 function validateTacIntrinsicCall(const instruction: llirInstruction): boolean;
@@ -641,37 +560,6 @@ begin
   else
     operatorToString := ''
   end
-end;
-
-function intrinsicKindToString(kind: llirIntrinsicKind): string;
-begin
-  case kind of
-    irIntrinsicReadInt: intrinsicKindToString := 'read_int';
-    irIntrinsicReadChar: intrinsicKindToString := 'read_char';
-    irIntrinsicWriteInt: intrinsicKindToString := 'write_int';
-    irIntrinsicWriteChar: intrinsicKindToString := 'write_char';
-    irIntrinsicWriteString: intrinsicKindToString := 'write_string';
-    irIntrinsicWriteLn: intrinsicKindToString := 'writeln';
-    irIntrinsicReadLn: intrinsicKindToString := 'readln';
-  else
-    intrinsicKindToString := 'none'
-  end
-end;
-
-function llirIntrinsicForReadType(valueType: typeValue): llirIntrinsicKind;
-begin
-  if valueType = typeChar then
-    llirIntrinsicForReadType := irIntrinsicReadChar
-  else
-    llirIntrinsicForReadType := irIntrinsicReadInt
-end;
-
-function llirIntrinsicForWriteType(valueType: typeValue): llirIntrinsicKind;
-begin
-  if valueType = typeChar then
-    llirIntrinsicForWriteType := irIntrinsicWriteChar
-  else
-    llirIntrinsicForWriteType := irIntrinsicWriteInt
 end;
 
 function routineOwnsSymbol(routineSymbol, operandSymbol: symbolIndex): boolean;

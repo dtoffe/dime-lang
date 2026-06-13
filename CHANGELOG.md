@@ -9,12 +9,14 @@ and this project is expected to follow [Semantic Versioning](https://semver.org/
 
 ### [Added]
 
+- Add a shared LLIR intrinsic-contract unit so target-neutral intrinsic metadata is not tied to one backend implementation.
 - Add explicit top-level global summaries to LLIR dumps for readability.
 - Document the current LIR features that do not comply with the contract.
 - Define and document the intended LIR contract.
 
 ### [Changed]
 
+- Treat `llirint` intrinsic execution as an interpreter-side testing backend while keeping LLIR intrinsic identities target-neutral.
 - Lower user LLIR calls to carry inline `argN` operands and optional `result` instead of separate `arg`/`result` transport steps.
 - Route builtin `read` lowering through explicit LLIR result handling.
 - Adapt `llirint` to consume the target-neutral LLIR dump shape, including top-level globals.

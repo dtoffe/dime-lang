@@ -23,7 +23,7 @@ procedure generateLlirProgram(const programData: hirProgramRecord;
 implementation
 
 uses
-  llir, symboltable, typetable;
+  llir, llirintrinsics, symboltable, typetable;
 
 var
   currentLoweredFunctionSymbol: symbolIndex;

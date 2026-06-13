@@ -14,7 +14,7 @@ program llirint;
 {$H+}
 
 uses
-  SysUtils, Classes, diagnostics, tokens;
+  SysUtils, Classes, diagnostics, tokens, typetable, llirintrinsics;
 
 const
   maxTacInstructions = 500;
@@ -887,58 +887,61 @@ begin
     readValueByIntrinsic := readIntegerValueOrHalt(consumeLineRemainder)
 end;
 
-procedure executeIntrinsicCall(const instruction: llirRuntimeInstruction);
+{ Interpreter-side intrinsic adapter used only for LLIR testing. This is one
+  backend implementation of target-neutral intrinsic names, not part of the
+  LLIR contract itself. }
+procedure executeInterpreterIntrinsicCall(const instruction: llirRuntimeInstruction);
 var
   value: integer;
-  resultValueType: string;
+  intrinsicKind: llirIntrinsicKind;
 begin
-  resultValueType := instruction.resultOperand.valueType;
-  if resultValueType = '' then
-    resultValueType := 'integer';
+  intrinsicKind := intrinsicKindFromString(instruction.targetOperand.name);
 
-  if instruction.targetOperand.name = 'read_int' then
-  begin
-    value := readValueByIntrinsic('read_int', resultValueType);
-    if instruction.resultOperand.kind <> rtOperandNone then
-      assignOperand(instruction.resultOperand, value)
-  end
-  else if instruction.targetOperand.name = 'read_char' then
-  begin
-    value := readValueByIntrinsic('read_char', 'char');
-    if instruction.resultOperand.kind <> rtOperandNone then
-      assignOperand(instruction.resultOperand, value)
-  end
-  else if instruction.targetOperand.name = 'write_int' then
-  begin
-    if instruction.callArgumentCount >= 1 then
-      value := operandValue(instruction.callArguments[1])
-    else
-      value := 0;
-    Write(value)
-  end
-  else if instruction.targetOperand.name = 'write_char' then
-  begin
-    if instruction.callArgumentCount >= 1 then
-      value := operandValue(instruction.callArguments[1])
-    else
-      value := 0;
-    Write(Chr(value))
-  end
-  else if instruction.targetOperand.name = 'write_string' then
-  begin
-    reportRuntimeError('TAC write_string intrinsic is not implemented yet.');
-    halt(1)
-  end
-  else if instruction.targetOperand.name = 'writeln' then
-    WriteLn
-  else if instruction.targetOperand.name = 'readln' then
-    consumeInputLineRemainder
+  case intrinsicKind of
+    irIntrinsicReadInt:
+      begin
+        value := readValueByIntrinsic(intrinsicKindToString(intrinsicKind),
+                                      instruction.resultOperand.valueType);
+        if instruction.resultOperand.kind <> rtOperandNone then
+          assignOperand(instruction.resultOperand, value)
+      end;
+    irIntrinsicReadChar:
+      begin
+        value := readValueByIntrinsic(intrinsicKindToString(intrinsicKind), 'char');
+        if instruction.resultOperand.kind <> rtOperandNone then
+          assignOperand(instruction.resultOperand, value)
+      end;
+    irIntrinsicWriteInt:
+      begin
+        if instruction.callArgumentCount >= 1 then
+          value := operandValue(instruction.callArguments[1])
+        else
+          value := 0;
+        Write(value)
+      end;
+    irIntrinsicWriteChar:
+      begin
+        if instruction.callArgumentCount >= 1 then
+          value := operandValue(instruction.callArguments[1])
+        else
+          value := 0;
+        Write(Chr(value))
+      end;
+    irIntrinsicWriteString:
+      begin
+        reportRuntimeError('TAC write_string intrinsic is not implemented yet.');
+        halt(1)
+      end;
+    irIntrinsicWriteLn:
+      WriteLn;
+    irIntrinsicReadLn:
+      consumeInputLineRemainder;
   else
   begin
     reportRuntimeError('Unknown TAC intrinsic call.');
     halt(1)
+  end
   end;
-
 end;
 
 procedure executeTac;
@@ -1104,7 +1107,7 @@ begin
         end;
       rtIntrinsicCall:
         begin
-          executeIntrinsicCall(instruction);
+          executeInterpreterIntrinsicCall(instruction);
           programCounter := programCounter + 1
         end;
       rtLoadConst:
