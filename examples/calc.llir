@@ -1,68 +1,68 @@
 llir program
 globals 4
-global 1 global[op]:integer/dword
-global 2 global[x]:integer/dword
-global 3 global[y]:integer/dword
-global 4 global[done]:integer/dword
+global 1 global[op]:integer/bits32
+global 2 global[x]:integer/bits32
+global 3 global[y]:integer/bits32
+global 4 global[done]:integer/bits32
 procedures 6
 proc 1 calc return=none params=0 locals=0 temps=18 blocks=10 labels=6 instructions=31
-  temp 1 temp[t1]:integer/dword
-  temp 2 temp[t2]:integer/dword
-  temp 3 temp[t3]:integer/dword
-  temp 4 temp[t4]:boolean/byte
-  temp 5 temp[t5]:integer/dword
-  temp 6 temp[t6]:integer/dword
-  temp 7 temp[t7]:integer/dword
-  temp 8 temp[t8]:boolean/byte
-  temp 9 temp[t9]:integer/dword
-  temp 10 temp[t10]:integer/dword
-  temp 11 temp[t11]:integer/dword
-  temp 12 temp[t12]:boolean/byte
-  temp 13 temp[t13]:integer/dword
-  temp 14 temp[t14]:integer/dword
-  temp 15 temp[t15]:integer/dword
-  temp 16 temp[t16]:boolean/byte
-  temp 17 temp[t17]:integer/dword
-  temp 18 temp[t18]:integer/dword
+  temp 1 temp[t1]:integer/bits32
+  temp 2 temp[t2]:integer/bits32
+  temp 3 temp[t3]:integer/bits32
+  temp 4 temp[t4]:boolean/bits8
+  temp 5 temp[t5]:integer/bits32
+  temp 6 temp[t6]:integer/bits32
+  temp 7 temp[t7]:integer/bits32
+  temp 8 temp[t8]:boolean/bits8
+  temp 9 temp[t9]:integer/bits32
+  temp 10 temp[t10]:integer/bits32
+  temp 11 temp[t11]:integer/bits32
+  temp 12 temp[t12]:boolean/bits8
+  temp 13 temp[t13]:integer/bits32
+  temp 14 temp[t14]:integer/bits32
+  temp 15 temp[t15]:integer/bits32
+  temp 16 temp[t16]:boolean/bits8
+  temp 17 temp[t17]:integer/bits32
+  temp 18 temp[t18]:integer/bits32
   block 1 label=L1 first=1 count=2
-   1 copy result=temp[t1]:integer/dword left=imm(0):integer/dword
-   2 store result=global[done]:integer/dword left=temp[t1]:integer/dword
+   1 copy result=temp[t1]:integer/bits32 left=imm(0):integer/bits32
+   2 store result=global[done]:integer/bits32 left=temp[t1]:integer/bits32
   block 2 label=L2 first=3 count=4
-   3 load result=temp[t2]:integer/dword left=global[done]:integer/dword
-   4 copy result=temp[t3]:integer/dword left=imm(0):integer/dword
-   5 cmp_eq result=temp[t4]:boolean/byte left=temp[t2]:integer/dword right=temp[t3]:integer/dword
-   6 brfalse left=temp[t4]:boolean/byte target=label[L3]:address
+   3 load result=temp[t2]:integer/bits32 left=global[done]:integer/bits32
+   4 copy result=temp[t3]:integer/bits32 left=imm(0):integer/bits32
+   5 cmp_eq result=temp[t4]:boolean/bits8 left=temp[t2]:integer/bits32 right=temp[t3]:integer/bits32
+   6 brfalse left=temp[t4]:boolean/bits8 target=label[L3]:pointer
   block 3 first=7 count=6
-   7 intrinsic_call result=temp[t5]:integer/dword target=intrinsic[read_int]:address
-   8 store result=global[op]:integer/dword left=temp[t5]:integer/dword
-   9 load result=temp[t6]:integer/dword left=global[op]:integer/dword
-  10 copy result=temp[t7]:integer/dword left=imm(1):integer/dword
-  11 cmp_lt result=temp[t8]:boolean/byte left=temp[t6]:integer/dword right=temp[t7]:integer/dword
-  12 brfalse left=temp[t8]:boolean/byte target=label[L4]:address
+   7 intrinsic_call result=temp[t5]:integer/bits32 target=intrinsic[read_int]:pointer
+   8 store result=global[op]:integer/bits32 left=temp[t5]:integer/bits32
+   9 load result=temp[t6]:integer/bits32 left=global[op]:integer/bits32
+  10 copy result=temp[t7]:integer/bits32 left=imm(1):integer/bits32
+  11 cmp_lt result=temp[t8]:boolean/bits8 left=temp[t6]:integer/bits32 right=temp[t7]:integer/bits32
+  12 brfalse left=temp[t8]:boolean/bits8 target=label[L4]:pointer
   block 4 first=13 count=2
-  13 copy result=temp[t9]:integer/dword left=imm(1):integer/dword
-  14 store result=global[done]:integer/dword left=temp[t9]:integer/dword
+  13 copy result=temp[t9]:integer/bits32 left=imm(1):integer/bits32
+  14 store result=global[done]:integer/bits32 left=temp[t9]:integer/bits32
   block 5 label=L4 first=15 count=4
-  15 load result=temp[t10]:integer/dword left=global[op]:integer/dword
-  16 copy result=temp[t11]:integer/dword left=imm(4):integer/dword
-  17 cmp_gt result=temp[t12]:boolean/byte left=temp[t10]:integer/dword right=temp[t11]:integer/dword
-  18 brfalse left=temp[t12]:boolean/byte target=label[L5]:address
+  15 load result=temp[t10]:integer/bits32 left=global[op]:integer/bits32
+  16 copy result=temp[t11]:integer/bits32 left=imm(4):integer/bits32
+  17 cmp_gt result=temp[t12]:boolean/bits8 left=temp[t10]:integer/bits32 right=temp[t11]:integer/bits32
+  18 brfalse left=temp[t12]:boolean/bits8 target=label[L5]:pointer
   block 6 first=19 count=2
-  19 copy result=temp[t13]:integer/dword left=imm(1):integer/dword
-  20 store result=global[done]:integer/dword left=temp[t13]:integer/dword
+  19 copy result=temp[t13]:integer/bits32 left=imm(1):integer/bits32
+  20 store result=global[done]:integer/bits32 left=temp[t13]:integer/bits32
   block 7 label=L5 first=21 count=4
-  21 load result=temp[t14]:integer/dword left=global[done]:integer/dword
-  22 copy result=temp[t15]:integer/dword left=imm(0):integer/dword
-  23 cmp_eq result=temp[t16]:boolean/byte left=temp[t14]:integer/dword right=temp[t15]:integer/dword
-  24 brfalse left=temp[t16]:boolean/byte target=label[L6]:address
+  21 load result=temp[t14]:integer/bits32 left=global[done]:integer/bits32
+  22 copy result=temp[t15]:integer/bits32 left=imm(0):integer/bits32
+  23 cmp_eq result=temp[t16]:boolean/bits8 left=temp[t14]:integer/bits32 right=temp[t15]:integer/bits32
+  24 brfalse left=temp[t16]:boolean/bits8 target=label[L6]:pointer
   block 8 first=25 count=5
-  25 intrinsic_call result=temp[t17]:integer/dword target=intrinsic[read_int]:address
-  26 store result=global[x]:integer/dword left=temp[t17]:integer/dword
-  27 intrinsic_call result=temp[t18]:integer/dword target=intrinsic[read_int]:address
-  28 store result=global[y]:integer/dword left=temp[t18]:integer/dword
-  29 call target=proc[calculate]:address
+  25 intrinsic_call result=temp[t17]:integer/bits32 target=intrinsic[read_int]:pointer
+  26 store result=global[x]:integer/bits32 left=temp[t17]:integer/bits32
+  27 intrinsic_call result=temp[t18]:integer/bits32 target=intrinsic[read_int]:pointer
+  28 store result=global[y]:integer/bits32 left=temp[t18]:integer/bits32
+  29 call target=proc[calculate]:pointer
   block 9 label=L6 first=30 count=1
-  30 jump target=label[L2]:address
+  30 jump target=label[L2]:pointer
   block 10 label=L3 first=31 count=1
   31 return
   labelmap L1 block=1 first=1
@@ -73,71 +73,71 @@ proc 1 calc return=none params=0 locals=0 temps=18 blocks=10 labels=6 instructio
   labelmap L6 block=9 first=30
 endproc
 proc 2 add return=none params=0 locals=0 temps=3 blocks=1 labels=1 instructions=5
-  temp 1 temp[t19]:integer/dword
-  temp 2 temp[t20]:integer/dword
-  temp 3 temp[t21]:integer/dword
+  temp 1 temp[t19]:integer/bits32
+  temp 2 temp[t20]:integer/bits32
+  temp 3 temp[t21]:integer/bits32
   block 1 label=L7 first=1 count=5
-   1 load result=temp[t19]:integer/dword left=global[x]:integer/dword
-   2 load result=temp[t20]:integer/dword left=global[y]:integer/dword
-   3 add result=temp[t21]:integer/dword left=temp[t19]:integer/dword right=temp[t20]:integer/dword
-   4 store result=global[x]:integer/dword left=temp[t21]:integer/dword
+   1 load result=temp[t19]:integer/bits32 left=global[x]:integer/bits32
+   2 load result=temp[t20]:integer/bits32 left=global[y]:integer/bits32
+   3 add result=temp[t21]:integer/bits32 left=temp[t19]:integer/bits32 right=temp[t20]:integer/bits32
+   4 store result=global[x]:integer/bits32 left=temp[t21]:integer/bits32
    5 return
   labelmap L7 block=1 first=1
 endproc
 proc 3 sub return=none params=0 locals=0 temps=3 blocks=1 labels=1 instructions=5
-  temp 1 temp[t22]:integer/dword
-  temp 2 temp[t23]:integer/dword
-  temp 3 temp[t24]:integer/dword
+  temp 1 temp[t22]:integer/bits32
+  temp 2 temp[t23]:integer/bits32
+  temp 3 temp[t24]:integer/bits32
   block 1 label=L8 first=1 count=5
-   1 load result=temp[t22]:integer/dword left=global[x]:integer/dword
-   2 load result=temp[t23]:integer/dword left=global[y]:integer/dword
-   3 sub result=temp[t24]:integer/dword left=temp[t22]:integer/dword right=temp[t23]:integer/dword
-   4 store result=global[x]:integer/dword left=temp[t24]:integer/dword
+   1 load result=temp[t22]:integer/bits32 left=global[x]:integer/bits32
+   2 load result=temp[t23]:integer/bits32 left=global[y]:integer/bits32
+   3 sub result=temp[t24]:integer/bits32 left=temp[t22]:integer/bits32 right=temp[t23]:integer/bits32
+   4 store result=global[x]:integer/bits32 left=temp[t24]:integer/bits32
    5 return
   labelmap L8 block=1 first=1
 endproc
 proc 4 mult return=none params=0 locals=1 temps=3 blocks=1 labels=1 instructions=5
-  local 1 local[c]:integer/dword
-  temp 1 temp[t25]:integer/dword
-  temp 2 temp[t26]:integer/dword
-  temp 3 temp[t27]:integer/dword
+  local 1 local[c]:integer/bits32
+  temp 1 temp[t25]:integer/bits32
+  temp 2 temp[t26]:integer/bits32
+  temp 3 temp[t27]:integer/bits32
   block 1 label=L9 first=1 count=5
-   1 load result=temp[t25]:integer/dword left=global[x]:integer/dword
-   2 load result=temp[t26]:integer/dword left=global[y]:integer/dword
-   3 mul result=temp[t27]:integer/dword left=temp[t25]:integer/dword right=temp[t26]:integer/dword
-   4 store result=global[x]:integer/dword left=temp[t27]:integer/dword
+   1 load result=temp[t25]:integer/bits32 left=global[x]:integer/bits32
+   2 load result=temp[t26]:integer/bits32 left=global[y]:integer/bits32
+   3 mul result=temp[t27]:integer/bits32 left=temp[t25]:integer/bits32 right=temp[t26]:integer/bits32
+   4 store result=global[x]:integer/bits32 left=temp[t27]:integer/bits32
    5 return
   labelmap L9 block=1 first=1
 endproc
 proc 5 div return=none params=0 locals=0 temps=10 blocks=5 labels=3 instructions=15
-  temp 1 temp[t28]:integer/dword
-  temp 2 temp[t29]:integer/dword
-  temp 3 temp[t30]:boolean/byte
-  temp 4 temp[t31]:integer/dword
-  temp 5 temp[t32]:integer/dword
-  temp 6 temp[t33]:integer/dword
-  temp 7 temp[t34]:integer/dword
-  temp 8 temp[t35]:integer/dword
-  temp 9 temp[t36]:boolean/byte
-  temp 10 temp[t37]:integer/dword
+  temp 1 temp[t28]:integer/bits32
+  temp 2 temp[t29]:integer/bits32
+  temp 3 temp[t30]:boolean/bits8
+  temp 4 temp[t31]:integer/bits32
+  temp 5 temp[t32]:integer/bits32
+  temp 6 temp[t33]:integer/bits32
+  temp 7 temp[t34]:integer/bits32
+  temp 8 temp[t35]:integer/bits32
+  temp 9 temp[t36]:boolean/bits8
+  temp 10 temp[t37]:integer/bits32
   block 1 label=L10 first=1 count=4
-   1 load result=temp[t28]:integer/dword left=global[y]:integer/dword
-   2 copy result=temp[t29]:integer/dword left=imm(0):integer/dword
-   3 cmp_ne result=temp[t30]:boolean/byte left=temp[t28]:integer/dword right=temp[t29]:integer/dword
-   4 brfalse left=temp[t30]:boolean/byte target=label[L11]:address
+   1 load result=temp[t28]:integer/bits32 left=global[y]:integer/bits32
+   2 copy result=temp[t29]:integer/bits32 left=imm(0):integer/bits32
+   3 cmp_ne result=temp[t30]:boolean/bits8 left=temp[t28]:integer/bits32 right=temp[t29]:integer/bits32
+   4 brfalse left=temp[t30]:boolean/bits8 target=label[L11]:pointer
   block 2 first=5 count=4
-   5 load result=temp[t31]:integer/dword left=global[x]:integer/dword
-   6 load result=temp[t32]:integer/dword left=global[y]:integer/dword
-   7 div result=temp[t33]:integer/dword left=temp[t31]:integer/dword right=temp[t32]:integer/dword
-   8 store result=global[x]:integer/dword left=temp[t33]:integer/dword
+   5 load result=temp[t31]:integer/bits32 left=global[x]:integer/bits32
+   6 load result=temp[t32]:integer/bits32 left=global[y]:integer/bits32
+   7 div result=temp[t33]:integer/bits32 left=temp[t31]:integer/bits32 right=temp[t32]:integer/bits32
+   8 store result=global[x]:integer/bits32 left=temp[t33]:integer/bits32
   block 3 label=L11 first=9 count=4
-   9 load result=temp[t34]:integer/dword left=global[y]:integer/dword
-  10 copy result=temp[t35]:integer/dword left=imm(0):integer/dword
-  11 cmp_eq result=temp[t36]:boolean/byte left=temp[t34]:integer/dword right=temp[t35]:integer/dword
-  12 brfalse left=temp[t36]:boolean/byte target=label[L12]:address
+   9 load result=temp[t34]:integer/bits32 left=global[y]:integer/bits32
+  10 copy result=temp[t35]:integer/bits32 left=imm(0):integer/bits32
+  11 cmp_eq result=temp[t36]:boolean/bits8 left=temp[t34]:integer/bits32 right=temp[t35]:integer/bits32
+  12 brfalse left=temp[t36]:boolean/bits8 target=label[L12]:pointer
   block 4 first=13 count=2
-  13 copy result=temp[t37]:integer/dword left=imm(1):integer/dword
-  14 store result=global[done]:integer/dword left=temp[t37]:integer/dword
+  13 copy result=temp[t37]:integer/bits32 left=imm(1):integer/bits32
+  14 store result=global[done]:integer/bits32 left=temp[t37]:integer/bits32
   block 5 label=L12 first=15 count=1
   15 return
   labelmap L10 block=1 first=1
@@ -145,46 +145,46 @@ proc 5 div return=none params=0 locals=0 temps=10 blocks=5 labels=3 instructions
   labelmap L12 block=5 first=15
 endproc
 proc 6 calculate return=none params=0 locals=0 temps=12 blocks=9 labels=5 instructions=21
-  temp 1 temp[t38]:integer/dword
-  temp 2 temp[t39]:integer/dword
-  temp 3 temp[t40]:boolean/byte
-  temp 4 temp[t41]:integer/dword
-  temp 5 temp[t42]:integer/dword
-  temp 6 temp[t43]:boolean/byte
-  temp 7 temp[t44]:integer/dword
-  temp 8 temp[t45]:integer/dword
-  temp 9 temp[t46]:boolean/byte
-  temp 10 temp[t47]:integer/dword
-  temp 11 temp[t48]:integer/dword
-  temp 12 temp[t49]:boolean/byte
+  temp 1 temp[t38]:integer/bits32
+  temp 2 temp[t39]:integer/bits32
+  temp 3 temp[t40]:boolean/bits8
+  temp 4 temp[t41]:integer/bits32
+  temp 5 temp[t42]:integer/bits32
+  temp 6 temp[t43]:boolean/bits8
+  temp 7 temp[t44]:integer/bits32
+  temp 8 temp[t45]:integer/bits32
+  temp 9 temp[t46]:boolean/bits8
+  temp 10 temp[t47]:integer/bits32
+  temp 11 temp[t48]:integer/bits32
+  temp 12 temp[t49]:boolean/bits8
   block 1 label=L13 first=1 count=4
-   1 load result=temp[t38]:integer/dword left=global[op]:integer/dword
-   2 copy result=temp[t39]:integer/dword left=imm(1):integer/dword
-   3 cmp_eq result=temp[t40]:boolean/byte left=temp[t38]:integer/dword right=temp[t39]:integer/dword
-   4 brfalse left=temp[t40]:boolean/byte target=label[L14]:address
+   1 load result=temp[t38]:integer/bits32 left=global[op]:integer/bits32
+   2 copy result=temp[t39]:integer/bits32 left=imm(1):integer/bits32
+   3 cmp_eq result=temp[t40]:boolean/bits8 left=temp[t38]:integer/bits32 right=temp[t39]:integer/bits32
+   4 brfalse left=temp[t40]:boolean/bits8 target=label[L14]:pointer
   block 2 first=5 count=1
-   5 call target=proc[add]:address
+   5 call target=proc[add]:pointer
   block 3 label=L14 first=6 count=4
-   6 load result=temp[t41]:integer/dword left=global[op]:integer/dword
-   7 copy result=temp[t42]:integer/dword left=imm(2):integer/dword
-   8 cmp_eq result=temp[t43]:boolean/byte left=temp[t41]:integer/dword right=temp[t42]:integer/dword
-   9 brfalse left=temp[t43]:boolean/byte target=label[L15]:address
+   6 load result=temp[t41]:integer/bits32 left=global[op]:integer/bits32
+   7 copy result=temp[t42]:integer/bits32 left=imm(2):integer/bits32
+   8 cmp_eq result=temp[t43]:boolean/bits8 left=temp[t41]:integer/bits32 right=temp[t42]:integer/bits32
+   9 brfalse left=temp[t43]:boolean/bits8 target=label[L15]:pointer
   block 4 first=10 count=1
-  10 call target=proc[sub]:address
+  10 call target=proc[sub]:pointer
   block 5 label=L15 first=11 count=4
-  11 load result=temp[t44]:integer/dword left=global[op]:integer/dword
-  12 copy result=temp[t45]:integer/dword left=imm(3):integer/dword
-  13 cmp_eq result=temp[t46]:boolean/byte left=temp[t44]:integer/dword right=temp[t45]:integer/dword
-  14 brfalse left=temp[t46]:boolean/byte target=label[L16]:address
+  11 load result=temp[t44]:integer/bits32 left=global[op]:integer/bits32
+  12 copy result=temp[t45]:integer/bits32 left=imm(3):integer/bits32
+  13 cmp_eq result=temp[t46]:boolean/bits8 left=temp[t44]:integer/bits32 right=temp[t45]:integer/bits32
+  14 brfalse left=temp[t46]:boolean/bits8 target=label[L16]:pointer
   block 6 first=15 count=1
-  15 call target=proc[mult]:address
+  15 call target=proc[mult]:pointer
   block 7 label=L16 first=16 count=4
-  16 load result=temp[t47]:integer/dword left=global[op]:integer/dword
-  17 copy result=temp[t48]:integer/dword left=imm(4):integer/dword
-  18 cmp_eq result=temp[t49]:boolean/byte left=temp[t47]:integer/dword right=temp[t48]:integer/dword
-  19 brfalse left=temp[t49]:boolean/byte target=label[L17]:address
+  16 load result=temp[t47]:integer/bits32 left=global[op]:integer/bits32
+  17 copy result=temp[t48]:integer/bits32 left=imm(4):integer/bits32
+  18 cmp_eq result=temp[t49]:boolean/bits8 left=temp[t47]:integer/bits32 right=temp[t48]:integer/bits32
+  19 brfalse left=temp[t49]:boolean/bits8 target=label[L17]:pointer
   block 8 first=20 count=1
-  20 call target=proc[div]:address
+  20 call target=proc[div]:pointer
   block 9 label=L17 first=21 count=1
   21 return
   labelmap L13 block=1 first=1

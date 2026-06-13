@@ -19,17 +19,17 @@ uses
   tokens, typetable, symboltable, llirintrinsics;
 
 const
-  maxTacInstructions = 500;
-  maxTacBasicBlocks = 100;
-  maxTacProcedures = 64;
-  maxTacOperandsPerCall = maxProcedureParameters;
+  maxLlirInstructions = 500;
+  maxLlirBasicBlocks = 100;
+  maxLlirProcedures = 64;
+  maxLlirOperandsPerCall = maxProcedureParameters;
 
 type
-  llirInstructionIndex = 0..maxTacInstructions;
-  llirBasicBlockIndex = 0..maxTacBasicBlocks;
-  llirProcedureIndex = 0..maxTacProcedures;
-  llirTemporaryId = 0..maxTacInstructions;
-  llirLabelId = 0..maxTacInstructions;
+  llirInstructionIndex = 0..maxLlirInstructions;
+  llirBasicBlockIndex = 0..maxLlirBasicBlocks;
+  llirProcedureIndex = 0..maxLlirProcedures;
+  llirTemporaryId = 0..maxLlirInstructions;
+  llirLabelId = 0..maxLlirInstructions;
 
   llirInstructionKind = (
     irNoOp,
@@ -113,7 +113,7 @@ type
     targetOperand: llirOperand;
     operatorSymbol: symbol;
     callArgumentCount: integer;
-    callArguments: array [1..maxTacOperandsPerCall] of llirOperand
+    callArguments: array [1..maxLlirOperandsPerCall] of llirOperand
   end;
 
   llirBasicBlock = record
@@ -138,12 +138,12 @@ type
     localCount: integer;
     locals: array [1..symbolTableMax] of llirOperand;
     temporaryCount: integer;
-    temporaries: array [1..maxTacInstructions] of llirTemporaryInfo;
+    temporaries: array [1..maxLlirInstructions] of llirTemporaryInfo;
     basicBlockCount: integer;
-    basicBlocks: array [1..maxTacBasicBlocks] of llirBasicBlock;
-    labelBlockIndex: array [1..maxTacInstructions] of llirBasicBlockIndex;
+    basicBlocks: array [1..maxLlirBasicBlocks] of llirBasicBlock;
+    labelBlockIndex: array [1..maxLlirInstructions] of llirBasicBlockIndex;
     instructionCount: integer;
-    instructions: array [1..maxTacInstructions] of llirInstruction;
+    instructions: array [1..maxLlirInstructions] of llirInstruction;
     labelCount: integer
   end;
 
@@ -151,7 +151,7 @@ type
     globalCount: integer;
     globals: array [1..symbolTableMax] of llirOperand;
     procedureCount: integer;
-    procedures: array [1..maxTacProcedures] of llirProcedure;
+    procedures: array [1..maxLlirProcedures] of llirProcedure;
     basicBlockCount: integer;
     instructionCount: integer;
     temporaryCount: integer;
@@ -163,34 +163,34 @@ procedure initializeLlir;
 function llirOverflowed: boolean;
 procedure getLlirProgram(var targetProgram: llirProgram);
 
-function makeTacNoneOperand: llirOperand;
-function makeTacConstOperand(const constantValue: integer; valueType: typeValue): llirOperand;
-function makeTacSymbolOperand(symbol: symbolIndex; const name: identifier;
+function makeLlirNoneOperand: llirOperand;
+function makeLlirConstOperand(const constantValue: integer; valueType: typeValue): llirOperand;
+function makeLlirSymbolOperand(symbol: symbolIndex; const name: identifier;
                               valueType: typeValue): llirOperand;
-function makeTacTempOperand(temporaryId: llirTemporaryId; valueType: typeValue): llirOperand;
-function makeTacLabelOperand(labelId: llirLabelId): llirOperand;
-function makeTacProcedureOperand(symbol: symbolIndex; const name: identifier): llirOperand;
-function makeTacIntrinsicOperand(intrinsicKind: llirIntrinsicKind): llirOperand;
-function makeTacAddressTempOperand(temporaryId: llirTemporaryId): llirOperand;
+function makeLlirTempOperand(temporaryId: llirTemporaryId; valueType: typeValue): llirOperand;
+function makeLlirLabelOperand(labelId: llirLabelId): llirOperand;
+function makeLlirProcedureOperand(symbol: symbolIndex; const name: identifier): llirOperand;
+function makeLlirIntrinsicOperand(intrinsicKind: llirIntrinsicKind): llirOperand;
+function makeLlirAddressTempOperand(temporaryId: llirTemporaryId): llirOperand;
 
-function newTacTemporary(valueType: typeValue): llirOperand;
-function newTacAddressTemporary: llirOperand;
-function newTacLabel: llirLabelId;
+function newLlirTemporary(valueType: typeValue): llirOperand;
+function newLlirAddressTemporary: llirOperand;
+function newLlirLabel: llirLabelId;
 
-function newTacInstruction(kind: llirInstructionKind): llirInstruction;
-function appendTacProcedure(const procedureName: identifier;
+function newLlirInstruction(kind: llirInstructionKind): llirInstruction;
+function appendLlirProcedure(const procedureName: identifier;
                             procedureSymbol: symbolIndex): llirProcedureIndex;
-procedure setTacProcedureReturnType(procedureIndex: llirProcedureIndex;
+procedure setLlirProcedureReturnType(procedureIndex: llirProcedureIndex;
                                     valueType: typeValue;
                                     hasReturnValue: boolean);
-procedure addTacProcedureParameter(procedureIndex: llirProcedureIndex;
+procedure addLlirProcedureParameter(procedureIndex: llirProcedureIndex;
                                    parameterSymbol: symbolIndex);
-procedure addTacProcedureLocal(procedureIndex: llirProcedureIndex;
+procedure addLlirProcedureLocal(procedureIndex: llirProcedureIndex;
                                localSymbol: symbolIndex);
-procedure addTacGlobal(globalSymbol: symbolIndex);
-function appendTacBasicBlock(blockLabelId: llirLabelId): llirBasicBlockIndex;
-function appendTacInstruction(const instruction: llirInstruction): llirInstructionIndex;
-procedure setTacCallArgument(var instruction: llirInstruction; argumentIndex: integer;
+procedure addLlirGlobal(globalSymbol: symbolIndex);
+function appendLlirBasicBlock(blockLabelId: llirLabelId): llirBasicBlockIndex;
+function appendLlirInstruction(const instruction: llirInstruction): llirInstructionIndex;
+procedure setLlirCallArgument(var instruction: llirInstruction; argumentIndex: integer;
                              const argument: llirOperand);
 procedure dumpLlir(const outputFileName: string);
 
@@ -240,38 +240,38 @@ begin
                            (operand.size = irSizePointer)
 end;
 
-function validateTacIntrinsicCall(const instruction: llirInstruction): boolean;
+function validateLlirIntrinsicCall(const instruction: llirInstruction): boolean;
 var
   argumentIndex, expectedCount: integer;
   kind: llirIntrinsicKind;
 begin
   kind := instruction.targetOperand.intrinsicKind;
-  validateTacIntrinsicCall := (kind <> irIntrinsicNone) and
-                              (intrinsicSideEffect(kind) = irSideEffectIO);
-  if not validateTacIntrinsicCall then
+  validateLlirIntrinsicCall := (kind <> irIntrinsicNone) and
+                               (intrinsicSideEffect(kind) = irSideEffectIO);
+  if not validateLlirIntrinsicCall then
     exit;
 
   expectedCount := intrinsicParameterCount(kind);
-  validateTacIntrinsicCall := instruction.callArgumentCount = expectedCount;
-  if not validateTacIntrinsicCall then
+  validateLlirIntrinsicCall := instruction.callArgumentCount = expectedCount;
+  if not validateLlirIntrinsicCall then
     exit;
 
   if intrinsicHasReturnValue(kind) then
-    validateTacIntrinsicCall := instruction.resultOperand.kind = irOperandTemporary
+    validateLlirIntrinsicCall := instruction.resultOperand.kind = irOperandTemporary
   else
-    validateTacIntrinsicCall := instruction.resultOperand.kind = irOperandNone;
-  if not validateTacIntrinsicCall then
+    validateLlirIntrinsicCall := instruction.resultOperand.kind = irOperandNone;
+  if not validateLlirIntrinsicCall then
     exit;
 
   for argumentIndex := 1 to instruction.callArgumentCount do
   begin
-    validateTacIntrinsicCall := isValueOperandKind(instruction.callArguments[argumentIndex].kind);
-    if not validateTacIntrinsicCall then
+    validateLlirIntrinsicCall := isValueOperandKind(instruction.callArguments[argumentIndex].kind);
+    if not validateLlirIntrinsicCall then
       exit;
     if not intrinsicAcceptsValueType(kind,
                                      instruction.callArguments[argumentIndex].valueType) then
     begin
-      validateTacIntrinsicCall := false;
+      validateLlirIntrinsicCall := false;
       exit
     end
   end
@@ -283,11 +283,11 @@ begin
                                              irLoadVar, irStoreVar]
 end;
 
-function validateTacInstruction(const instruction: llirInstruction): boolean;
+function validateLlirInstruction(const instruction: llirInstruction): boolean;
 var
   argumentIndex: integer;
 begin
-  validateTacInstruction := true;
+  validateLlirInstruction := true;
   case instruction.kind of
     irAdd,
     irSub,
@@ -300,94 +300,94 @@ begin
     irCmpLe,
     irCmpGt,
     irCmpGe:
-      validateTacInstruction := (instruction.resultOperand.kind = irOperandTemporary) and
+      validateLlirInstruction := (instruction.resultOperand.kind = irOperandTemporary) and
                                 isValueOperandKind(instruction.leftOperand.kind) and
                                 isValueOperandKind(instruction.rightOperand.kind);
     irNeg:
-      validateTacInstruction := (instruction.resultOperand.kind = irOperandTemporary) and
+      validateLlirInstruction := (instruction.resultOperand.kind = irOperandTemporary) and
                                 isValueOperandKind(instruction.leftOperand.kind) and
                                 (instruction.rightOperand.kind = irOperandNone);
     irJump:
-      validateTacInstruction := instruction.targetOperand.kind = irOperandLabel;
+      validateLlirInstruction := instruction.targetOperand.kind = irOperandLabel;
     irBranchTrue,
     irBranchFalse:
-      validateTacInstruction := isValueOperandKind(instruction.leftOperand.kind) and
+      validateLlirInstruction := isValueOperandKind(instruction.leftOperand.kind) and
                                 (instruction.targetOperand.kind = irOperandLabel);
     irCall:
       begin
-        validateTacInstruction := (instruction.targetOperand.kind = irOperandProcedure) and
+        validateLlirInstruction := (instruction.targetOperand.kind = irOperandProcedure) and
                                   (instruction.leftOperand.kind = irOperandNone) and
                                   (instruction.rightOperand.kind = irOperandNone) and
                                   ((instruction.resultOperand.kind = irOperandNone) or
                                    (instruction.resultOperand.kind = irOperandTemporary));
-        if validateTacInstruction then
+        if validateLlirInstruction then
           for argumentIndex := 1 to instruction.callArgumentCount do
           begin
-            validateTacInstruction :=
+            validateLlirInstruction :=
               isValueOperandKind(instruction.callArguments[argumentIndex].kind);
-            if not validateTacInstruction then
+            if not validateLlirInstruction then
               exit
           end
       end;
     irIntrinsicCall:
       begin
-        validateTacInstruction := instruction.targetOperand.kind = irOperandIntrinsic;
-        if validateTacInstruction then
-          validateTacInstruction := (instruction.leftOperand.kind = irOperandNone) and
+        validateLlirInstruction := instruction.targetOperand.kind = irOperandIntrinsic;
+        if validateLlirInstruction then
+          validateLlirInstruction := (instruction.leftOperand.kind = irOperandNone) and
                                     (instruction.rightOperand.kind = irOperandNone);
-        if validateTacInstruction then
-          validateTacInstruction := validateTacIntrinsicCall(instruction)
+        if validateLlirInstruction then
+          validateLlirInstruction := validateLlirIntrinsicCall(instruction)
       end;
     irAddrGlobal:
-      validateTacInstruction := isAddressValueOperand(instruction.resultOperand) and
+      validateLlirInstruction := isAddressValueOperand(instruction.resultOperand) and
                                 (instruction.leftOperand.kind = irOperandGlobal);
     irLoadConst:
-      validateTacInstruction := (instruction.resultOperand.kind = irOperandTemporary) and
+      validateLlirInstruction := (instruction.resultOperand.kind = irOperandTemporary) and
                                 (instruction.leftOperand.kind = irOperandImmediate);
     irCopy:
-      validateTacInstruction := (instruction.resultOperand.kind = irOperandTemporary) and
+      validateLlirInstruction := (instruction.resultOperand.kind = irOperandTemporary) and
                                 isValueOperandKind(instruction.leftOperand.kind) and
                                 (instruction.rightOperand.kind = irOperandNone);
     irAddrLocal:
-      validateTacInstruction := isAddressValueOperand(instruction.resultOperand) and
+      validateLlirInstruction := isAddressValueOperand(instruction.resultOperand) and
                                 (instruction.leftOperand.kind = irOperandLocal);
     irAddrParam:
-      validateTacInstruction := isAddressValueOperand(instruction.resultOperand) and
+      validateLlirInstruction := isAddressValueOperand(instruction.resultOperand) and
                                 (instruction.leftOperand.kind = irOperandParameter);
     irFieldAddr:
-      validateTacInstruction := isAddressValueOperand(instruction.resultOperand) and
+      validateLlirInstruction := isAddressValueOperand(instruction.resultOperand) and
                                 isAddressValueOperand(instruction.leftOperand) and
                                 isValueOperandKind(instruction.rightOperand.kind);
     irIndexAddr:
-      validateTacInstruction := isAddressValueOperand(instruction.resultOperand) and
+      validateLlirInstruction := isAddressValueOperand(instruction.resultOperand) and
                                 isAddressValueOperand(instruction.leftOperand) and
                                 isValueOperandKind(instruction.rightOperand.kind) and
                                 isValueOperandKind(instruction.targetOperand.kind);
     irLoadAddr:
-      validateTacInstruction := (instruction.resultOperand.kind = irOperandTemporary) and
+      validateLlirInstruction := (instruction.resultOperand.kind = irOperandTemporary) and
                                 isAddressValueOperand(instruction.leftOperand);
     irStoreAddr:
-      validateTacInstruction := isAddressValueOperand(instruction.resultOperand) and
+      validateLlirInstruction := isAddressValueOperand(instruction.resultOperand) and
                                 isValueOperandKind(instruction.leftOperand.kind);
     irGoto:
-      validateTacInstruction := instruction.targetOperand.kind = irOperandLabel;
+      validateLlirInstruction := instruction.targetOperand.kind = irOperandLabel;
     irLoadVar:
-      validateTacInstruction := (instruction.resultOperand.kind = irOperandTemporary) and
+      validateLlirInstruction := (instruction.resultOperand.kind = irOperandTemporary) and
                                 isStorageOperandKind(instruction.leftOperand.kind);
     irStoreVar:
-      validateTacInstruction := isStorageOperandKind(instruction.resultOperand.kind) and
+      validateLlirInstruction := isStorageOperandKind(instruction.resultOperand.kind) and
                                 isValueOperandKind(instruction.leftOperand.kind);
     irReturn,
     irNoOp,
     irLabel:
-      validateTacInstruction := true
+      validateLlirInstruction := true
   end;
 
-  if validateTacInstruction then
+  if validateLlirInstruction then
     if not instructionUsesStorageOperands(instruction.kind) then
-      validateTacInstruction := not isStorageOperandKind(instruction.leftOperand.kind) and
-                                not isStorageOperandKind(instruction.rightOperand.kind) and
-                                not isStorageOperandKind(instruction.targetOperand.kind)
+      validateLlirInstruction := not isStorageOperandKind(instruction.leftOperand.kind) and
+                                 not isStorageOperandKind(instruction.rightOperand.kind) and
+                                 not isStorageOperandKind(instruction.targetOperand.kind)
 end;
 
 procedure bindLabelToCurrentBlock(labelId: llirLabelId);
@@ -400,16 +400,16 @@ begin
     currentProgram.procedures[currentProcedure].basicBlocks[currentBasicBlock].labelId := labelId
 end;
 
-function createTacBasicBlock(blockLabelId: llirLabelId): llirBasicBlockIndex;
+function createLlirBasicBlock(blockLabelId: llirLabelId): llirBasicBlockIndex;
 begin
-  createTacBasicBlock := 0;
+  createLlirBasicBlock := 0;
   if currentProcedure = 0 then
   begin
     currentProgram.overflow := true;
     exit
   end;
 
-  if currentProgram.basicBlockCount >= maxTacBasicBlocks then
+  if currentProgram.basicBlockCount >= maxLlirBasicBlocks then
   begin
     currentProgram.overflow := true;
     exit
@@ -417,21 +417,21 @@ begin
 
   with currentProgram.procedures[currentProcedure] do
   begin
-    if basicBlockCount >= maxTacBasicBlocks then
+    if basicBlockCount >= maxLlirBasicBlocks then
     begin
       currentProgram.overflow := true;
       exit
     end;
 
     basicBlockCount := basicBlockCount + 1;
-    createTacBasicBlock := basicBlockCount;
-    basicBlocks[createTacBasicBlock].labelId := blockLabelId;
-    basicBlocks[createTacBasicBlock].firstInstruction := 0;
-    basicBlocks[createTacBasicBlock].instructionCount := 0
+    createLlirBasicBlock := basicBlockCount;
+    basicBlocks[createLlirBasicBlock].labelId := blockLabelId;
+    basicBlocks[createLlirBasicBlock].firstInstruction := 0;
+    basicBlocks[createLlirBasicBlock].instructionCount := 0
   end;
 
   currentProgram.basicBlockCount := currentProgram.basicBlockCount + 1;
-  currentBasicBlock := createTacBasicBlock
+  currentBasicBlock := createLlirBasicBlock
 end;
 
 function identifierToString(const identifierName: identifier): string;
@@ -649,89 +649,89 @@ begin
   targetProgram := currentProgram
 end;
 
-function makeTacNoneOperand: llirOperand;
+function makeLlirNoneOperand: llirOperand;
 begin
-  FillChar(makeTacNoneOperand, SizeOf(makeTacNoneOperand), 0);
-  makeTacNoneOperand.kind := irOperandNone;
-  makeTacNoneOperand.valueType := typeInteger;
-  makeTacNoneOperand.size := irSizeNone;
-  makeTacNoneOperand.intrinsicKind := irIntrinsicNone
+  FillChar(makeLlirNoneOperand, SizeOf(makeLlirNoneOperand), 0);
+  makeLlirNoneOperand.kind := irOperandNone;
+  makeLlirNoneOperand.valueType := typeInteger;
+  makeLlirNoneOperand.size := irSizeNone;
+  makeLlirNoneOperand.intrinsicKind := irIntrinsicNone
 end;
 
-function makeTacConstOperand(const constantValue: integer; valueType: typeValue): llirOperand;
+function makeLlirConstOperand(const constantValue: integer; valueType: typeValue): llirOperand;
 begin
-  FillChar(makeTacConstOperand, SizeOf(makeTacConstOperand), 0);
-  makeTacConstOperand.kind := irOperandImmediate;
-  makeTacConstOperand.valueType := valueType;
-  makeTacConstOperand.size := typeToOperandSize(valueType);
-  makeTacConstOperand.intrinsicKind := irIntrinsicNone;
-  makeTacConstOperand.constantValue := constantValue
+  FillChar(makeLlirConstOperand, SizeOf(makeLlirConstOperand), 0);
+  makeLlirConstOperand.kind := irOperandImmediate;
+  makeLlirConstOperand.valueType := valueType;
+  makeLlirConstOperand.size := typeToOperandSize(valueType);
+  makeLlirConstOperand.intrinsicKind := irIntrinsicNone;
+  makeLlirConstOperand.constantValue := constantValue
 end;
 
-function makeTacSymbolOperand(symbol: symbolIndex; const name: identifier;
+function makeLlirSymbolOperand(symbol: symbolIndex; const name: identifier;
                               valueType: typeValue): llirOperand;
 begin
-  FillChar(makeTacSymbolOperand, SizeOf(makeTacSymbolOperand), 0);
-  makeTacSymbolOperand.kind := classifySymbolOperand(symbol);
-  makeTacSymbolOperand.valueType := valueType;
-  makeTacSymbolOperand.size := typeToOperandSize(valueType);
-  makeTacSymbolOperand.symbol := symbol;
-  makeTacSymbolOperand.name := name;
-  makeTacSymbolOperand.intrinsicKind := irIntrinsicNone
+  FillChar(makeLlirSymbolOperand, SizeOf(makeLlirSymbolOperand), 0);
+  makeLlirSymbolOperand.kind := classifySymbolOperand(symbol);
+  makeLlirSymbolOperand.valueType := valueType;
+  makeLlirSymbolOperand.size := typeToOperandSize(valueType);
+  makeLlirSymbolOperand.symbol := symbol;
+  makeLlirSymbolOperand.name := name;
+  makeLlirSymbolOperand.intrinsicKind := irIntrinsicNone
 end;
 
-function makeTacTempOperand(temporaryId: llirTemporaryId; valueType: typeValue): llirOperand;
+function makeLlirTempOperand(temporaryId: llirTemporaryId; valueType: typeValue): llirOperand;
 begin
-  FillChar(makeTacTempOperand, SizeOf(makeTacTempOperand), 0);
-  makeTacTempOperand.kind := irOperandTemporary;
-  makeTacTempOperand.valueType := valueType;
-  makeTacTempOperand.size := typeToOperandSize(valueType);
-  makeTacTempOperand.intrinsicKind := irIntrinsicNone;
-  makeTacTempOperand.temporaryId := temporaryId
+  FillChar(makeLlirTempOperand, SizeOf(makeLlirTempOperand), 0);
+  makeLlirTempOperand.kind := irOperandTemporary;
+  makeLlirTempOperand.valueType := valueType;
+  makeLlirTempOperand.size := typeToOperandSize(valueType);
+  makeLlirTempOperand.intrinsicKind := irIntrinsicNone;
+  makeLlirTempOperand.temporaryId := temporaryId
 end;
 
-function makeTacAddressTempOperand(temporaryId: llirTemporaryId): llirOperand;
+function makeLlirAddressTempOperand(temporaryId: llirTemporaryId): llirOperand;
 begin
-  makeTacAddressTempOperand := makeTacTempOperand(temporaryId, typeInteger);
-  makeTacAddressTempOperand.size := irSizePointer
+  makeLlirAddressTempOperand := makeLlirTempOperand(temporaryId, typeInteger);
+  makeLlirAddressTempOperand.size := irSizePointer
 end;
 
-function makeTacLabelOperand(labelId: llirLabelId): llirOperand;
+function makeLlirLabelOperand(labelId: llirLabelId): llirOperand;
 begin
-  FillChar(makeTacLabelOperand, SizeOf(makeTacLabelOperand), 0);
-  makeTacLabelOperand.kind := irOperandLabel;
-  makeTacLabelOperand.valueType := typeInteger;
-  makeTacLabelOperand.size := irSizePointer;
-  makeTacLabelOperand.intrinsicKind := irIntrinsicNone;
-  makeTacLabelOperand.labelId := labelId
+  FillChar(makeLlirLabelOperand, SizeOf(makeLlirLabelOperand), 0);
+  makeLlirLabelOperand.kind := irOperandLabel;
+  makeLlirLabelOperand.valueType := typeInteger;
+  makeLlirLabelOperand.size := irSizePointer;
+  makeLlirLabelOperand.intrinsicKind := irIntrinsicNone;
+  makeLlirLabelOperand.labelId := labelId
 end;
 
-function makeTacProcedureOperand(symbol: symbolIndex; const name: identifier): llirOperand;
+function makeLlirProcedureOperand(symbol: symbolIndex; const name: identifier): llirOperand;
 begin
-  FillChar(makeTacProcedureOperand, SizeOf(makeTacProcedureOperand), 0);
-  makeTacProcedureOperand.kind := irOperandProcedure;
-  makeTacProcedureOperand.valueType := typeInteger;
-  makeTacProcedureOperand.size := irSizePointer;
-  makeTacProcedureOperand.symbol := symbol;
-  makeTacProcedureOperand.name := name;
-  makeTacProcedureOperand.intrinsicKind := irIntrinsicNone
+  FillChar(makeLlirProcedureOperand, SizeOf(makeLlirProcedureOperand), 0);
+  makeLlirProcedureOperand.kind := irOperandProcedure;
+  makeLlirProcedureOperand.valueType := typeInteger;
+  makeLlirProcedureOperand.size := irSizePointer;
+  makeLlirProcedureOperand.symbol := symbol;
+  makeLlirProcedureOperand.name := name;
+  makeLlirProcedureOperand.intrinsicKind := irIntrinsicNone
 end;
 
-function makeTacIntrinsicOperand(intrinsicKind: llirIntrinsicKind): llirOperand;
+function makeLlirIntrinsicOperand(intrinsicKind: llirIntrinsicKind): llirOperand;
 begin
-  FillChar(makeTacIntrinsicOperand, SizeOf(makeTacIntrinsicOperand), 0);
-  makeTacIntrinsicOperand.kind := irOperandIntrinsic;
-  makeTacIntrinsicOperand.valueType := typeInteger;
-  makeTacIntrinsicOperand.size := irSizePointer;
-  makeTacIntrinsicOperand.intrinsicKind := intrinsicKind
+  FillChar(makeLlirIntrinsicOperand, SizeOf(makeLlirIntrinsicOperand), 0);
+  makeLlirIntrinsicOperand.kind := irOperandIntrinsic;
+  makeLlirIntrinsicOperand.valueType := typeInteger;
+  makeLlirIntrinsicOperand.size := irSizePointer;
+  makeLlirIntrinsicOperand.intrinsicKind := intrinsicKind
 end;
 
-function newTacTemporary(valueType: typeValue): llirOperand;
+function newLlirTemporary(valueType: typeValue): llirOperand;
 begin
-  if currentProgram.temporaryCount >= maxTacInstructions then
+  if currentProgram.temporaryCount >= maxLlirInstructions then
   begin
     currentProgram.overflow := true;
-    newTacTemporary := makeTacNoneOperand;
+    newLlirTemporary := makeLlirNoneOperand;
     exit
   end;
 
@@ -739,10 +739,10 @@ begin
   if currentProcedure <> 0 then
     with currentProgram.procedures[currentProcedure] do
     begin
-      if temporaryCount >= maxTacInstructions then
+      if temporaryCount >= maxLlirInstructions then
       begin
         currentProgram.overflow := true;
-        newTacTemporary := makeTacNoneOperand;
+        newLlirTemporary := makeLlirNoneOperand;
         exit
       end;
 
@@ -751,15 +751,15 @@ begin
       temporaries[temporaryCount].valueType := valueType;
       temporaries[temporaryCount].size := typeToOperandSize(valueType)
     end;
-  newTacTemporary := makeTacTempOperand(currentProgram.temporaryCount, valueType)
+  newLlirTemporary := makeLlirTempOperand(currentProgram.temporaryCount, valueType)
 end;
 
-function newTacAddressTemporary: llirOperand;
+function newLlirAddressTemporary: llirOperand;
 begin
-  if currentProgram.temporaryCount >= maxTacInstructions then
+  if currentProgram.temporaryCount >= maxLlirInstructions then
   begin
     currentProgram.overflow := true;
-    newTacAddressTemporary := makeTacNoneOperand;
+    newLlirAddressTemporary := makeLlirNoneOperand;
     exit
   end;
 
@@ -767,10 +767,10 @@ begin
   if currentProcedure <> 0 then
     with currentProgram.procedures[currentProcedure] do
     begin
-      if temporaryCount >= maxTacInstructions then
+      if temporaryCount >= maxLlirInstructions then
       begin
         currentProgram.overflow := true;
-        newTacAddressTemporary := makeTacNoneOperand;
+        newLlirAddressTemporary := makeLlirNoneOperand;
         exit
       end;
 
@@ -779,15 +779,15 @@ begin
       temporaries[temporaryCount].valueType := typeInteger;
       temporaries[temporaryCount].size := irSizePointer
     end;
-  newTacAddressTemporary := makeTacAddressTempOperand(currentProgram.temporaryCount)
+  newLlirAddressTemporary := makeLlirAddressTempOperand(currentProgram.temporaryCount)
 end;
 
-function newTacLabel: llirLabelId;
+function newLlirLabel: llirLabelId;
 begin
-  if currentProgram.labelCount >= maxTacInstructions then
+  if currentProgram.labelCount >= maxLlirInstructions then
   begin
     currentProgram.overflow := true;
-    newTacLabel := 0;
+    newLlirLabel := 0;
     exit
   end;
 
@@ -795,38 +795,38 @@ begin
   if currentProcedure <> 0 then
     currentProgram.procedures[currentProcedure].labelCount :=
       currentProgram.procedures[currentProcedure].labelCount + 1;
-  newTacLabel := currentProgram.labelCount
+  newLlirLabel := currentProgram.labelCount
 end;
 
-function newTacInstruction(kind: llirInstructionKind): llirInstruction;
+function newLlirInstruction(kind: llirInstructionKind): llirInstruction;
 var
   argumentIndex: integer;
 begin
-  FillChar(newTacInstruction, SizeOf(newTacInstruction), 0);
-  newTacInstruction.kind := kind;
-  newTacInstruction.resultOperand := makeTacNoneOperand;
-  newTacInstruction.leftOperand := makeTacNoneOperand;
-  newTacInstruction.rightOperand := makeTacNoneOperand;
-  newTacInstruction.targetOperand := makeTacNoneOperand;
-  newTacInstruction.operatorSymbol := nul;
-  newTacInstruction.callArgumentCount := 0;
-  for argumentIndex := 1 to maxTacOperandsPerCall do
-    newTacInstruction.callArguments[argumentIndex] := makeTacNoneOperand
+  FillChar(newLlirInstruction, SizeOf(newLlirInstruction), 0);
+  newLlirInstruction.kind := kind;
+  newLlirInstruction.resultOperand := makeLlirNoneOperand;
+  newLlirInstruction.leftOperand := makeLlirNoneOperand;
+  newLlirInstruction.rightOperand := makeLlirNoneOperand;
+  newLlirInstruction.targetOperand := makeLlirNoneOperand;
+  newLlirInstruction.operatorSymbol := nul;
+  newLlirInstruction.callArgumentCount := 0;
+  for argumentIndex := 1 to maxLlirOperandsPerCall do
+    newLlirInstruction.callArguments[argumentIndex] := makeLlirNoneOperand
 end;
 
-function appendTacProcedure(const procedureName: identifier;
+function appendLlirProcedure(const procedureName: identifier;
                             procedureSymbol: symbolIndex): llirProcedureIndex;
 begin
-  appendTacProcedure := 0;
-  if currentProgram.procedureCount >= maxTacProcedures then
+  appendLlirProcedure := 0;
+  if currentProgram.procedureCount >= maxLlirProcedures then
   begin
     currentProgram.overflow := true;
     exit
   end;
 
   currentProgram.procedureCount := currentProgram.procedureCount + 1;
-  appendTacProcedure := currentProgram.procedureCount;
-  currentProcedure := appendTacProcedure;
+  appendLlirProcedure := currentProgram.procedureCount;
+  currentProcedure := appendLlirProcedure;
   currentBasicBlock := 0;
   with currentProgram.procedures[currentProcedure] do
   begin
@@ -843,7 +843,7 @@ begin
   end
 end;
 
-procedure setTacProcedureReturnType(procedureIndex: llirProcedureIndex;
+procedure setLlirProcedureReturnType(procedureIndex: llirProcedureIndex;
                                     valueType: typeValue;
                                     hasReturnValue: boolean);
 begin
@@ -857,7 +857,7 @@ begin
   currentProgram.procedures[procedureIndex].hasReturnValue := hasReturnValue
 end;
 
-procedure addTacProcedureParameter(procedureIndex: llirProcedureIndex;
+procedure addLlirProcedureParameter(procedureIndex: llirProcedureIndex;
                                    parameterSymbol: symbolIndex);
 begin
   if (procedureIndex < 1) or (procedureIndex > currentProgram.procedureCount) or
@@ -876,14 +876,14 @@ begin
     end;
 
     parameterCount := parameterCount + 1;
-    parameters[parameterCount] := makeTacSymbolOperand(
+    parameters[parameterCount] := makeLlirSymbolOperand(
       parameterSymbol,
       getDeclarationIdentifier(parameterSymbol),
       getDeclarationType(parameterSymbol))
   end
 end;
 
-procedure addTacProcedureLocal(procedureIndex: llirProcedureIndex;
+procedure addLlirProcedureLocal(procedureIndex: llirProcedureIndex;
                                localSymbol: symbolIndex);
 begin
   if (procedureIndex < 1) or (procedureIndex > currentProgram.procedureCount) or
@@ -902,14 +902,14 @@ begin
     end;
 
     localCount := localCount + 1;
-    locals[localCount] := makeTacSymbolOperand(
+    locals[localCount] := makeLlirSymbolOperand(
       localSymbol,
       getDeclarationIdentifier(localSymbol),
       getDeclarationType(localSymbol))
   end
 end;
 
-procedure addTacGlobal(globalSymbol: symbolIndex);
+procedure addLlirGlobal(globalSymbol: symbolIndex);
 begin
   if globalSymbol = 0 then
   begin
@@ -924,56 +924,56 @@ begin
   end;
 
   currentProgram.globalCount := currentProgram.globalCount + 1;
-  currentProgram.globals[currentProgram.globalCount] := makeTacSymbolOperand(
+  currentProgram.globals[currentProgram.globalCount] := makeLlirSymbolOperand(
     globalSymbol,
     getDeclarationIdentifier(globalSymbol),
     getDeclarationType(globalSymbol))
 end;
 
-function appendTacBasicBlock(blockLabelId: llirLabelId): llirBasicBlockIndex;
+function appendLlirBasicBlock(blockLabelId: llirLabelId): llirBasicBlockIndex;
 begin
   if currentProcedure = 0 then
   begin
     currentProgram.overflow := true;
-    appendTacBasicBlock := 0;
+    appendLlirBasicBlock := 0;
     exit
   end;
 
   if currentProcedureHasOpenBlock then
   begin
-    if currentBlockInstructionCount = 0 then
-    begin
-      bindLabelToCurrentBlock(blockLabelId);
-      appendTacBasicBlock := currentBasicBlock;
+      if currentBlockInstructionCount = 0 then
+      begin
+        bindLabelToCurrentBlock(blockLabelId);
+      appendLlirBasicBlock := currentBasicBlock;
       exit
     end;
     currentBasicBlock := 0
   end;
 
-  appendTacBasicBlock := createTacBasicBlock(0);
+  appendLlirBasicBlock := createLlirBasicBlock(0);
   bindLabelToCurrentBlock(blockLabelId)
 end;
 
-function appendTacInstruction(const instruction: llirInstruction): llirInstructionIndex;
+function appendLlirInstruction(const instruction: llirInstruction): llirInstructionIndex;
 begin
-  appendTacInstruction := 0;
+  appendLlirInstruction := 0;
   if currentProcedure = 0 then
   begin
     currentProgram.overflow := true;
     exit
   end;
 
-  if currentProgram.instructionCount >= maxTacInstructions then
+  if currentProgram.instructionCount >= maxLlirInstructions then
   begin
     currentProgram.overflow := true;
     exit
   end;
 
   if not currentProcedureHasOpenBlock then
-    if createTacBasicBlock(0) = 0 then
+    if createLlirBasicBlock(0) = 0 then
       exit;
 
-  if not validateTacInstruction(instruction) then
+  if not validateLlirInstruction(instruction) then
   begin
     currentProgram.overflow := true;
     exit
@@ -981,15 +981,15 @@ begin
 
   with currentProgram.procedures[currentProcedure] do
   begin
-    if instructionCount >= maxTacInstructions then
+    if instructionCount >= maxLlirInstructions then
     begin
       currentProgram.overflow := true;
       exit
     end;
 
     instructionCount := instructionCount + 1;
-    appendTacInstruction := instructionCount;
-    instructions[appendTacInstruction] := instruction
+    appendLlirInstruction := instructionCount;
+    instructions[appendLlirInstruction] := instruction
   end;
 
   currentProgram.instructionCount := currentProgram.instructionCount + 1;
@@ -998,7 +998,7 @@ begin
     with currentProgram.procedures[currentProcedure].basicBlocks[currentBasicBlock] do
     begin
       if firstInstruction = 0 then
-        firstInstruction := appendTacInstruction;
+        firstInstruction := appendLlirInstruction;
       instructionCount := instructionCount + 1
     end;
 
@@ -1006,10 +1006,10 @@ begin
     currentBasicBlock := 0
 end;
 
-procedure setTacCallArgument(var instruction: llirInstruction; argumentIndex: integer;
+procedure setLlirCallArgument(var instruction: llirInstruction; argumentIndex: integer;
                              const argument: llirOperand);
 begin
-  if (argumentIndex < 1) or (argumentIndex > maxTacOperandsPerCall) then
+  if (argumentIndex < 1) or (argumentIndex > maxLlirOperandsPerCall) then
   begin
     currentProgram.overflow := true;
     exit
@@ -1020,7 +1020,7 @@ begin
     instruction.callArgumentCount := argumentIndex
 end;
 
-procedure dumpTacInstruction(var outputFile: Text; instructionIndex: integer;
+procedure dumpLlirInstruction(var outputFile: Text; instructionIndex: integer;
                              const instruction: llirInstruction);
 var
   argumentIndex: integer;
@@ -1075,8 +1075,8 @@ begin
                 operandToString(locals[itemIndex]));
       for itemIndex := 1 to temporaryCount do
         writeln(outputFile, '  temp ', itemIndex, ' ',
-                operandToString(makeTacTempOperand(temporaries[itemIndex].temporaryId,
-                                                   temporaries[itemIndex].valueType)));
+                operandToString(makeLlirTempOperand(temporaries[itemIndex].temporaryId,
+                                                    temporaries[itemIndex].valueType)));
       for itemIndex := 1 to basicBlockCount do
         with basicBlocks[itemIndex] do
         begin
@@ -1100,8 +1100,8 @@ begin
           begin
             blockLastInstruction := firstInstruction + instructionCount - 1;
             for instructionIndex := firstInstruction to blockLastInstruction do
-              dumpTacInstruction(outputFile, instructionIndex,
-                                 instructions[instructionIndex])
+              dumpLlirInstruction(outputFile, instructionIndex,
+                                  instructions[instructionIndex])
           end
         end;
       for labelIndex := Low(labelBlockIndex) to High(labelBlockIndex) do

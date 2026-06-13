@@ -17,12 +17,12 @@ uses
   SysUtils, Classes, diagnostics, tokens, typetable, llirintrinsics;
 
 const
-  maxTacInstructions = 500;
-  maxTacProcedures = 64;
-  maxTacLabels = 500;
-  maxTacTemporaries = 500;
-  maxTacVariables = 200;
-  maxTacMemoryCells = 1000;
+  maxLlirInstructions = 500;
+  maxLlirProcedures = 64;
+  maxLlirLabels = 500;
+  maxLlirTemporaries = 500;
+  maxLlirVariables = 200;
+  maxLlirMemoryCells = 1000;
   maxCallDepth = 64;
 
 type
@@ -97,8 +97,8 @@ type
     parameterCount: integer;
     parameters: array [1..maxProcedureParameters] of llirRuntimeOperand;
     instructionCount: integer;
-    instructions: array [1..maxTacInstructions] of llirRuntimeInstruction;
-    labelTargets: array [1..maxTacLabels] of integer
+    instructions: array [1..maxLlirInstructions] of llirRuntimeInstruction;
+    labelTargets: array [1..maxLlirLabels] of integer
   end;
 
   llirRuntimeVariable = record
@@ -123,14 +123,14 @@ var
   llirFile: Text;
   llirFileName: string;
   verbosity: diagnosticVerbosity;
-  procedures: array [1..maxTacProcedures] of llirRuntimeProcedure;
+  procedures: array [1..maxLlirProcedures] of llirRuntimeProcedure;
   procedureCount: integer;
-  variables: array [1..maxTacVariables] of llirRuntimeVariable;
+  variables: array [1..maxLlirVariables] of llirRuntimeVariable;
   variableCount: integer;
   nextVariableAddress: integer;
-  memoryCells: array [1..maxTacMemoryCells] of llirRuntimeMemoryCell;
+  memoryCells: array [1..maxLlirMemoryCells] of llirRuntimeMemoryCell;
   memoryCellCount: integer;
-  temporaries: array [1..maxTacTemporaries] of integer;
+  temporaries: array [1..maxLlirTemporaries] of integer;
   returnStack: array [1..maxCallDepth] of llirReturnAddress;
   returnStackTop: integer;
 function makeNoneOperand: llirRuntimeOperand;
@@ -176,7 +176,7 @@ function parseLabelId(const labelText: string): integer;
 begin
   if (labelText <> '') and (labelText[1] = 'L') then
     parseLabelId := parseIntegerOrHalt(Copy(labelText, 2, Length(labelText)),
-                                       'Invalid TAC label identifier.')
+                                       'Invalid LLIR label identifier.')
   else
     parseLabelId := 0
 end;
@@ -223,14 +223,14 @@ begin
   begin
     parseOperand.kind := rtOperandImmediate;
     parseOperand.value := parseIntegerOrHalt(payloadText,
-                                             'Invalid TAC constant operand.')
+                                             'Invalid LLIR constant operand.')
   end
   else if startsWith(atomText, 'temp[') and (Length(payloadText) > 1) and
           (payloadText[1] = 't') then
   begin
     parseOperand.kind := rtOperandTemporary;
     parseOperand.temporaryId := parseIntegerOrHalt(Copy(payloadText, 2, Length(payloadText)),
-                                                   'Invalid TAC temporary operand.')
+                                                   'Invalid LLIR temporary operand.')
   end
   else if startsWith(atomText, 'local[') then
   begin
@@ -335,14 +335,14 @@ procedure readGlobalSummary(const tokens: TStrings); forward;
 
 function beginProcedure(const tokens: TStrings): integer;
 begin
-  if procedureCount >= maxTacProcedures then
+  if procedureCount >= maxLlirProcedures then
   begin
-    reportRuntimeError('Too many TAC procedures.');
+    reportRuntimeError('Too many LLIR procedures.');
     halt(1)
   end;
   if tokens.Count < 3 then
   begin
-    reportRuntimeError('Invalid TAC procedure header.');
+    reportRuntimeError('Invalid LLIR procedure header.');
     halt(1)
   end;
 
@@ -363,7 +363,7 @@ begin
     exit;
   if procedures[procedureIndex].parameterCount >= maxProcedureParameters then
   begin
-    reportRuntimeError('Too many TAC procedure parameters.');
+    reportRuntimeError('Too many LLIR procedure parameters.');
     halt(1)
   end;
 
@@ -392,10 +392,10 @@ begin
     valueText := tokenValue(tokens[tokenIndex], 'first');
     if valueText <> '' then
       firstInstruction := parseIntegerOrHalt(valueText,
-                                             'Invalid TAC label map first instruction.')
+                                             'Invalid LLIR label map first instruction.')
   end;
 
-  if (labelId >= 1) and (labelId <= maxTacLabels) then
+  if (labelId >= 1) and (labelId <= maxLlirLabels) then
     procedures[procedureIndex].labelTargets[labelId] := firstInstruction
 end;
 
@@ -403,12 +403,12 @@ procedure readBlockSummary(procedureIndex: integer; const tokens: TStrings);
 var
   tokenIndex, firstInstruction: integer;
   valueText: string;
-  blockLabels: array [1..maxTacLabels] of integer;
+  blockLabels: array [1..maxLlirLabels] of integer;
   blockLabelCount: integer;
 begin
   if (procedureIndex < 1) or (procedureIndex > procedureCount) then
   begin
-    reportRuntimeError('TAC block found outside procedure.');
+    reportRuntimeError('LLIR block found outside procedure.');
     halt(1)
   end;
   if tokens.Count < 3 then
@@ -435,11 +435,11 @@ begin
     valueText := tokenValue(tokens[tokenIndex], 'first');
     if valueText <> '' then
       firstInstruction := parseIntegerOrHalt(valueText,
-                                             'Invalid TAC block first instruction.')
+                                             'Invalid LLIR block first instruction.')
   end;
 
   for tokenIndex := 1 to blockLabelCount do
-    if (blockLabels[tokenIndex] >= 1) and (blockLabels[tokenIndex] <= maxTacLabels) then
+    if (blockLabels[tokenIndex] >= 1) and (blockLabels[tokenIndex] <= maxLlirLabels) then
       procedures[procedureIndex].labelTargets[blockLabels[tokenIndex]] := firstInstruction
 end;
 
@@ -452,14 +452,14 @@ begin
     exit;
   if (procedureIndex < 1) or (procedureIndex > procedureCount) then
   begin
-    reportRuntimeError('TAC instruction found outside procedure.');
+    reportRuntimeError('LLIR instruction found outside procedure.');
     halt(1)
   end;
 
-  instructionIndex := parseIntegerOrHalt(tokens[0], 'Invalid TAC instruction index.');
-  if (instructionIndex < 1) or (instructionIndex > maxTacInstructions) then
+  instructionIndex := parseIntegerOrHalt(tokens[0], 'Invalid LLIR instruction index.');
+  if (instructionIndex < 1) or (instructionIndex > maxLlirInstructions) then
   begin
-    reportRuntimeError('TAC instruction index out of range.');
+    reportRuntimeError('LLIR instruction index out of range.');
     halt(1)
   end;
 
@@ -521,7 +521,7 @@ begin
 
 end;
 
-procedure loadTacFile;
+procedure loadLlirFile;
 var
   llirLine: string;
   tokens: TStringList;
@@ -590,9 +590,9 @@ begin
   if ensureVariable <> 0 then
     exit;
 
-  if variableCount >= maxTacVariables then
+  if variableCount >= maxLlirVariables then
   begin
-    reportRuntimeError('Too many TAC runtime variables.');
+    reportRuntimeError('Too many LLIR runtime variables.');
     halt(1)
   end;
 
@@ -635,9 +635,9 @@ begin
   if ensureMemoryCell <> 0 then
     exit;
 
-  if memoryCellCount >= maxTacMemoryCells then
+  if memoryCellCount >= maxLlirMemoryCells then
   begin
-    reportRuntimeError('Too many TAC runtime memory cells.');
+    reportRuntimeError('Too many LLIR runtime memory cells.');
     halt(1)
   end;
 
@@ -753,14 +753,14 @@ function labelTarget(procedureIndex, labelId: integer): integer;
 begin
   if (procedureIndex < 1) or (procedureIndex > procedureCount) then
     labelTarget := 0
-  else if (labelId >= 1) and (labelId <= maxTacLabels) then
+  else if (labelId >= 1) and (labelId <= maxLlirLabels) then
     labelTarget := procedures[procedureIndex].labelTargets[labelId]
   else
     labelTarget := 0;
 
   if labelTarget = 0 then
   begin
-    reportRuntimeError('Unknown TAC label.');
+    reportRuntimeError('Unknown LLIR label.');
     halt(1)
   end
 end;
@@ -916,7 +916,7 @@ begin
       end;
     irIntrinsicWriteString:
       begin
-        reportRuntimeError('TAC write_string intrinsic is not implemented yet.');
+        reportRuntimeError('LLIR write_string intrinsic is not implemented yet.');
         halt(1)
       end;
     irIntrinsicWriteLn:
@@ -925,13 +925,13 @@ begin
       consumeInputLineRemainder;
   else
   begin
-    reportRuntimeError('Unknown TAC intrinsic call.');
+    reportRuntimeError('Unknown LLIR intrinsic call.');
     halt(1)
   end
   end;
 end;
 
-procedure executeTac;
+procedure executeLlir;
 var
   currentProcedureIndex, programCounter, calleeProcedureIndex, argumentIndex: integer;
   instruction: llirRuntimeInstruction;
@@ -948,7 +948,7 @@ begin
     if (programCounter < 1) or
        (programCounter > procedures[currentProcedureIndex].instructionCount) then
     begin
-      reportRuntimeError('TAC instruction pointer out of range.');
+      reportRuntimeError('LLIR instruction pointer out of range.');
       halt(1)
     end;
 
@@ -1058,17 +1058,17 @@ begin
           calleeProcedureIndex := findProcedure(instruction.targetOperand.name);
           if calleeProcedureIndex = 0 then
           begin
-            reportRuntimeError('Unknown TAC procedure.');
+            reportRuntimeError('Unknown LLIR procedure.');
             halt(1)
           end;
           if returnStackTop >= maxCallDepth then
           begin
-            reportRuntimeError('TAC call stack overflow.');
+            reportRuntimeError('LLIR call stack overflow.');
             halt(1)
           end;
           if instruction.callArgumentCount <> procedures[calleeProcedureIndex].parameterCount then
           begin
-            reportRuntimeError('TAC call argument count does not match procedure parameters.');
+            reportRuntimeError('LLIR call argument count does not match procedure parameters.');
             halt(1)
           end;
           for argumentIndex := 1 to instruction.callArgumentCount do
@@ -1190,7 +1190,7 @@ begin
   llirFileName := ParamStr(1);
   Assign(llirFile, llirFileName);
   Reset(llirFile);
-  loadTacFile;
-  executeTac
+  loadLlirFile;
+  executeLlir
 end.
 

@@ -1,12 +1,12 @@
 # Dime LIR Contract
 
-This document freezes the intended lowered IR contract for milestone
+This document defines the lowered IR contract for milestone
 `v0.0.13 - Backend Lowering Contract`.
 
 It describes the target-neutral LIR surface that frontend lowering may produce
 and backend-specific lowering may consume. It is intentionally narrower than
-the current implementation notes in `LLIR.md`: this page states the intended
-contract, not every detail currently present in the dump.
+the implementation notes in `LLIR.md`: this page states the contract, not
+every detail present in the dump.
 
 ## Purpose
 
@@ -184,47 +184,36 @@ to later lowering.
 
 ## Relation to Current LLIR
 
-The current `LLIR.md` describes the implementation as it exists today.
+`LLIR.md` describes the implementation and dump format.
 
-For `v0.0.13`, this contract is the design target:
+For `v0.0.13`, this contract is the project boundary:
 
 - structural lowering belongs in LIR
 - machine-facing frame and ABI decisions belong below LIR
 
-Any current LLIR detail that violates this boundary should be treated as
-transitional implementation state, not as the intended long-term contract.
+Any LLIR detail that violates this boundary is outside the intended contract.
 
 ## Current Boundary Status
 
-The structural LLIR layer now satisfies the main `v0.0.13` split:
+The structural LLIR layer satisfies the main `v0.0.13` split:
 
-- frame offsets no longer live in `llir.pas`
-- stack-slot policy no longer lives in `llir.pas`
-- `enter` and `leave` are no longer part of structural LLIR
-- the `.llir` dump no longer emits frame summaries or slot assignments
+- frame offsets do not live in `llir.pas`
+- stack-slot policy does not live in `llir.pas`
+- `enter` and `leave` are not part of structural LLIR
+- the `.llir` dump does not emit frame summaries or slot assignments
 
-What still remains below full backend separation is narrower and mostly concerns
+What remains below full backend separation is narrower and mostly concerns
 call/runtime behavior rather than frame layout.
 
-### The user-call shape is now structural rather than transport-shaped
+### User Calls Are Structural Rather Than Transport-Shaped
 
-The original LLIR call model leaked ABI-shaped details in two ways:
+User calls use the same structural pattern as intrinsics:
 
-- `arg` instructions staged arguments one position at a time before the call
-- `result` modeled call return pickup as a separate post-call transport step
-
-That shape described a particular argument-transfer and return-transfer protocol
-rather than the structural meaning of "call this procedure with these operands
-and optionally bind the result here".
-
-The current LLIR fixes that boundary by making user calls match the same
-structural pattern already used by intrinsics:
-
-- the `call` instruction now carries its argument operands directly as `arg1=`,
+- the `call` instruction carries its argument operands directly as `arg1=`,
   `arg2=`, and so on
 - a value-returning call writes its destination directly through the `call`
   instruction `result=...` operand
-- the interpreter now binds procedure parameters from the `call` instruction
+- the interpreter binds procedure parameters from the `call` instruction
   itself and writes the returned function value directly to the caller-provided
   result operand on return
 
@@ -239,19 +228,19 @@ Evidence in code:
 - `src/llirint.pas`: `rtReturn` writes the function result directly to that
   destination
 
-The legacy `arg` and `result` transport instructions have now been removed from
-the structural LLIR core rather than merely left unused.
+The structural LLIR core does not include separate `arg` or `result`
+transport instructions.
 
-Why this is a better contract fit:
+Why this fits the contract:
 
-- LIR still exposes explicit calls and ordered operands
+- LIR exposes explicit calls and ordered operands
 - but it no longer commits structural LLIR to one staged runtime transfer model
-- a native backend can now consume one call node and decide later how argument
+- a native backend can consume one call node and decide later how argument
   movement and return-value placement are realized physically
 
-### Intrinsics now stay target-neutral while backends choose the implementation
+### Intrinsics Stay Target-Neutral While Backends Choose The Implementation
 
-The intended boundary for this project is:
+The boundary at this layer is:
 
 - LLIR keeps target-neutral intrinsic identities for testing and inspection
 - `llirint` may continue to execute those intrinsics directly as a fake testing
@@ -259,10 +248,10 @@ The intended boundary for this project is:
 - later native backends may lower the same intrinsic identities to syscalls or
   runtime helpers without changing frontend lowering
 
-That means LLIR describes which intrinsic operation is requested, but not how a
+LLIR describes which intrinsic operation is requested, but not how a
 particular backend realizes it.
 
-The implementation now reflects that boundary more clearly:
+The implementation reflects that boundary like this:
 
 - shared intrinsic identifiers, names, and signature rules live in a dedicated
   intrinsic-contract unit
@@ -283,7 +272,7 @@ Evidence in code and docs:
 - `docs/LLIR.md`: documents direct intrinsic execution as an interpreter
   testing path rather than the meaning of LLIR itself
 
-Why this is a better contract fit:
+Why this fits the contract:
 
 - target-neutral intrinsic identity stays available in LLIR for debugging and
   regression testing

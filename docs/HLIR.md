@@ -36,7 +36,7 @@ Relevant units:
 - `hlir.pas`: HLIR data model and dump support
 - `llircgen.pas`: HLIR-to-LLIR lowering
 
-The intended split is:
+The split is:
 
 - `AST` is still syntax-shaped.
 - `HLIR` is language-shaped.
@@ -304,7 +304,7 @@ AST-specific concerns that do not survive into HLIR include:
 - routine block scanning logic after declarations are collected
 - token-level operator encoding
 
-The result is still structured, but cleaner and more semantic than the AST.
+The result is structured, but cleaner and more semantic than the AST.
 
 ## Why HLIR Is Still High-Level
 
@@ -316,7 +316,7 @@ For example, a source assignment like:
 x := y + 1
 ```
 
-still looks conceptually like:
+looks conceptually like:
 
 ```text
 assign
@@ -395,7 +395,7 @@ This is where LLIR stops being statement-shaped and becomes block-shaped.
 
 ### Builtin lowering
 
-HLIR still knows about language builtins like `write`, `writeln`, `read`, and
+HLIR knows about language builtins like `write`, `writeln`, `read`, and
 `readln`.
 
 LLIR lowers them into intrinsic operations:
@@ -409,21 +409,19 @@ LLIR lowers them into intrinsic operations:
 
 ### Call lowering
 
-User routine calls become explicit LLIR call setup:
+User routine calls become direct LLIR call instructions with inline arguments
+and optional result binding:
 
 ```text
-arg ...
-arg ...
-call target=proc[foo]
-result ...
+call result=temp[t1] target=proc[foo] arg1=temp[t2] arg2=temp[t3]
 ```
 
-Intrinsic calls currently carry their arguments directly on the
+Intrinsic calls carry their arguments directly on the
 `intrinsic_call` instruction.
 
 ### Target-neutral lowering
 
-HLIR does not know stack layout. LLIR now stays target-neutral as well.
+HLIR does not know stack layout. LLIR stays target-neutral as well.
 
 During HLIR-to-LLIR lowering and LLIR construction, the compiler records:
 
@@ -460,5 +458,4 @@ Current HLIR limitations are intentional:
 - There are no memory ownership/free helpers for HLIR nodes yet.
 - Builtin identity remains at the HLIR level until LLIR lowering.
 
-Those tradeoffs keep HLIR simple while the language and backend continue to
-grow.
+Those tradeoffs keep HLIR simple while the language and backend grow.

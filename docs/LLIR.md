@@ -40,7 +40,7 @@ In code, the relevant lowering units are:
 
 The important conceptual boundary is:
 
-- `HLIR` still looks like the source language: routines, `if`, `while`, `for`,
+- `HLIR` looks like the source language: routines, `if`, `while`, `for`,
   `switch`, `case`, typed expressions, and builtin calls are all structured.
 - `LLIR` is no longer structured syntax. It is procedure-scoped, block-based,
   temporary-heavy, and explicit about storage and control flow.
@@ -226,8 +226,8 @@ The current normalized LLIR instruction families are:
 
 - `intrinsic_call`
 
-Not every instruction is emitted by every source program yet, but the LLIR data
-model and validator already reserve space for the full lowered set above.
+Not every instruction is emitted by every source program, but the LLIR data
+model and validator reserve space for the full lowered set above.
 
 ## Lowering from HLIR
 
@@ -287,7 +287,7 @@ Each lowered procedure gets:
 
 ### Builtins become intrinsics
 
-HLIR still knows about source builtins such as `write`, `writeln`, `read`, and
+HLIR knows about source builtins such as `write`, `writeln`, `read`, and
 `readln`. LLIR lowers them to compiler-known intrinsics:
 
 - `write(integer|boolean)` -> `intrinsic[write_int]`
@@ -354,19 +354,19 @@ routine for the source program.
 
 ## Current Runtime Model
 
-The interpreter is intentionally small and still more symbolic than a real
+The interpreter is intentionally small and more symbolic than a real
 backend:
 
 - It executes the textual `.llir` dump, not a binary IR image.
-- Variables are still interpreted symbolically.
+- Variables are interpreted symbolically.
 - Temporary slots exist as indexed runtime cells.
 - Calls use a return stack rather than a full machine model.
 - Intrinsics are executed through an interpreter-specific testing adapter rather
   than lowered to syscalls yet.
 
-This is still useful because it gives the compiler a checkable backend-facing
-IR before assembler generation lands, while keeping the intrinsic names
-themselves target-neutral. The native backend in later milestones can consume
+This gives the compiler a checkable backend-facing IR while keeping the
+intrinsic names themselves target-neutral. The native backend in later
+milestones can consume
 the same `intrinsic_call` operations and lower them differently.
 
 ## Current Limits
@@ -375,14 +375,13 @@ LLIR is already lower than HLIR, but it is not yet final target code.
 
 Current limits worth keeping in mind:
 
-- The textual dump still uses some legacy `tac*` names internally.
-- The file header still says `llir program`.
+- The file header says `llir program`.
 - `write_string` exists in the intrinsic model but is not implemented by the
   interpreter yet.
 - Addressing instructions are modeled in LLIR but not heavily exercised by the
   current scalar-only language subset.
 - There is no register allocation yet.
 
-That is the intended tradeoff for this stage: LLIR should be explicit,
+That is the tradeoff for this stage: LLIR should be explicit,
 verifiable, and boring enough to support the upcoming assembler backend.
 
