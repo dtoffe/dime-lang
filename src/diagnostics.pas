@@ -259,8 +259,8 @@ begin
         ERR_CHARACTER_LITERAL_MUST_CONTAIN_EXACTLY_ONE_CHARACTER: compilerErrorMessage := 'Character literal must contain exactly one character.';
         ERR_CHARACTER_LITERAL_OUT_OF_RANGE: compilerErrorMessage := 'Character literal must use a raw ASCII character in the range $20..$7F.';
         ERR_UNTERMINATED_CHARACTER_LITERAL: compilerErrorMessage := 'Character literal is missing its closing quote.';
-        ERR_PROCEDURE_ARGUMENTS_NOT_YET_SUPPORTED: compilerErrorMessage := 'Procedure call arguments parse into the AST, but argument passing is not implemented yet.';
-        ERR_ONLY_ONE_CALL_ARGUMENT_SUPPORTED: compilerErrorMessage := 'Only one procedure-call argument is supported at this temporary stage.';
+        ERR_PROCEDURE_ARGUMENTS_NOT_YET_SUPPORTED: compilerErrorMessage := 'Routine call arguments are part of the current language; this diagnostic indicates an outdated compiler path.';
+        ERR_ONLY_ONE_CALL_ARGUMENT_SUPPORTED: compilerErrorMessage := 'Routine calls are no longer limited to one argument; this diagnostic indicates an outdated compiler path.';
         ERR_BUILTIN_PROCEDURE_NOT_YET_IMPLEMENTED: compilerErrorMessage := 'Built-in procedure is recognized by the compiler, but p-code generation for it is not implemented yet.';
         ERR_WRITE_REQUIRES_ARGUMENT: compilerErrorMessage := 'Built-in procedures "write" and "writeln" currently require exactly one argument.';
         ERR_WRITE_ARGUMENT_TYPE_UNSUPPORTED: compilerErrorMessage := 'Built-in procedures "write" and "writeln" require an integer, char, or boolean argument.';

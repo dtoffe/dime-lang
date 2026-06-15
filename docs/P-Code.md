@@ -528,7 +528,7 @@ Because `JPC` jumps on `0`, the loop repeats until the condition becomes true.
 ### `for`
 
 ```pl0
-for i := start to limit step stepExpr do
+for i := start to limit by stepExpr do
 statementSequence
 endfor
 ```
