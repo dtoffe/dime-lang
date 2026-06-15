@@ -16,6 +16,7 @@ and this project is expected to follow [Semantic Versioning](https://semver.org/
 
 ### [Changed]
 
+- Update P-Code documentation to align with latest language changes.
 - Remove legacy wording and `tac*` from the HLIR and LLIR docs and code.
 - Rename LLIR operand size classes from machine-flavored terms to abstract width categories such as `bits32` and `pointer`.
 - Remove legacy `arg`/`result` call artifacts and `positionIndex` from the LLIR core model.

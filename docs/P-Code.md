@@ -6,11 +6,7 @@ instruction array and executes it with three registers:
 
 In the intended surface syntax documented here, `begin ... end` is not a
 statement form. It is required only to delimit the main program body and each
-procedure body.
-
-At the current implementation stage, ordinary user-defined procedure calls are
-still `ident()`. The single-argument call form is reserved for the built-in
-procedures `write(expr)` and `read(varIdent)`.
+procedure or function body.
 
 - `programCounter`: index of the next instruction.
 - `basePointer`: base address of the current activation record.
@@ -22,23 +18,26 @@ Each instruction has this shape:
 OPCODE lexicalLevel argument
 ```
 
-`lexicalLevel` is used by variable access and procedure calls. It says how many
-static scopes outward the machine must walk from the current frame. `argument`
-is either a literal value, stack address, jump target, procedure entry point,
-or operation number, depending on the opcode. `char` values use this same
+`lexicalLevel` is used by variable access and procedure calls. For `LOD` and
+`STO` it says how many static scopes outward the machine must walk from the
+current frame. For `CAL` it stores encoded call metadata: the low bits are the
+static-link distance and the high bits are the argument count. `argument` is
+either a literal value, stack address, jump target, procedure entry point, or
+operation number, depending on the opcode. `char` values use this same
 integer-valued representation, storing ASCII code points directly.
 
 ## Stack Frames
 
-The stack is one-based. Every block reserves three slots for frame linkage, so
-local variables start at address `3`.
+The stack is one-based. Every routine reserves three slots for frame linkage.
+If the routine has parameters, they are copied into the first slots after the
+header, so local variables begin at address `3 + parameterCount`.
 
 ```text
 base + 0  static link: base of the enclosing lexical scope
 base + 1  dynamic link: caller's base pointer
 base + 2  return address: caller's program counter
-base + 3  first local variable
-base + 4  second local variable
+base + 3  first parameter or first local variable
+base + 4  second parameter or second local variable
 ...
 ```
 
@@ -91,6 +90,13 @@ Boolean results are stored as `0` for false and `1` for true.
 | `20` | read integer | `-> push parsed integer token` |
 | `21` | read char | `-> push ord(single-character token)` |
 | `22` | read boolean | `-> push 0 or 1` |
+| `23` | writeln scalar as integer | `x -> output decimal x and newline` |
+| `24` | writeln char | `x -> output chr(x) and newline` |
+| `25` | readln integer | `-> push parsed integer token and consume line remainder` |
+| `26` | readln char | `-> push ord(single-character token) and consume line remainder` |
+| `27` | readln boolean | `-> push 0 or 1 and consume line remainder` |
+| `28` | queue call argument | `x -> copy x to argument stack, then pop` |
+| `29` | return value | `x -> return from function and leave x on caller stack` |
 
 ### `LOD lexicalLevel, address`
 
@@ -112,23 +118,32 @@ stack[findBase(lexicalLevel) + address] := stack[stackTop]
 stackTop := stackTop - 1
 ```
 
-This p-code interpreter also prints the stored value as a side effect.
-
 ### `CAL lexicalLevel, address`
 
 Calls a procedure whose first instruction is at `address`. The machine writes a
-new activation record above the current stack top:
+new activation record above the current stack top. For `CAL`, the encoded
+`lexicalLevel` field packs two values:
 
 ```text
-stack[stackTop + 1] := findBase(lexicalLevel)  // static link
-stack[stackTop + 2] := basePointer             // dynamic link
-stack[stackTop + 3] := programCounter          // return address
+argumentCount * (maxLexicalNestingLevel + 1) + staticLinkDistance
+```
+
+At runtime the interpreter decodes that field, creates the linkage header, and
+copies queued arguments into the callee frame immediately after the header:
+
+```text
+stack[stackTop + 1] := findBase(staticLinkDistance)  // static link
+stack[stackTop + 2] := basePointer                   // dynamic link
+stack[stackTop + 3] := programCounter                // return address
 basePointer := stackTop + 1
+stack[basePointer + 3] := first argument
+stack[basePointer + 4] := second argument
+...
 programCounter := address
 ```
 
-The called block's `INT` instruction then moves `stackTop` past the frame header
-and local variables.
+The called block's `INT` instruction then moves `stackTop` past the frame
+header, parameter slots, and local variables.
 
 ### `INT 0, size`
 
@@ -138,7 +153,7 @@ Allocates stack space for the current block.
 stackTop := stackTop + size
 ```
 
-`size` is `3 + numberOfVariablesInBlock`.
+`size` is `3 + parameterCount + numberOfVariablesInBlock`.
 
 ### `JMP 0, address`
 
@@ -164,10 +179,10 @@ stackTop := stackTop - 1
 ### Block
 
 Only the global block starts with a placeholder jump over its top-level
-procedure bodies. Procedure blocks no longer need this jump because nested
-procedure declarations are not part of the language. After global declarations
-are parsed, the compiler patches that jump to the mandatory `begin ... end`
-main block body.
+procedure and function bodies. Routine blocks no longer need this jump because
+nested routine declarations are not part of the language. After global
+declarations are parsed, the compiler patches that jump to the mandatory
+`begin ... end` main block body.
 
 ```text
 JMP 0, body
@@ -178,8 +193,8 @@ INT 0, frameSize
 OPR 0, 0
 ```
 
-For a procedure block, code generation begins directly at its mandatory
-`begin ... end` body:
+For a procedure or function block, code generation begins directly at its
+mandatory `begin ... end` body:
 
 ```text
 INT 0, frameSize
@@ -201,47 +216,59 @@ LIT 0, constantValue
 No stack-frame slot is allocated. `char` constants use the same form, with the
 ASCII code as `constantValue`.
 
-### Variables
+### Variables and Parameters
 
-Variables are assigned consecutive addresses starting at `3` in their declaring
-block. Referencing a variable emits:
+Routine parameters are copied into consecutive frame slots starting at address
+`3`. Locals follow them immediately after. Referencing either kind emits the
+same load instruction:
 
 ```text
 LOD levelDifference, address
 ```
 
-Assigning a variable compiles the right-hand expression first, then stores it:
+Assigning to a writable slot compiles the right-hand expression first, then stores it:
 
 ```text
 ... expression leaves value on stack ...
 STO levelDifference, address
 ```
 
-`levelDifference` is `currentLevel - declarationLevel`. `char` variables use
-the same `LOD` and `STO` instructions as other scalar variables.
+`levelDifference` is `currentLevel - declarationLevel`. `char` variables and
+parameters use the same `LOD` and `STO` instructions as other scalar values.
 
-### Procedures
+### Procedures and Functions
 
-A procedure declaration records the current code index as the procedure entry
-address. Calling it emits:
+A procedure or function declaration records the current code index as the
+routine entry address. Each actual argument is evaluated left to right, queued
+with `OPR 0,28`, and then the call is emitted:
 
 ```text
-CAL levelDifference, procedureAddress
+... argument 1 expression ...
+OPR 0,28
+... argument 2 expression ...
+OPR 0,28
+CAL encodedCallMetadata, routineAddress
 ```
 
 The static link created by `CAL` lets the procedure access variables from its
 lexically enclosing blocks.
 
-### Built-in `write`
+Procedures use `CAL` as a statement. Functions use the same call shape inside
+expressions; when the callee executes `OPR 0,29`, the returned scalar value is
+left on the caller stack so the surrounding expression can continue.
 
-The compiler currently recognizes `write(expr)` as a built-in procedure call.
-It compiles the argument expression first, then emits an `OPR` sub-operation
-selected by the argument type:
+### Built-in `write` and `writeln`
+
+The compiler recognizes `write(expr)` and `writeln(expr)` as built-in procedure
+calls. It compiles the argument expression first, then emits an `OPR`
+sub-operation selected by the argument type and whether a trailing newline is
+requested:
 
 ```text
-integer  -> OPR 0,18
-boolean  -> OPR 0,18
-char     -> OPR 0,19
+write(integer|boolean)   -> OPR 0,18
+write(char)              -> OPR 0,19
+writeln(integer|boolean) -> OPR 0,23
+writeln(char)            -> OPR 0,24
 ```
 
 Each operation prints the top stack value and then pops it. Booleans use their
@@ -249,24 +276,28 @@ runtime scalar representation, so `false` prints as `0` and `true` prints as
 `1`. This keeps `write` aligned with the value representation expected by the
 later `read` implementation.
 
-### Built-in `read`
+### Built-in `read` and `readln`
 
-The compiler currently recognizes `read(varIdent)` as a built-in procedure
-call. The argument must be exactly one writable variable of type `integer`,
-`char`, or `boolean`.
+The compiler recognizes `read(varIdent)` and `readln(varIdent)` as built-in
+procedure calls. The argument must be exactly one writable variable of type
+`integer`, `char`, or `boolean`.
 
 The compiler emits an input operation selected by the variable type and then
 stores the pushed value into that variable:
 
 ```text
-integer  -> OPR 0,20 ; STO level,address
-char     -> OPR 0,21 ; STO level,address
-boolean  -> OPR 0,22 ; STO level,address
+read(integer)    -> OPR 0,20 ; STO level,address
+read(char)       -> OPR 0,21 ; STO level,address
+read(boolean)    -> OPR 0,22 ; STO level,address
+readln(integer)  -> OPR 0,25 ; STO level,address
+readln(char)     -> OPR 0,26 ; STO level,address
+readln(boolean)  -> OPR 0,27 ; STO level,address
 ```
 
 Boolean input uses the same scalar representation as boolean values elsewhere
 in the VM, so `read` accepts `0` for `false` and `1` for `true`. Character
-input currently expects a one-character token.
+input currently expects a one-character token. `readln` consumes the rest of
+the current input line after reading that token.
 
 ### Expressions
 
@@ -357,24 +388,48 @@ STO levelDifference, xAddress
 ### Procedure Call
 
 ```pl0
-p()
+p(x, y)
 ```
 
 Compiles to:
 
 ```text
-CAL levelDifference, pAddress
+... x ...
+OPR 0,28
+... y ...
+OPR 0,28
+CAL encodedCallMetadata, pAddress
 ```
 
-Calls of the form `p(expr)` are not yet part of the user-defined procedure
-calling convention. The parser accepts a single argument syntactically, but
-current semantic analysis reserves it for built-in `read` and `write` only.
+The current implementation supports user-defined procedure parameters and
+function parameters. The encoded `CAL` metadata carries both the lexical-level
+distance and the number of queued arguments.
+
+### Function Call
+
+```pl0
+z := add(7, 8)
+```
+
+Compiles to:
+
+```text
+LIT 0,7
+OPR 0,28
+LIT 0,8
+OPR 0,28
+CAL encodedCallMetadata, addAddress
+STO levelDifference, zAddress
+```
+
+The call itself leaves the function result on the caller stack via
+`OPR 0,29`.
 
 ### Block Bodies
 
-The mandatory `begin ... end` bodies of the main program and procedures compile
-their contained statements in order. Semicolons do not emit p-code; they only
-terminate source statements inside those bodies.
+The mandatory `begin ... end` bodies of the main program, procedures, and
+functions compile their contained statements in order. Semicolons do not emit
+p-code; they only terminate source statements inside those bodies.
 
 ### `if`
 
@@ -449,4 +504,60 @@ The boolean expression is re-evaluated before each iteration.
 `return;` is valid in procedures and exits immediately back to the caller.
 
 `return expr;` is valid in functions and returns the computed value to the
-caller.
+caller by emitting the expression followed by `OPR 0,29`.
+
+### `repeat`
+
+```pl0
+repeat
+statementSequence
+until expression;
+```
+
+Compiles to:
+
+```text
+loopStart:
+... statementSequence ...
+... expression leaves 0 or 1 on stack ...
+JPC 0, loopStart
+```
+
+Because `JPC` jumps on `0`, the loop repeats until the condition becomes true.
+
+### `for`
+
+```pl0
+for i := start to limit step stepExpr do
+statementSequence
+endfor
+```
+
+Compiles to:
+
+```text
+... start ...
+STO levelDifference, iAddress
+loopStart:
+LOD levelDifference, iAddress
+... limit ...
+OPR 0,13      // i <= limit
+JPC 0, afterLoop
+... statementSequence ...
+LOD levelDifference, iAddress
+... stepExpr ...
+OPR 0,2       // i + step
+STO levelDifference, iAddress
+JMP 0, loopStart
+afterLoop:
+```
+
+The current lowering uses an inclusive upper bound and always increments by the
+compiled step expression.
+
+### `switch`
+
+`switch` is a statement form lowered as a chain of selector comparisons,
+conditional jumps into branch bodies, and unconditional jumps to a common end
+label. There is no fallthrough between branches: after any matching branch body
+finishes, control jumps to the end of the `switch`.
